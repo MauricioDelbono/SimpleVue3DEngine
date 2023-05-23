@@ -1,10 +1,10 @@
-import type { Entity } from './entity'
+import { Entity } from './entity'
 
-export class Component {
+export abstract class Component {
   public entity: Entity
 
-  constructor(entity: Entity) {
-    this.entity = entity
+  constructor() {
+    this.entity = new Entity()
     this.start()
   }
 

@@ -1,3 +1,4 @@
+import type { Class } from '@/constants/types'
 import { Component } from './component'
 import { Material } from './material'
 import { Mesh } from './mesh'
@@ -45,11 +46,11 @@ export class Entity {
     }
   }
 
-  public getComponents<T extends Component>(type: { new (): T }): T[] {
+  public getComponents<T extends Component>(type: Class<T>): T[] {
     return this.components.filter((component) => component instanceof type) as T[]
   }
 
-  public getComponent<T extends Component>(type: { new (): T }): T | null {
+  public getComponent<T extends Component>(type: Class<T>): T | null {
     const components = this.getComponents(type)
     return components.length > 0 ? components[0] : null
   }
