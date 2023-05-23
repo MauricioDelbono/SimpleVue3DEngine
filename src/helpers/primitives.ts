@@ -252,6 +252,61 @@ export default class Primitives {
     return cone
   }
 
+  static createTorus(slices: number = 8, loops: number = 20, inner_rad: number = 0.5, outerRad: number = 2) {
+    const positions = []
+    const indices = []
+    const normals = []
+    const textureCoords = []
+
+    for (let slice = 0; slice <= slices; ++slice) {
+      const v = slice / slices
+      const slice_angle = v * 2 * Math.PI
+      const cos_slices = Math.cos(slice_angle)
+      const sin_slices = Math.sin(slice_angle)
+      const slice_rad = outerRad + inner_rad * cos_slices
+
+      for (let loop = 0; loop <= loops; ++loop) {
+        const u = loop / loops
+        const loop_angle = u * 2 * Math.PI
+        const cos_loops = Math.cos(loop_angle)
+        const sin_loops = Math.sin(loop_angle)
+
+        const x = slice_rad * cos_loops
+        const y = slice_rad * sin_loops
+        const z = inner_rad * sin_slices
+
+        positions.push(x, y, z)
+        normals.push(cos_loops * sin_slices, sin_loops * sin_slices, cos_slices)
+
+        textureCoords.push(u)
+        textureCoords.push(v)
+      }
+    }
+
+    const vertsPerSlice = loops + 1
+    for (let i = 0; i < slices; ++i) {
+      let v1 = i * vertsPerSlice
+      let v2 = v1 + vertsPerSlice
+
+      for (let j = 0; j < loops; ++j) {
+        indices.push(v1)
+        indices.push(v1 + 1)
+        indices.push(v2)
+
+        indices.push(v2)
+        indices.push(v1 + 1)
+        indices.push(v2 + 1)
+
+        v1 += 1
+        v2 += 1
+      }
+    }
+
+    const torus = new Mesh(positions, normals, textureCoords, indices)
+    torus.vao = this.createMeshVAO(torus)
+    return torus
+  }
+
   static createXYQuad(size: number = 2, xOffset: number = 0, yOffset: number = 0): Mesh {
     size *= 0.5
     const positions = [

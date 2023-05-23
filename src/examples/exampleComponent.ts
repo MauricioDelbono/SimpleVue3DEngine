@@ -16,10 +16,6 @@ export class ExampleComponent extends Component {
     // console.log('Update')
   }
 
-  public lateUpdate(time: number, renderDelta: number) {
-    // console.log('Late Update')
-  }
-
   public destroy() {
     console.log('Destroy')
   }
