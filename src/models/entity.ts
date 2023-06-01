@@ -35,6 +35,7 @@ export class Entity {
 
   public addComponent(component: Component) {
     this.components.push(component)
+    component.entity = this
     component.awake()
   }
 

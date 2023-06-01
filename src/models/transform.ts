@@ -23,7 +23,7 @@ export class Transform {
   }
 
   public get worldPosition(): vec3 {
-    return this.parentTransform ? vec3.add([0, 0, 0], this.parentTransform.worldPosition, this.position) : this.position
+    return mat4.getTranslation([0, 0, 0], this.worldMatrix)
   }
 
   public get worldRotation(): vec3 {

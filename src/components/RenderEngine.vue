@@ -4,11 +4,13 @@ import { useWebGLStore } from '../stores/webgl'
 import { storeToRefs } from 'pinia'
 import { useRenderStore } from '../stores/render'
 import { Entity } from '../models/entity'
+import { usePhysicsStore } from '@/stores/physics'
 
 const emit = defineEmits(['ready'])
 
 const store = useWebGLStore()
 const renderStore = useRenderStore()
+const physicsStore = usePhysicsStore()
 const { subscribers, scene, lastRenderTime } = storeToRefs(renderStore)
 
 const initialize = () => {

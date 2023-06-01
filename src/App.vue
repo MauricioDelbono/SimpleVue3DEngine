@@ -8,6 +8,10 @@ import Textures from './helpers/texture'
 import Primitives from './helpers/primitives'
 import { useCamera } from './composables/camera'
 import { ExampleComponent } from './examples/exampleComponent'
+import { Rigidbody } from './physics/dynamics/rigidBody'
+import { PlaneCollider } from './physics/collisions/planeCollider'
+import { SphereCollider } from './physics/collisions/sphereCollider'
+import { vec3 } from 'gl-matrix'
 
 const renderStore = useRenderStore()
 const inputStore = useInputStore()
@@ -32,7 +36,7 @@ const initialize = async () => {
   const entity1 = renderStore.createEntity([0, 0, 0], meshList[1], textureList[0])
   entity1.material.albedo = [1, 0.2, 0.2, 1]
   entity1.material.roughness = 90
-  entity1.addComponent(new ExampleComponent(entity1))
+  entity1.addComponent(new ExampleComponent())
   const entity2 = renderStore.createEntity([3, 1, 0], meshList[0], textureList[2])
   entity2.material.roughness = 90
   const entity3 = renderStore.createEntity([-3, -1, 0], meshList[2], textureList[1])
@@ -41,7 +45,21 @@ const initialize = async () => {
   const entity4 = renderStore.createEntity([0, -5, 0], meshList[3], textureList[0])
   entity4.material.roughness = 90
 
+  // Orbit object
   const entity11 = renderStore.createEntity([0, 0, 10], meshList[0], textureList[0], entity1)
+
+  // Physics
+  const planeRigidbody = new Rigidbody()
+  planeRigidbody.isDynamic = false
+  const planeCollider = new PlaneCollider(entity4.transform.getUpVector(), 10)
+  entity4.addComponent(planeRigidbody)
+  entity4.addComponent(planeCollider)
+
+  const entity5 = renderStore.createEntity([0, 0, -4], meshList[1], textureList[0])
+  const sphereRigidbody = new Rigidbody()
+  const sphereCollider = new SphereCollider(vec3.fromValues(0, 0, 0), 1)
+  entity5.addComponent(sphereRigidbody)
+  entity5.addComponent(sphereCollider)
 }
 </script>
 
