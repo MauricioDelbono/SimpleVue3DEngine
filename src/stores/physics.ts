@@ -6,6 +6,7 @@ import type { Solver } from '@/physics/dynamics/solver'
 import { Collision } from '@/physics/collisions/collision'
 import type { Rigidbody } from '@/physics/dynamics/rigidBody'
 import { PositionSolver } from '@/physics/dynamics/positionSolver'
+import { ImpulseSolver } from '@/physics/dynamics/impulseSolver'
 
 export const usePhysicsStore = defineStore('physics', () => {
   const store = useRenderStore()
@@ -16,6 +17,7 @@ export const usePhysicsStore = defineStore('physics', () => {
 
   onMounted(() => {
     addSolver(new PositionSolver())
+    addSolver(new ImpulseSolver())
     store.subscribeToRender({ update: step, lateUpdate: () => {} })
   })
 
@@ -64,10 +66,11 @@ export const usePhysicsStore = defineStore('physics', () => {
   const resolveCollisions = (delta: number) => {
     const collisions: Collision[] = []
     // First iterate over all rigidbodies
-    objects.forEach((object) => {
+    objects.reverse().forEach((object, i) => {
+      if (object.isStatic) return
       const objectColliders = object.colliders
-      objects.forEach((otherObject) => {
-        if (object === otherObject) return
+      objects.forEach((otherObject, j) => {
+        if (object === otherObject || j >= objects.length - i) return
         const otherObjectColliders = otherObject.colliders
         if (!objectColliders.length || !otherObjectColliders.length) return
 

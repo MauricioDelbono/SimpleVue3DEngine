@@ -1,7 +1,7 @@
 import { vec3 } from 'gl-matrix'
 import { Collider } from './collider'
-import type { SphereCollider } from './sphereCollider'
 import CollisionsHelper from '../helpers/collisions'
+import { SphereCollider } from './sphereCollider'
 import type { CollisionPoints } from './collisionPoints'
 
 export class PlaneCollider extends Collider {
@@ -12,6 +12,17 @@ export class PlaneCollider extends Collider {
     super()
     this.plane = plane
     this.distance = distance
+  }
+
+  public testCollision<T extends Collider>(collider: T): CollisionPoints {
+    switch (collider.constructor) {
+      case PlaneCollider:
+        return this.testPlaneCollision(collider as unknown as PlaneCollider)
+      case SphereCollider:
+        return this.testSphereCollision(collider as unknown as SphereCollider)
+      default:
+        throw new Error('Collider not supported')
+    }
   }
 
   public testSphereCollision(collider: SphereCollider): CollisionPoints {

@@ -1,7 +1,5 @@
 import type { Collision } from '../collisions/collision'
 
-export class Solver {
-  constructor() {}
-
-  public solve(collisions: Collision[], delta: number) {}
+export abstract class Solver {
+  public abstract solve(collisions: Collision[], delta: number): void
 }

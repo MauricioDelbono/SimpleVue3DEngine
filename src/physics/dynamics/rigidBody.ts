@@ -5,6 +5,7 @@ import { Collider } from '../collisions/collider'
 
 export class Rigidbody extends Component {
   public mass: number = 1
+  public restitution: number = 0.5
   public velocity: vec3 = vec3.fromValues(0, 0, 0)
   public acceleration: vec3 = vec3.fromValues(0, 0, 0)
   public force: vec3 = vec3.fromValues(0, 0, 0)
@@ -18,6 +19,10 @@ export class Rigidbody extends Component {
 
   public get position() {
     return this.entity.transform.position
+  }
+
+  public get inverseMass() {
+    return 1 / this.mass
   }
 
   public get colliders() {
