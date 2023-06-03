@@ -16,7 +16,7 @@ export const usePhysicsStore = defineStore('physics', () => {
   const gravity = vec3.fromValues(0, -9.81, 0)
 
   onMounted(() => {
-    addSolver(new PositionSolver())
+    // addSolver(new PositionSolver())
     addSolver(new ImpulseSolver())
     store.subscribeToRender({ update: step, lateUpdate: () => {} })
   })
@@ -45,14 +45,14 @@ export const usePhysicsStore = defineStore('physics', () => {
 
   const step = (time: number, delta: number) => {
     applyForces()
-    resolveCollisions(delta)
     moveObjects(delta)
+    resolveCollisions(delta)
   }
 
   const applyForces = () => {
     objects.forEach((object) => {
       if (object.isStatic) return
-      object.applyForce(vec3.scale([0, 0, 0], gravity, object.mass))
+      object.applyForce(gravity)
     })
   }
 
@@ -70,7 +70,8 @@ export const usePhysicsStore = defineStore('physics', () => {
       if (object.isStatic) return
       const objectColliders = object.colliders
       objects.forEach((otherObject, j) => {
-        if (object === otherObject || j >= objects.length - i) return
+        // if (object === otherObject || j >= objects.length - i) return
+        if (object === otherObject) return
         const otherObjectColliders = otherObject.colliders
         if (!objectColliders.length || !otherObjectColliders.length) return
 
