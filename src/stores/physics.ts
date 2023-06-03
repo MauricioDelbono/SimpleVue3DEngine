@@ -16,8 +16,8 @@ export const usePhysicsStore = defineStore('physics', () => {
   const gravity = vec3.fromValues(0, -9.81, 0)
 
   onMounted(() => {
-    // addSolver(new PositionSolver())
     addSolver(new ImpulseSolver())
+    addSolver(new PositionSolver())
     store.subscribeToRender({ update: step, lateUpdate: () => {} })
   })
 

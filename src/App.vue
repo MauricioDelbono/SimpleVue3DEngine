@@ -22,6 +22,9 @@ let textureList: WebGLTexture[] = []
 
 const initialize = async () => {
   inputStore.initialize()
+  const skyBox = await Textures.createSkyBoxTextureFromOneSource('./src/assets/images/skybox1.png')
+  renderStore.setSkybox(skyBox)
+
   textureList.push(Textures.createDefaultTexture())
   textureList.push(Textures.createTexture())
   textureList.push(await Textures.createTextureFromImage('./src/assets/images/subaru.jpg'))
@@ -29,9 +32,6 @@ const initialize = async () => {
   meshList.push(Primitives.createSphere())
   meshList.push(Primitives.createTruncatedCone())
   meshList.push(Primitives.createPlane())
-
-  const skyBox = await Textures.createSkyBoxTextureFromOneSource('./src/assets/images/skybox1.png')
-  renderStore.setSkybox(skyBox)
 
   const entity1 = renderStore.createEntity([0, 0, 0], meshList[1], textureList[0])
   entity1.material.albedo = [1, 0.2, 0.2, 1]

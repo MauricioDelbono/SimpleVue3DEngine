@@ -10,7 +10,6 @@ export class ImpulseSolver extends Solver {
       const velocityAlongNormal = vec3.dot(relativeVelocity, collision.points.normal)
       if (velocityAlongNormal > 0) return
 
-      console.log(velocityAlongNormal)
       const restitution = Math.min(collision.entityA.restitution, collision.entityB.restitution)
       const impulseScalar = (-(1 + restitution) * velocityAlongNormal) / (collision.entityA.inverseMass + collision.entityB.inverseMass)
       const impulse = vec3.scale(vec3.create(), collision.points.normal, impulseScalar)
