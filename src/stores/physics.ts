@@ -7,6 +7,8 @@ import { Collision } from '@/physics/collisions/collision'
 import type { Rigidbody } from '@/physics/dynamics/rigidBody'
 import { PositionSolver } from '@/physics/dynamics/positionSolver'
 import { ImpulseSolver } from '@/physics/dynamics/impulseSolver'
+import type { Collider } from '@/physics/collisions/collider'
+import { CollisionPair } from '@/physics/collisions/collisionPair'
 
 export const usePhysicsStore = defineStore('physics', () => {
   const store = useRenderStore()
@@ -44,9 +46,14 @@ export const usePhysicsStore = defineStore('physics', () => {
   }
 
   const step = (time: number, delta: number) => {
+    // Dynamics
     applyForces()
     moveObjects(delta)
-    resolveCollisions(delta)
+
+    // Collisions
+    const collisionPairs = broadPhaseCollisions()
+    const collisions = narrowPhaseCollisions(collisionPairs)
+    resolveCollisions(delta, collisions)
   }
 
   const applyForces = () => {
@@ -63,30 +70,45 @@ export const usePhysicsStore = defineStore('physics', () => {
     })
   }
 
-  const resolveCollisions = (delta: number) => {
-    const collisions: Collision[] = []
+  const broadPhaseCollisions = () => {
+    const colliderPairs: CollisionPair[] = []
     // First iterate over all rigidbodies
     objects.reverse().forEach((object, i) => {
       if (object.isStatic) return
       const objectColliders = object.colliders
       objects.forEach((otherObject, j) => {
-        // if (object === otherObject || j >= objects.length - i) return
-        if (object === otherObject) return
+        // skip self and already checked pairs
+        if (object === otherObject || j >= objects.length - i) return
         const otherObjectColliders = otherObject.colliders
         if (!objectColliders.length || !otherObjectColliders.length) return
 
         // Then iterate over all colliders of each of the rigidbodies
         objectColliders.forEach((collider) => {
           otherObjectColliders.forEach((otherCollider) => {
-            const collisionPoints = collider.testCollision(otherCollider)
-            if (collisionPoints.hasCollision) {
-              collisions.push(new Collision(object, otherObject, collisionPoints))
+            if (collider.isWithinBounds(otherCollider)) {
+              colliderPairs.push(new CollisionPair(object, otherObject, collider, otherCollider))
             }
           })
         })
       })
     })
 
+    return colliderPairs
+  }
+
+  const narrowPhaseCollisions = (collisionPairs: CollisionPair[]) => {
+    const collisions: Collision[] = []
+    collisionPairs.forEach((collisionPair: CollisionPair) => {
+      const collisionPoints = collisionPair.colliderA.testCollision(collisionPair.colliderB)
+      if (collisionPoints.hasCollision) {
+        collisions.push(new Collision(collisionPair.entityA, collisionPair.entityB, collisionPoints))
+      }
+    })
+
+    return collisions
+  }
+
+  const resolveCollisions = (delta: number, collisions: Collision[]) => {
     solvers.forEach((solver) => {
       if (collisions.length === 0) return
       solver.solve(collisions, delta)

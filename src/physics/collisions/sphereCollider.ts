@@ -5,7 +5,6 @@ import CollisionsHelper from '../helpers/collisions'
 import { PlaneCollider } from './planeCollider'
 
 export class SphereCollider extends Collider {
-  // public center: vec3 = vec3.create()
   public radius: number = 1
 
   constructor(center: vec3, radius: number) {
@@ -31,5 +30,15 @@ export class SphereCollider extends Collider {
 
   public testPlaneCollision(collider: PlaneCollider): CollisionPoints {
     return CollisionsHelper.getSpherePlaneCollision(this, collider)
+  }
+
+  public get min(): vec3 {
+    const localMin = vec3.subtract(vec3.create(), this.center, vec3.fromValues(this.radius, this.radius, this.radius))
+    return this.entity.transform.toWorldSpace(localMin)
+  }
+
+  public get max(): vec3 {
+    const localMax = vec3.add(vec3.create(), this.center, vec3.fromValues(this.radius, this.radius, this.radius))
+    return this.entity.transform.toWorldSpace(localMax)
   }
 }
