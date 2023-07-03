@@ -1,4 +1,4 @@
-import { defineStore, storeToRefs } from 'pinia'
+import { defineStore } from 'pinia'
 import { useRenderStore } from './render'
 import { onMounted } from 'vue'
 import { vec3 } from 'gl-matrix'
@@ -7,7 +7,6 @@ import { Collision } from '@/physics/collisions/collision'
 import type { Rigidbody } from '@/physics/dynamics/rigidBody'
 import { PositionSolver } from '@/physics/dynamics/positionSolver'
 import { ImpulseSolver } from '@/physics/dynamics/impulseSolver'
-import type { Collider } from '@/physics/collisions/collider'
 import { CollisionPair } from '@/physics/collisions/collisionPair'
 
 export const usePhysicsStore = defineStore('physics', () => {
