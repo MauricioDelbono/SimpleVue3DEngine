@@ -39,6 +39,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     gl.value.enable(gl.value.DEPTH_TEST)
     gl.value.enable(gl.value.CULL_FACE)
     gl.value.clear(gl.value.COLOR_BUFFER_BIT | gl.value.DEPTH_BUFFER_BIT)
+    lastUsedVertexArray = null
   }
 
   function initialize(canvasId: string) {

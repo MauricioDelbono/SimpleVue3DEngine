@@ -19,8 +19,8 @@ export const useRenderStore = defineStore('render', () => {
   const { gl, pipelines } = storeToRefs(useWebGLStore())
 
   onMounted(() => {
-    scene.value.camera.position = vec3.fromValues(0, 0, -6)
-    scene.value.camera.rotation = vec3.fromValues(0, 180, 0)
+    scene.value.camera.position = vec3.fromValues(0, 10, -25)
+    scene.value.camera.rotation = vec3.fromValues(-25, 180, 0)
   })
 
   function subscribeToRender(subscriber: Render) {

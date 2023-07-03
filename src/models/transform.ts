@@ -23,15 +23,19 @@ export class Transform {
   }
 
   public get worldPosition(): vec3 {
-    return this.parentTransform ? vec3.add([0, 0, 0], this.parentTransform.worldPosition, this.position) : this.position
+    return mat4.getTranslation([0, 0, 0], this.worldMatrix)
   }
 
-  public get worldRotation(): vec3 {
-    return this.parentTransform ? vec3.add([0, 0, 0], this.parentTransform.worldRotation, this.rotation) : this.rotation
+  public get worldRotation(): quat {
+    return mat4.getRotation([0, 0, 0, 0], this.worldMatrix)
   }
 
   public get worldScale(): vec3 {
-    return this.parentTransform ? vec3.multiply([0, 0, 0], this.parentTransform.worldScale, this.scale) : this.scale
+    return mat4.getScaling([0, 0, 0], this.worldMatrix)
+  }
+
+  public toWorldSpace(point: vec3): vec3 {
+    return vec3.transformMat4([0, 0, 0], point, this.worldMatrix)
   }
 
   public getMatrix(destination: mat4): mat4 {
