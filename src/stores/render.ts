@@ -48,6 +48,10 @@ export const useRenderStore = defineStore('render', () => {
     return entity
   }
 
+  function removeEntity(entity: Entity) {
+    scene.value.removeEntity(entity)
+  }
+
   function setSkybox(texture: WebGLTexture) {
     const pipeline = pipelines.value.skybox
     gl.value.useProgram(pipeline.program)

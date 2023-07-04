@@ -27,6 +27,7 @@ export interface IScene {
   entities: Entity[]
 
   addEntity(entity: Entity): void
+  removeEntity(entity: Entity): void
   setSkybox(skybox: Skybox): void
   update(time: number, renderDelta: number): void
   lateUpdate(time: number, renderDelta: number): void
@@ -54,6 +55,13 @@ export class Scene {
 
   public addEntity(entity: Entity) {
     this.entities.push(entity)
+  }
+
+  public removeEntity(entity: Entity) {
+    const index = this.entities.indexOf(entity)
+    if (index > -1) {
+      this.entities.splice(index, 1)
+    }
   }
 
   public setSkybox(skybox: Skybox) {
