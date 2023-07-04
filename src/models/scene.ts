@@ -58,9 +58,13 @@ export class Scene {
   }
 
   public removeEntity(entity: Entity) {
-    const index = this.entities.indexOf(entity)
-    if (index > -1) {
-      this.entities.splice(index, 1)
+    if (entity.parent) {
+      entity.parent.removeChild(entity)
+    } else {
+      const index = this.entities.indexOf(entity)
+      if (index > -1) {
+        this.entities.splice(index, 1)
+      }
     }
   }
 

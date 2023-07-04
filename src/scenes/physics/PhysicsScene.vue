@@ -1,14 +1,12 @@
 <script setup lang="ts">
-import type { Mesh } from '../models/mesh'
-import RenderEngine from '../components/RenderEngine.vue'
-import FPSInfo from '../components/FPSInfo.vue'
-import { useRenderStore } from '../stores/render'
-import { useInputStore } from '../stores/input'
-import Textures from '../helpers/texture'
-import Primitives from '../helpers/primitives'
-import { useCamera } from '../composables/camera'
-import { Rigidbody } from '../physics/dynamics/rigidBody'
-import { SphereCollider } from '../physics/collisions/sphereCollider'
+import { useCamera } from '@/composables/camera'
+import Primitives from '@/helpers/primitives'
+import Textures from '@/helpers/texture'
+import type { Mesh } from '@/models/mesh'
+import { SphereCollider } from '@/physics/collisions/sphereCollider'
+import { Rigidbody } from '@/physics/dynamics/rigidBody'
+import { useInputStore } from '@/stores/input'
+import { useRenderStore } from '@/stores/render'
 import { vec3 } from 'gl-matrix'
 
 const renderStore = useRenderStore()
@@ -44,7 +42,7 @@ const initialize = async () => {
 
     // Cleanup old spheres
     if (renderStore.scene.entities.length > 20) {
-      renderStore.scene.entities.splice(1, 1)
+      renderStore.removeEntity(renderStore.scene.entities[1])
     }
   }, 500)
 }

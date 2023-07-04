@@ -1,10 +1,10 @@
 import { onMounted, ref, type Ref } from 'vue'
 import { defineStore, storeToRefs } from 'pinia'
-import { Scene, Skybox } from '../models/scene'
 import { vec3 } from 'gl-matrix'
-import { Mesh } from '../models/mesh'
-import { Entity } from '../models/entity'
-import Primitives from '../helpers/primitives'
+import Primitives from '@/helpers/primitives'
+import { Entity } from '@/models/entity'
+import type { Mesh } from '@/models/mesh'
+import { Scene, Skybox } from '@/models/scene'
 import { useWebGLStore } from './webgl'
 
 interface Render {
@@ -76,5 +76,5 @@ export const useRenderStore = defineStore('render', () => {
     scene.value.skybox = new Skybox(texture, mesh, pipeline)
   }
 
-  return { subscribers, lastRenderTime, scene, subscribeToRender, createEntity, setSkybox, traverseTree }
+  return { subscribers, lastRenderTime, scene, subscribeToRender, createEntity, setSkybox, traverseTree, removeEntity }
 })
