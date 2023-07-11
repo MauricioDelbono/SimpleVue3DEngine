@@ -4,7 +4,7 @@ export interface IMesh {
   textureCoords: number[]
   indices: number[]
 
-  vao: WebGLVertexArrayObject | null
+  vaoMap: Record<string, WebGLVertexArrayObject | null>
 }
 
 export class Mesh {
@@ -13,7 +13,7 @@ export class Mesh {
   public textureCoords: number[]
   public indices: number[]
 
-  public vao: WebGLVertexArrayObject | null
+  public vaoMap: Record<string, WebGLVertexArrayObject | null>
 
   constructor(positions: number[] = [], normals: number[] = [], textureCoords: number[] = [], indices: number[] = []) {
     this.positions = positions
@@ -21,7 +21,7 @@ export class Mesh {
     this.textureCoords = textureCoords
     this.indices = indices
 
-    this.vao = null
+    this.vaoMap = {}
   }
 
   // public render() {

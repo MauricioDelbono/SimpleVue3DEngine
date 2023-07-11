@@ -1,9 +1,3 @@
-import vertexShaderSource from '../shaders/vertex.shader'
-import fragmentShaderSource from '../shaders/fragment.shader'
-import skyboxVertexShaderSource from '../shaders/skyboxVertex.shader'
-import skyboxFragmentShaderSource from '../shaders/skyboxFragment.shader'
-import type { Pipeline } from '@/models/pipeline'
-
 const compileShader = (gl: WebGL2RenderingContext, shaderSource: string, shaderType: number): WebGLShader => {
   const shader = gl.createShader(shaderType)
   if (!shader) {
@@ -31,7 +25,7 @@ const createShadersFromScript = (gl: WebGL2RenderingContext, vertexShaderSource:
   return { vertexShader, fragmentShader }
 }
 
-const createDefaultPipeline = (gl: WebGL2RenderingContext): Pipeline => {
+const createProgram = (gl: WebGL2RenderingContext, vertexShaderSource: string, fragmentShaderSource: string): WebGLProgram => {
   const { vertexShader, fragmentShader } = createShadersFromScript(gl, vertexShaderSource, fragmentShaderSource)
   const program = gl.createProgram()
   if (!program) {
@@ -47,62 +41,7 @@ const createDefaultPipeline = (gl: WebGL2RenderingContext): Pipeline => {
     throw 'program failed to link:' + gl.getProgramInfoLog(program)
   }
 
-  const pipeline: Pipeline = {
-    program,
-    attributes: {
-      positionLoc: gl.getAttribLocation(program, 'aPosition'),
-      normalLoc: gl.getAttribLocation(program, 'aNormal'),
-      textureCoordsLoc: gl.getAttribLocation(program, 'aTextureCoords')
-    },
-    uniforms: {
-      uLightDirectionLoc: gl.getUniformLocation(program, 'uLightDirection'),
-      uLightColorLoc: gl.getUniformLocation(program, 'uLightColor'),
-      uAlbedoLoc: gl.getUniformLocation(program, 'uAlbedo'),
-      uSpecularLoc: gl.getUniformLocation(program, 'uSpecular'),
-      uRoughnessLoc: gl.getUniformLocation(program, 'uRoughness'),
-      uSpecularFactorLoc: gl.getUniformLocation(program, 'uSpecularFactor'),
-      uDiffuseLoc: gl.getUniformLocation(program, 'uDiffuse'),
-      uModelLoc: gl.getUniformLocation(program, 'uModel'),
-      uModelInverseTransposeLoc: gl.getUniformLocation(program, 'uModelInverseTranspose'),
-      uModelViewProjectionLoc: gl.getUniformLocation(program, 'uModelViewProjection'),
-      uCameraLoc: gl.getUniformLocation(program, 'uCamera'),
-      uFogColorLocation: gl.getUniformLocation(program, 'uFogColor'),
-      uFogNearLocation: gl.getUniformLocation(program, 'uFogNear'),
-      uFogFarLocation: gl.getUniformLocation(program, 'uFogFar')
-    }
-  }
-
-  return pipeline
-}
-
-const createSkyboxPipeline = (gl: WebGL2RenderingContext): Pipeline => {
-  const { vertexShader, fragmentShader } = createShadersFromScript(gl, skyboxVertexShaderSource, skyboxFragmentShaderSource)
-  const program = gl.createProgram()
-  if (!program) {
-    throw 'Error creating shader program'
-  }
-
-  gl.attachShader(program, vertexShader)
-  gl.attachShader(program, fragmentShader)
-  gl.linkProgram(program)
-
-  const success = gl.getProgramParameter(program, gl.LINK_STATUS)
-  if (!success) {
-    throw 'program failed to link:' + gl.getProgramInfoLog(program)
-  }
-
-  const pipeline: Pipeline = {
-    program,
-    attributes: {
-      aPosition: gl.getAttribLocation(program, 'aPosition')
-    },
-    uniforms: {
-      uViewDirectionProjectionInverse: gl.getUniformLocation(program, 'uViewDirectionProjectionInverse'),
-      uSkybox: gl.getUniformLocation(program, 'uSkybox')
-    }
-  }
-
-  return pipeline
+  return program
 }
 
 const resizeCanvasToDisplaySize = (canvas: HTMLCanvasElement) => {
@@ -132,4 +71,4 @@ const resizeCanvasToDisplaySize = (canvas: HTMLCanvasElement) => {
 //   dv.setInt8(16 * i + 15, 0)
 // })
 
-export default { createDefaultPipeline, createSkyboxPipeline, resizeCanvasToDisplaySize }
+export default { createProgram, resizeCanvasToDisplaySize }

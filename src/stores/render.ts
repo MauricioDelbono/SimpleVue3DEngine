@@ -38,6 +38,7 @@ export const useRenderStore = defineStore('render', () => {
     const entity = new Entity()
     entity.transform.position = position
     entity.mesh = mesh
+    entity.mesh.vaoMap[entity.pipeline] = pipelines.value[entity.pipeline].createMeshVAO(entity.mesh, 3)
     entity.material.diffuse = texture
     if (!parent) {
       scene.value.addEntity(entity)
@@ -72,7 +73,7 @@ export const useRenderStore = defineStore('render', () => {
     gl.value.bindBuffer(gl.value.ELEMENT_ARRAY_BUFFER, indicesBuffer)
     gl.value.bindVertexArray(null)
 
-    mesh.vao = vao
+    mesh.vaoMap.skybox = vao
     scene.value.skybox = new Skybox(texture, mesh, pipeline)
   }
 

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import RenderEngine from '@/components/RenderEngine.vue'
+import FPSInfo from '@/components/FPSInfo.vue'
 import { useCamera } from '@/composables/camera'
 import Primitives from '@/helpers/primitives'
 import Textures from '@/helpers/texture'

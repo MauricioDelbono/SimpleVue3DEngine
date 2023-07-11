@@ -1,42 +1,6 @@
 import { Mesh } from '@/models/mesh'
-import { useWebGLStore } from '@/stores/webgl'
 
 export default class Primitives {
-  static createMeshVAO(mesh: Mesh, numberOfComponents: number = 3) {
-    const { gl, pipelines } = useWebGLStore()
-    gl.useProgram(pipelines.default.program)
-    const vao = gl.createVertexArray()
-    gl.bindVertexArray(vao)
-
-    const positionBuffer = gl.createBuffer()
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.positions), gl.STATIC_DRAW)
-    const normalBuffer = gl.createBuffer()
-    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.normals), gl.STATIC_DRAW)
-    const textureCoordsBuffer = gl.createBuffer()
-    gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordsBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.textureCoords), gl.STATIC_DRAW)
-    const indicesBuffer = gl.createBuffer()
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(mesh.indices), gl.STATIC_DRAW)
-
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
-    gl.vertexAttribPointer(pipelines.default.attributes.positionLoc, numberOfComponents, gl.FLOAT, false, 0, 0)
-    gl.enableVertexAttribArray(pipelines.default.attributes.positionLoc)
-    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer)
-    gl.vertexAttribPointer(pipelines.default.attributes.normalLoc, numberOfComponents, gl.FLOAT, false, 0, 0)
-    gl.enableVertexAttribArray(pipelines.default.attributes.normalLoc)
-    gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordsBuffer)
-    gl.vertexAttribPointer(pipelines.default.attributes.textureCoordsLoc, 2, gl.FLOAT, false, 0, 0)
-    gl.enableVertexAttribArray(pipelines.default.attributes.textureCoordsLoc)
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
-
-    gl.bindVertexArray(null)
-
-    return vao
-  }
-
   static createCube(): Mesh {
     const positions = [
       1, 1, -1, 1, 1, 1, 1, -1, 1, 1, -1, -1, -1, 1, 1, -1, 1, -1, -1, -1, -1, -1, -1, 1, -1, 1, 1, 1, 1, 1, 1, 1, -1, -1, 1, -1, -1, -1,
@@ -55,8 +19,6 @@ export default class Primitives {
     ]
 
     const cube = new Mesh(positions, normals, textureCoords, indices)
-    cube.vao = this.createMeshVAO(cube)
-
     return cube
   }
 
@@ -96,7 +58,6 @@ export default class Primitives {
     }
 
     const plane = new Mesh(positions, normals, textureCoords, indices)
-    plane.vao = this.createMeshVAO(plane)
     return plane
   }
 
@@ -162,7 +123,6 @@ export default class Primitives {
     }
 
     const sphere = new Mesh(positions, normals, textureCoords, indices)
-    sphere.vao = this.createMeshVAO(sphere)
     return sphere
   }
 
@@ -248,7 +208,6 @@ export default class Primitives {
     }
 
     const cone = new Mesh(positions, normals, textureCoords, indices)
-    cone.vao = this.createMeshVAO(cone)
     return cone
   }
 
@@ -303,7 +262,6 @@ export default class Primitives {
     }
 
     const torus = new Mesh(positions, normals, textureCoords, indices)
-    torus.vao = this.createMeshVAO(torus)
     return torus
   }
 
@@ -324,7 +282,6 @@ export default class Primitives {
     const indices = [0, 1, 2, 2, 1, 3]
 
     const quad = new Mesh(positions, normals, textureCoords, indices)
-    // quad.vao = this.createMeshVAO(quad, 2)
     return quad
   }
 }

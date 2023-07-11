@@ -9,6 +9,8 @@ import { useInputStore } from '@/stores/input'
 import { useRenderStore } from '@/stores/render'
 import { vec3 } from 'gl-matrix'
 import { ExampleComponent } from './exampleComponent'
+import RenderEngine from '@/components/RenderEngine.vue'
+import FPSInfo from '@/components/FPSInfo.vue'
 
 const renderStore = useRenderStore()
 const inputStore = useInputStore()
