@@ -5,7 +5,7 @@ import { Entity } from '@/models/entity'
 import { Scene } from '@/models/scene'
 import webgl from '@/helpers/webgl'
 import utils from '@/helpers/utils'
-import { DefaultPipeline, SkyboxPipeline, type Pipeline } from '@/models/pipeline'
+import { DefaultPipeline, SkyboxPipeline, type Pipeline, HDRPipeline, LightPipeline } from '@/models/pipeline'
 
 export const useWebGLStore = defineStore('webgl', () => {
   const canvas: Ref<HTMLCanvasElement> = ref({} as HTMLCanvasElement)
@@ -54,6 +54,8 @@ export const useWebGLStore = defineStore('webgl', () => {
 
       pipelines.value.default = new DefaultPipeline(gl.value)
       pipelines.value.skybox = new SkyboxPipeline(gl.value)
+      pipelines.value.light = new LightPipeline(gl.value)
+      pipelines.value.hdr = new HDRPipeline(gl.value)
     }
 
     return true
@@ -96,7 +98,11 @@ export const useWebGLStore = defineStore('webgl', () => {
   const setEntityUniforms = (scene: Scene, entity: Entity) => {
     const pipelineKey = entity.pipeline ?? 'default'
     const pipeline = pipelines.value[pipelineKey]
-    const vao = entity.mesh.vaoMap[pipelineKey]
+    let vao = entity.mesh.vaoMap[pipelineKey]
+    if (!entity.mesh.vaoMap[pipelineKey]) {
+      vao = pipeline.createMeshVAO(entity.mesh, 3)
+      entity.mesh.vaoMap[pipelineKey] = vao
+    }
 
     if (lastUsedPipeline !== pipelineKey) {
       lastUsedPipeline = pipelineKey
@@ -140,6 +146,14 @@ export const useWebGLStore = defineStore('webgl', () => {
     return cameraMatrix
   }
 
+  const getProjectionMatrix = () => {
+    return projectionMatrix
+  }
+
+  const getViewMatrix = () => {
+    return viewMatrix
+  }
+
   return {
     gl,
     canvas,
@@ -151,6 +165,8 @@ export const useWebGLStore = defineStore('webgl', () => {
     setGlobalUniforms,
     setEntityUniforms,
     getCameraMatrix,
+    getViewMatrix,
+    getProjectionMatrix,
     getModelInverseMatrix,
     getModelViewProjectionMatrix,
     getViewDirectionProjectionInverseMatrix,

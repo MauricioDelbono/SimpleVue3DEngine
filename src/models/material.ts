@@ -16,7 +16,7 @@ export class Material {
   public diffuse: WebGLTexture | null
 
   constructor() {
-    this.albedo = [1, 1, 1, 1]
+    this.albedo = [0.5, 0.5, 0.5, 1]
     this.specular = [1, 1, 1, 1]
     this.roughness = 80
     this.specularFactor = 1

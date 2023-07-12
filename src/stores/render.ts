@@ -34,11 +34,10 @@ export const useRenderStore = defineStore('render', () => {
     })
   }
 
-  function createEntity(position: vec3, mesh: Mesh, texture: WebGLTexture, parent?: Entity): Entity {
+  function createEntity(position: vec3, mesh: Mesh, texture: WebGLTexture | null, parent?: Entity): Entity {
     const entity = new Entity()
     entity.transform.position = position
     entity.mesh = mesh
-    entity.mesh.vaoMap[entity.pipeline] = pipelines.value[entity.pipeline].createMeshVAO(entity.mesh, 3)
     entity.material.diffuse = texture
     if (!parent) {
       scene.value.addEntity(entity)

@@ -11,7 +11,7 @@ export class Entity {
   public parent: Entity | null = null
   public children: Entity[] = []
   public components: Component[] = []
-  public pipeline: string = 'default'
+  public pipeline: string = 'hdr'
 
   constructor() {
     this.transform = new Transform(this)

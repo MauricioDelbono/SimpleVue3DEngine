@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import DefaultScene from './scenes/default/DefaultScene.vue'
+import LightScene from './scenes/light/LightScene.vue'
 import PhysicsScene from './scenes/physics/PhysicsScene.vue'
 </script>
 
 <template>
-  <DefaultScene />
-  <!-- <PhysicsScene /> -->
+  <LightScene />
 </template>
 
 <style scoped lang="scss"></style>
