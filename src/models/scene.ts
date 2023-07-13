@@ -25,6 +25,8 @@ export interface IScene {
   skybox?: Skybox
   camera: Camera
   entities: Entity[]
+  defaultPipeline: string
+  lights: Entity[]
 
   addEntity(entity: Entity): void
   removeEntity(entity: Entity): void
@@ -42,6 +44,8 @@ export class Scene {
   public skybox?: Skybox
   public camera: Camera
   public entities: Entity[]
+  public defaultPipeline = 'default'
+  public lights: Entity[]
 
   constructor() {
     this.fogColor = vec4.fromValues(0.5, 0.5, 0.5, 1)
@@ -51,6 +55,7 @@ export class Scene {
     this.lightColor = vec4.fromValues(1, 1, 1, 1)
     this.camera = new Camera()
     this.entities = []
+    this.lights = []
   }
 
   public addEntity(entity: Entity) {

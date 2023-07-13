@@ -16,11 +16,13 @@ let meshList: Mesh[] = []
 const initialize = async () => {
   inputStore.initialize()
   renderStore.scene.fogColor = [0.0, 0.0, 0.0, 1]
+  renderStore.scene.defaultPipeline = 'hdr'
 
   meshList.push(Primitives.createCube())
 
   const lightCube = renderStore.createEntity([5, 5, 0], meshList[0], null)
   lightCube.pipeline = 'light'
+  renderStore.scene.lights.push(lightCube)
   const cube = renderStore.createEntity([-5, 0, 0], meshList[0], null)
   cube.material.albedo = [1, 0.2, 0.2, 1]
 }

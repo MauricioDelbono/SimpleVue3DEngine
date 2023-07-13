@@ -217,6 +217,7 @@ export class LightPipeline implements Pipeline {
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer)
     this.gl.vertexAttribPointer(this.attributes.position, numberOfComponents, this.gl.FLOAT, false, 0, 0)
     this.gl.enableVertexAttribArray(this.attributes.position)
+
     this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
 
     this.gl.bindVertexArray(null)
@@ -252,12 +253,15 @@ export class HDRPipeline implements Pipeline {
 
   private createAttributes() {
     return {
-      position: this.gl.getAttribLocation(this.program, 'aPosition')
+      position: this.gl.getAttribLocation(this.program, 'aPosition'),
+      normal: this.gl.getAttribLocation(this.program, 'aNormal')
     }
   }
 
   private createUniforms() {
     return {
+      viewPosition: this.gl.getUniformLocation(this.program, 'viewPos'),
+      lightPosition: this.gl.getUniformLocation(this.program, 'lightPos'),
       lightColor: this.gl.getUniformLocation(this.program, 'lightColor'),
       objectColor: this.gl.getUniformLocation(this.program, 'objectColor'),
       model: this.gl.getUniformLocation(this.program, 'model'),
@@ -274,6 +278,9 @@ export class HDRPipeline implements Pipeline {
     const positionBuffer = this.gl.createBuffer()
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer)
     this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(mesh.positions), this.gl.STATIC_DRAW)
+    const normalBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, normalBuffer)
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(mesh.normals), this.gl.STATIC_DRAW)
     const indicesBuffer = this.gl.createBuffer()
     this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
     this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(mesh.indices), this.gl.STATIC_DRAW)
@@ -281,6 +288,9 @@ export class HDRPipeline implements Pipeline {
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer)
     this.gl.vertexAttribPointer(this.attributes.position, numberOfComponents, this.gl.FLOAT, false, 0, 0)
     this.gl.enableVertexAttribArray(this.attributes.position)
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, normalBuffer)
+    this.gl.vertexAttribPointer(this.attributes.normal, numberOfComponents, this.gl.FLOAT, false, 0, 0)
+    this.gl.enableVertexAttribArray(this.attributes.normal)
     this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
 
     this.gl.bindVertexArray(null)
@@ -295,6 +305,8 @@ export class HDRPipeline implements Pipeline {
     this.gl.uniformMatrix4fv(this.uniforms.view, false, this.store.getViewMatrix())
     this.gl.uniformMatrix4fv(this.uniforms.projection, false, this.store.getProjectionMatrix())
     this.gl.uniform4fv(this.uniforms.lightColor, scene.lightColor)
+    this.gl.uniform3fv(this.uniforms.lightPosition, scene.lights[0].transform.worldPosition)
+    this.gl.uniform3fv(this.uniforms.lightPosition, scene.camera.position)
   }
 
   public render(scene: Scene, entity: Entity): void {

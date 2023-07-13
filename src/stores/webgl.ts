@@ -96,7 +96,7 @@ export const useWebGLStore = defineStore('webgl', () => {
   }
 
   const setEntityUniforms = (scene: Scene, entity: Entity) => {
-    const pipelineKey = entity.pipeline ?? 'default'
+    const pipelineKey = entity.pipeline ?? scene.defaultPipeline
     const pipeline = pipelines.value[pipelineKey]
     let vao = entity.mesh.vaoMap[pipelineKey]
     if (!entity.mesh.vaoMap[pipelineKey]) {
