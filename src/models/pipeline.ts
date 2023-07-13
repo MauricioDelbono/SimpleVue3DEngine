@@ -261,9 +261,14 @@ export class HDRPipeline implements Pipeline {
   private createUniforms() {
     return {
       viewPosition: this.gl.getUniformLocation(this.program, 'viewPos'),
-      lightPosition: this.gl.getUniformLocation(this.program, 'lightPos'),
-      lightColor: this.gl.getUniformLocation(this.program, 'lightColor'),
-      objectColor: this.gl.getUniformLocation(this.program, 'objectColor'),
+      lightPosition: this.gl.getUniformLocation(this.program, 'light.position'),
+      lightAmbient: this.gl.getUniformLocation(this.program, 'light.ambient'),
+      lightDiffuse: this.gl.getUniformLocation(this.program, 'light.diffuse'),
+      lightSpecular: this.gl.getUniformLocation(this.program, 'light.specular'),
+      ambient: this.gl.getUniformLocation(this.program, 'material.ambient'),
+      diffuse: this.gl.getUniformLocation(this.program, 'material.diffuse'),
+      specular: this.gl.getUniformLocation(this.program, 'material.specular'),
+      shininess: this.gl.getUniformLocation(this.program, 'material.shininess'),
       model: this.gl.getUniformLocation(this.program, 'model'),
       view: this.gl.getUniformLocation(this.program, 'view'),
       projection: this.gl.getUniformLocation(this.program, 'projection')
@@ -302,15 +307,22 @@ export class HDRPipeline implements Pipeline {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
 
+    const light = scene.lights[0]
+
     this.gl.uniformMatrix4fv(this.uniforms.view, false, this.store.getViewMatrix())
     this.gl.uniformMatrix4fv(this.uniforms.projection, false, this.store.getProjectionMatrix())
-    this.gl.uniform4fv(this.uniforms.lightColor, scene.lightColor)
-    this.gl.uniform3fv(this.uniforms.lightPosition, scene.lights[0].transform.worldPosition)
-    this.gl.uniform3fv(this.uniforms.lightPosition, scene.camera.position)
+    this.gl.uniform3fv(this.uniforms.lightAmbient, light.ambient)
+    this.gl.uniform3fv(this.uniforms.lightDiffuse, light.diffuse)
+    this.gl.uniform3fv(this.uniforms.lightSpecular, light.specular)
+    this.gl.uniform3fv(this.uniforms.lightPosition, light.transform.worldPosition)
+    this.gl.uniform3fv(this.uniforms.viewPosition, scene.camera.position)
   }
 
   public render(scene: Scene, entity: Entity): void {
-    this.gl.uniform4fv(this.uniforms.objectColor, entity.material.albedo)
+    this.gl.uniform3fv(this.uniforms.ambient, entity.hdrMaterial.ambient)
+    this.gl.uniform3fv(this.uniforms.diffuse, entity.hdrMaterial.diffuse)
+    this.gl.uniform3fv(this.uniforms.specular, entity.hdrMaterial.specular)
+    this.gl.uniform1f(this.uniforms.shininess, entity.hdrMaterial.shininess)
     this.gl.uniformMatrix4fv(this.uniforms.model, false, entity.transform.worldMatrix)
   }
 }

@@ -1,4 +1,4 @@
-import type { vec4 } from 'gl-matrix'
+import type { vec3, vec4 } from 'gl-matrix'
 
 export interface IMaterial {
   albedo: vec4
@@ -25,5 +25,19 @@ export class Material {
 
   public use() {
     // Do nothing
+  }
+}
+
+export class HDRMaterial {
+  public ambient: vec3
+  public diffuse: vec3
+  public specular: vec3
+  public shininess: number
+
+  constructor() {
+    this.ambient = [0.5, 0.5, 0.5]
+    this.diffuse = [0.5, 0.5, 0.5]
+    this.specular = [0.5, 0.5, 0.5]
+    this.shininess = 32.0
   }
 }

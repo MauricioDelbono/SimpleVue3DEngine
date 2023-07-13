@@ -6,6 +6,7 @@ import { Entity } from '@/models/entity'
 import type { Mesh } from '@/models/mesh'
 import { Scene, Skybox } from '@/models/scene'
 import { useWebGLStore } from './webgl'
+import { Light } from '@/models/light'
 
 interface Render {
   update: (time: number, renderDelta: number) => void
@@ -48,6 +49,21 @@ export const useRenderStore = defineStore('render', () => {
     return entity
   }
 
+  function createLight(position: vec3, mesh: Mesh, parent?: Entity): Light {
+    const light = new Light()
+    light.transform.position = position
+    light.mesh = mesh
+    light.pipeline = 'light'
+    if (!parent) {
+      scene.value.addEntity(light)
+    } else {
+      parent.addChild(light)
+    }
+
+    scene.value.lights.push(light)
+    return light
+  }
+
   function removeEntity(entity: Entity) {
     scene.value.removeEntity(entity)
   }
@@ -76,5 +92,5 @@ export const useRenderStore = defineStore('render', () => {
     scene.value.skybox = new Skybox(texture, mesh, pipeline)
   }
 
-  return { subscribers, lastRenderTime, scene, subscribeToRender, createEntity, setSkybox, traverseTree, removeEntity }
+  return { subscribers, lastRenderTime, scene, subscribeToRender, createEntity, createLight, setSkybox, traverseTree, removeEntity }
 })

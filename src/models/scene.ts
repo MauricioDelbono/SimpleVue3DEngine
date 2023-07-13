@@ -3,6 +3,7 @@ import { Entity } from './entity'
 import { Camera } from './camera'
 import { Mesh } from './mesh'
 import type { Pipeline } from './pipeline'
+import type { Light } from './light'
 
 export class Skybox {
   public texture: WebGLTexture
@@ -45,7 +46,7 @@ export class Scene {
   public camera: Camera
   public entities: Entity[]
   public defaultPipeline = 'default'
-  public lights: Entity[]
+  public lights: Light[]
 
   constructor() {
     this.fogColor = vec4.fromValues(0.5, 0.5, 0.5, 1)
