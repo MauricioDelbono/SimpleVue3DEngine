@@ -22,22 +22,20 @@ export class Material {
     this.specularFactor = 1
     this.diffuse = null
   }
-
-  public use() {
-    // Do nothing
-  }
 }
 
 export class HDRMaterial {
-  public ambient: vec3
-  public diffuse: vec3
-  public specular: vec3
+  public albedo: vec3
+  public diffuse: WebGLTexture | null
+  public specular: WebGLTexture | null
+  public emission: WebGLTexture | null
   public shininess: number
 
   constructor() {
-    this.ambient = [0.5, 0.5, 0.5]
-    this.diffuse = [0.5, 0.5, 0.5]
-    this.specular = [0.5, 0.5, 0.5]
+    this.albedo = [0, 0, 0]
+    this.diffuse = null
+    this.specular = null
+    this.emission = null
     this.shininess = 32.0
   }
 }

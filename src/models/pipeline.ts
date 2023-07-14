@@ -254,7 +254,8 @@ export class HDRPipeline implements Pipeline {
   private createAttributes() {
     return {
       position: this.gl.getAttribLocation(this.program, 'aPosition'),
-      normal: this.gl.getAttribLocation(this.program, 'aNormal')
+      normal: this.gl.getAttribLocation(this.program, 'aNormal'),
+      texture: this.gl.getAttribLocation(this.program, 'aTexCoords')
     }
   }
 
@@ -265,10 +266,13 @@ export class HDRPipeline implements Pipeline {
       lightAmbient: this.gl.getUniformLocation(this.program, 'light.ambient'),
       lightDiffuse: this.gl.getUniformLocation(this.program, 'light.diffuse'),
       lightSpecular: this.gl.getUniformLocation(this.program, 'light.specular'),
-      ambient: this.gl.getUniformLocation(this.program, 'material.ambient'),
+
+      albedo: this.gl.getUniformLocation(this.program, 'material.albedo'),
       diffuse: this.gl.getUniformLocation(this.program, 'material.diffuse'),
       specular: this.gl.getUniformLocation(this.program, 'material.specular'),
+      emission: this.gl.getUniformLocation(this.program, 'material.emission'),
       shininess: this.gl.getUniformLocation(this.program, 'material.shininess'),
+
       model: this.gl.getUniformLocation(this.program, 'model'),
       view: this.gl.getUniformLocation(this.program, 'view'),
       projection: this.gl.getUniformLocation(this.program, 'projection')
@@ -286,6 +290,9 @@ export class HDRPipeline implements Pipeline {
     const normalBuffer = this.gl.createBuffer()
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, normalBuffer)
     this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(mesh.normals), this.gl.STATIC_DRAW)
+    const textureCoordsBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, textureCoordsBuffer)
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(mesh.textureCoords), this.gl.STATIC_DRAW)
     const indicesBuffer = this.gl.createBuffer()
     this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
     this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(mesh.indices), this.gl.STATIC_DRAW)
@@ -296,6 +303,9 @@ export class HDRPipeline implements Pipeline {
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, normalBuffer)
     this.gl.vertexAttribPointer(this.attributes.normal, numberOfComponents, this.gl.FLOAT, false, 0, 0)
     this.gl.enableVertexAttribArray(this.attributes.normal)
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, textureCoordsBuffer)
+    this.gl.vertexAttribPointer(this.attributes.texture, 2, this.gl.FLOAT, false, 0, 0)
+    this.gl.enableVertexAttribArray(this.attributes.texture)
     this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
 
     this.gl.bindVertexArray(null)
@@ -319,10 +329,20 @@ export class HDRPipeline implements Pipeline {
   }
 
   public render(scene: Scene, entity: Entity): void {
-    this.gl.uniform3fv(this.uniforms.ambient, entity.hdrMaterial.ambient)
-    this.gl.uniform3fv(this.uniforms.diffuse, entity.hdrMaterial.diffuse)
-    this.gl.uniform3fv(this.uniforms.specular, entity.hdrMaterial.specular)
+    this.gl.uniform3fv(this.uniforms.albedo, entity.hdrMaterial.albedo)
+    this.gl.uniform1i(this.uniforms.diffuse, 0)
+    this.gl.uniform1i(this.uniforms.specular, 1)
+    this.gl.uniform1i(this.uniforms.emission, 2)
     this.gl.uniform1f(this.uniforms.shininess, entity.hdrMaterial.shininess)
     this.gl.uniformMatrix4fv(this.uniforms.model, false, entity.transform.worldMatrix)
+
+    this.gl.activeTexture(this.gl.TEXTURE0)
+    this.gl.bindTexture(this.gl.TEXTURE_2D, entity.hdrMaterial.diffuse)
+
+    this.gl.activeTexture(this.gl.TEXTURE1)
+    this.gl.bindTexture(this.gl.TEXTURE_2D, entity.hdrMaterial.specular)
+
+    this.gl.activeTexture(this.gl.TEXTURE2)
+    this.gl.bindTexture(this.gl.TEXTURE_2D, entity.hdrMaterial.emission)
   }
 }
