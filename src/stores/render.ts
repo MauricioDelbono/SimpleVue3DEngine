@@ -6,7 +6,7 @@ import { Entity } from '@/models/entity'
 import type { Mesh } from '@/models/mesh'
 import { Scene, Skybox } from '@/models/scene'
 import { useWebGLStore } from './webgl'
-import { Light } from '@/models/light'
+import { DirectionalLight, PointLight, SpotLight } from '@/models/light'
 
 interface Render {
   update: (time: number, renderDelta: number) => void
@@ -49,8 +49,8 @@ export const useRenderStore = defineStore('render', () => {
     return entity
   }
 
-  function createLight(position: vec3, mesh: Mesh, parent?: Entity): Light {
-    const light = new Light()
+  function createPointLight(position: vec3, mesh: Mesh, parent?: Entity): PointLight {
+    const light = new PointLight()
     light.transform.position = position
     light.mesh = mesh
     light.pipeline = 'light'
@@ -60,7 +60,32 @@ export const useRenderStore = defineStore('render', () => {
       parent.addChild(light)
     }
 
-    scene.value.lights.push(light)
+    scene.value.pointLights.push(light)
+    return light
+  }
+
+  function createSpotLight(position: vec3, mesh: Mesh, parent?: Entity): SpotLight {
+    const light = new SpotLight()
+    light.transform.position = position
+    light.mesh = mesh
+    light.pipeline = 'light'
+    if (!parent) {
+      scene.value.addEntity(light)
+    } else {
+      parent.addChild(light)
+    }
+
+    scene.value.spotLight = light
+    return light
+  }
+
+  function createDirectionalLight(position?: vec3, mesh?: Mesh): DirectionalLight {
+    const light = new DirectionalLight()
+    light.transform.position = position ?? [0, 0, 0]
+    light.mesh = mesh ?? light.mesh
+    light.pipeline = 'light'
+    scene.value.addEntity(light)
+    scene.value.directionalLight = light
     return light
   }
 
@@ -92,5 +117,17 @@ export const useRenderStore = defineStore('render', () => {
     scene.value.skybox = new Skybox(texture, mesh, pipeline)
   }
 
-  return { subscribers, lastRenderTime, scene, subscribeToRender, createEntity, createLight, setSkybox, traverseTree, removeEntity }
+  return {
+    subscribers,
+    lastRenderTime,
+    scene,
+    subscribeToRender,
+    createEntity,
+    createPointLight,
+    createDirectionalLight,
+    createSpotLight,
+    setSkybox,
+    traverseTree,
+    removeEntity
+  }
 })

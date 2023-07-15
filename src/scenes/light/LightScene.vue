@@ -25,15 +25,35 @@ const initialize = async () => {
   const containerSpecular = await Textures.createTextureFromImage('./src/assets/images/containerSpecular.png')
   const containerEmission = await Textures.createTextureFromImage('./src/assets/images/containerEmission.jpg')
 
-  const lightCube = renderStore.createLight([5, 5, 0], cubeMesh)
+  const lightCube = renderStore.createPointLight([5, 5, -2], cubeMesh)
+  lightCube.setLightAttenuation(100)
+
+  const lightCube2 = renderStore.createPointLight([-5, 0, 5], cubeMesh)
+  lightCube2.setLightAttenuation(50)
+
+  const spotLight = renderStore.createSpotLight([15, 5, 3], sphereMesh)
+  spotLight.transform.scale = [0.2, 0.2, 1]
+  spotLight.transform.rotation = [0, -90, 0]
+
+  const dirLight = renderStore.createDirectionalLight([0, 0, 0], cubeMesh)
+  dirLight.transform.scale = [0.2, 0.2, 1]
+  dirLight.transform.rotation = [45, 0, 45]
+
   const cube = renderStore.createEntity([-5, 0, 0], cubeMesh, null)
   cube.hdrMaterial.diffuse = containerDiffuse
   cube.hdrMaterial.specular = containerSpecular
   cube.hdrMaterial.emission = containerEmission
+
   const sphere = renderStore.createEntity([0, 2, 5], sphereMesh, defaultTexture)
   sphere.hdrMaterial.albedo = [0.4, 0.2, 0.2]
+
   const plane = renderStore.createEntity([0, -5, 0], planeMesh, defaultTexture)
   plane.hdrMaterial.albedo = [1, 0.5, 0.31]
+
+  const cube2 = renderStore.createEntity([10, 5, 2], cubeMesh, null)
+  cube2.hdrMaterial.diffuse = containerDiffuse
+  cube2.hdrMaterial.specular = containerSpecular
+  cube2.hdrMaterial.shininess = 64.0
 }
 </script>
 

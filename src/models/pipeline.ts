@@ -243,6 +243,7 @@ export class HDRPipeline implements Pipeline {
   attributes: Record<string, number>
   uniforms: Record<string, WebGLUniformLocation | null>
   store = useWebGLStore()
+  private maxPointLights = 4
 
   constructor(gl: WebGL2RenderingContext) {
     this.gl = gl
@@ -260,12 +261,24 @@ export class HDRPipeline implements Pipeline {
   }
 
   private createUniforms() {
-    return {
-      viewPosition: this.gl.getUniformLocation(this.program, 'viewPos'),
-      lightPosition: this.gl.getUniformLocation(this.program, 'light.position'),
-      lightAmbient: this.gl.getUniformLocation(this.program, 'light.ambient'),
-      lightDiffuse: this.gl.getUniformLocation(this.program, 'light.diffuse'),
-      lightSpecular: this.gl.getUniformLocation(this.program, 'light.specular'),
+    const uniformLocations: Record<string, WebGLUniformLocation | null> = {
+      dirLightEnabled: this.gl.getUniformLocation(this.program, 'dirLight.enabled'),
+      dirLightDirection: this.gl.getUniformLocation(this.program, 'dirLight.direction'),
+      dirLightAmbient: this.gl.getUniformLocation(this.program, 'dirLight.ambient'),
+      dirLightDiffuse: this.gl.getUniformLocation(this.program, 'dirLight.diffuse'),
+      dirLightSpecular: this.gl.getUniformLocation(this.program, 'dirLight.specular'),
+
+      spotLightEnabled: this.gl.getUniformLocation(this.program, 'spotLight.enabled'),
+      spotLightPosition: this.gl.getUniformLocation(this.program, 'spotLight.position'),
+      spotLightDirection: this.gl.getUniformLocation(this.program, 'spotLight.direction'),
+      spotLightAmbient: this.gl.getUniformLocation(this.program, 'spotLight.ambient'),
+      spotLightDiffuse: this.gl.getUniformLocation(this.program, 'spotLight.diffuse'),
+      spotLightSpecular: this.gl.getUniformLocation(this.program, 'spotLight.specular'),
+      spotLightConstant: this.gl.getUniformLocation(this.program, 'spotLight.constant'),
+      spotLightLinear: this.gl.getUniformLocation(this.program, 'spotLight.linear'),
+      spotLightQuadratic: this.gl.getUniformLocation(this.program, 'spotLight.quadratic'),
+      spotLightCutOff: this.gl.getUniformLocation(this.program, 'spotLight.cutOff'),
+      spotLightOuterCutOff: this.gl.getUniformLocation(this.program, 'spotLight.outerCutOff'),
 
       albedo: this.gl.getUniformLocation(this.program, 'material.albedo'),
       diffuse: this.gl.getUniformLocation(this.program, 'material.diffuse'),
@@ -273,10 +286,24 @@ export class HDRPipeline implements Pipeline {
       emission: this.gl.getUniformLocation(this.program, 'material.emission'),
       shininess: this.gl.getUniformLocation(this.program, 'material.shininess'),
 
+      viewPosition: this.gl.getUniformLocation(this.program, 'viewPos'),
       model: this.gl.getUniformLocation(this.program, 'model'),
       view: this.gl.getUniformLocation(this.program, 'view'),
       projection: this.gl.getUniformLocation(this.program, 'projection')
     }
+
+    for (let index = 0; index < this.maxPointLights; index++) {
+      uniformLocations[`pointLights[${index}]Enabled`] = this.gl.getUniformLocation(this.program, `pointLights[${index}].enabled`)
+      uniformLocations[`pointLights[${index}]Position`] = this.gl.getUniformLocation(this.program, `pointLights[${index}].position`)
+      uniformLocations[`pointLights[${index}]Ambient`] = this.gl.getUniformLocation(this.program, `pointLights[${index}].ambient`)
+      uniformLocations[`pointLights[${index}]Diffuse`] = this.gl.getUniformLocation(this.program, `pointLights[${index}].diffuse`)
+      uniformLocations[`pointLights[${index}]Specular`] = this.gl.getUniformLocation(this.program, `pointLights[${index}].specular`)
+      uniformLocations[`pointLights[${index}]Constant`] = this.gl.getUniformLocation(this.program, `pointLights[${index}].constant`)
+      uniformLocations[`pointLights[${index}]Linear`] = this.gl.getUniformLocation(this.program, `pointLights[${index}].linear`)
+      uniformLocations[`pointLights[${index}]Quadratic`] = this.gl.getUniformLocation(this.program, `pointLights[${index}].quadratic`)
+    }
+
+    return uniformLocations
   }
 
   public createMeshVAO(mesh: Mesh, numberOfComponents: number = 3) {
@@ -317,15 +344,47 @@ export class HDRPipeline implements Pipeline {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
 
-    const light = scene.lights[0]
-
     this.gl.uniformMatrix4fv(this.uniforms.view, false, this.store.getViewMatrix())
     this.gl.uniformMatrix4fv(this.uniforms.projection, false, this.store.getProjectionMatrix())
-    this.gl.uniform3fv(this.uniforms.lightAmbient, light.ambient)
-    this.gl.uniform3fv(this.uniforms.lightDiffuse, light.diffuse)
-    this.gl.uniform3fv(this.uniforms.lightSpecular, light.specular)
-    this.gl.uniform3fv(this.uniforms.lightPosition, light.transform.worldPosition)
     this.gl.uniform3fv(this.uniforms.viewPosition, scene.camera.position)
+
+    if (scene.directionalLight) {
+      this.gl.uniform1i(this.uniforms.dirLightEnabled, 1)
+      this.gl.uniform3fv(this.uniforms.dirLightDirection, scene.directionalLight.transform.getForwardVector())
+      this.gl.uniform3fv(this.uniforms.dirLightAmbient, scene.directionalLight.ambient)
+      this.gl.uniform3fv(this.uniforms.dirLightDiffuse, scene.directionalLight.diffuse)
+      this.gl.uniform3fv(this.uniforms.dirLightSpecular, scene.directionalLight.specular)
+    }
+
+    if (scene.spotLight) {
+      this.gl.uniform1i(this.uniforms.spotLightEnabled, 1)
+      this.gl.uniform3fv(this.uniforms.spotLightDirection, scene.spotLight.transform.getForwardVector())
+      this.gl.uniform3fv(this.uniforms.spotLightPosition, scene.spotLight.transform.worldPosition)
+      this.gl.uniform3fv(this.uniforms.spotLightAmbient, scene.spotLight.ambient)
+      this.gl.uniform3fv(this.uniforms.spotLightDiffuse, scene.spotLight.diffuse)
+      this.gl.uniform3fv(this.uniforms.spotLightSpecular, scene.spotLight.specular)
+      this.gl.uniform1f(this.uniforms.spotLightCutOff, scene.spotLight.cutOff)
+      this.gl.uniform1f(this.uniforms.spotLightOuterCutOff, scene.spotLight.outerCutOff)
+      this.gl.uniform1f(this.uniforms.spotLightConstant, scene.spotLight.lightAttenuation.constant)
+      this.gl.uniform1f(this.uniforms.spotLightLinear, scene.spotLight.lightAttenuation.linear)
+      this.gl.uniform1f(this.uniforms.spotLightQuadratic, scene.spotLight.lightAttenuation.quadratic)
+    }
+
+    for (let index = 0; index < this.maxPointLights; index++) {
+      if (index >= this.maxPointLights) return
+      if (scene.pointLights.length <= index) return
+      else {
+        const light = scene.pointLights[index]
+        this.gl.uniform1i(this.uniforms[`pointLights[${index}]Enabled`], 1)
+        this.gl.uniform3fv(this.uniforms[`pointLights[${index}]Position`], light.transform.worldPosition)
+        this.gl.uniform3fv(this.uniforms[`pointLights[${index}]Ambient`], light.ambient)
+        this.gl.uniform3fv(this.uniforms[`pointLights[${index}]Diffuse`], light.diffuse)
+        this.gl.uniform3fv(this.uniforms[`pointLights[${index}]Specular`], light.specular)
+        this.gl.uniform1f(this.uniforms[`pointLights[${index}]Constant`], light.lightAttenuation.constant)
+        this.gl.uniform1f(this.uniforms[`pointLights[${index}]Linear`], light.lightAttenuation.linear)
+        this.gl.uniform1f(this.uniforms[`pointLights[${index}]Quadratic`], light.lightAttenuation.quadratic)
+      }
+    }
   }
 
   public render(scene: Scene, entity: Entity): void {
