@@ -6,6 +6,7 @@ import { useRenderStore } from '@/stores/render'
 import RenderEngine from '@/components/RenderEngine.vue'
 import FPSInfo from '@/components/FPSInfo.vue'
 import Textures from '@/helpers/texture'
+import { vec3 } from 'gl-matrix'
 
 const renderStore = useRenderStore()
 const inputStore = useInputStore()
@@ -27,9 +28,15 @@ const initialize = async () => {
 
   const lightCube = renderStore.createPointLight([5, 5, -2], cubeMesh)
   lightCube.setLightAttenuation(100)
+  lightCube.transform.scale = [0.2, 0.2, 0.2]
+  lightCube.ambient = vec3.scale([0, 0, 0], [0, 1, 0], 0.2)
+  lightCube.diffuse = vec3.scale([0, 0, 0], [0, 1, 0], 0.8)
 
   const lightCube2 = renderStore.createPointLight([-5, 0, 5], cubeMesh)
   lightCube2.setLightAttenuation(50)
+  lightCube2.transform.scale = [0.2, 0.2, 0.2]
+  lightCube2.ambient = vec3.scale([0, 0, 0], [1, 0, 0], 0.2)
+  lightCube2.diffuse = vec3.scale([0, 0, 0], [1, 0, 0], 0.8)
 
   const spotLight = renderStore.createSpotLight([15, 5, 3], sphereMesh)
   spotLight.transform.scale = [0.2, 0.2, 1]
