@@ -14,21 +14,27 @@ export default class Textures {
     })
   }
 
-  static async loadImageIntoTexture(gl: WebGL2RenderingContext, texture: WebGLTexture, sourcePath: string, target: number): Promise<void> {
+  static async loadImageIntoTexture(
+    gl: WebGL2RenderingContext,
+    texture: WebGLTexture,
+    sourcePath: string,
+    target: number,
+    format: number
+  ): Promise<void> {
     const image = await this.loadImage(sourcePath)
     gl.bindTexture(target, texture)
-    gl.texImage2D(target, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
+    gl.texImage2D(target, 0, format, gl.RGBA, gl.UNSIGNED_BYTE, image)
     gl.generateMipmap(target)
   }
 
-  static async createTextureFromImage(sourcePath: string): Promise<WebGLTexture> {
+  static async createTextureFromImage(sourcePath: string, SRGB: boolean = true): Promise<WebGLTexture> {
     const { gl } = useWebGLStore()
     const texture = gl.createTexture()
     if (!texture) {
       throw 'Error creating texture'
     }
 
-    await this.loadImageIntoTexture(gl, texture, sourcePath, gl.TEXTURE_2D)
+    await this.loadImageIntoTexture(gl, texture, sourcePath, gl.TEXTURE_2D, SRGB ? gl.SRGB8_ALPHA8 : gl.RGBA)
     return texture
   }
 
@@ -40,7 +46,7 @@ export default class Textures {
     }
 
     gl.bindTexture(gl.TEXTURE_2D, texture)
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255, 255, 255, 255]))
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.SRGB8_ALPHA8, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255, 255, 255, 255]))
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
 
     return texture
@@ -57,7 +63,7 @@ export default class Textures {
     gl.texImage2D(
       gl.TEXTURE_2D,
       0,
-      gl.RGBA,
+      gl.SRGB,
       2,
       2,
       0,
@@ -98,7 +104,7 @@ export default class Textures {
       const cubeFaceOrder = this.getCubeFaceOrder(gl)
       gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture)
       images.forEach((image, index) => {
-        gl.texImage2D(cubeFaceOrder[index], 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
+        gl.texImage2D(cubeFaceOrder[index], 0, gl.SRGB, gl.RGBA, gl.UNSIGNED_BYTE, image)
       })
       gl.generateMipmap(gl.TEXTURE_CUBE_MAP)
     }
@@ -136,7 +142,7 @@ export default class Textures {
         const xOffset = slices[index * 2 + 0] * size
         const yOffset = slices[index * 2 + 1] * size
         tempCtx.drawImage(image, xOffset, yOffset, size, size, 0, 0, size, size)
-        gl.texImage2D(cubeFaceOrder[index], 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, tempCtx.canvas)
+        gl.texImage2D(cubeFaceOrder[index], 0, gl.SRGB, gl.RGBA, gl.UNSIGNED_BYTE, tempCtx.canvas)
       }
 
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1)

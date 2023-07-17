@@ -23,17 +23,15 @@ const initialize = async () => {
 
   const defaultTexture = Textures.createDefaultTexture()
   const containerDiffuse = await Textures.createTextureFromImage('./src/assets/images/containerDiffuse.png')
-  const containerSpecular = await Textures.createTextureFromImage('./src/assets/images/containerSpecular.png')
+  const containerSpecular = await Textures.createTextureFromImage('./src/assets/images/containerSpecular.png', false)
   const containerEmission = await Textures.createTextureFromImage('./src/assets/images/containerEmission.jpg')
 
   const lightCube = renderStore.createPointLight([5, 5, -2], cubeMesh)
-  lightCube.setLightAttenuation(100)
   lightCube.transform.scale = [0.2, 0.2, 0.2]
   lightCube.ambient = vec3.scale([0, 0, 0], [0, 1, 0], 0.2)
   lightCube.diffuse = vec3.scale([0, 0, 0], [0, 1, 0], 0.8)
 
   const lightCube2 = renderStore.createPointLight([-5, 0, 5], cubeMesh)
-  lightCube2.setLightAttenuation(50)
   lightCube2.transform.scale = [0.2, 0.2, 0.2]
   lightCube2.ambient = vec3.scale([0, 0, 0], [1, 0, 0], 0.2)
   lightCube2.diffuse = vec3.scale([0, 0, 0], [1, 0, 0], 0.8)
@@ -44,7 +42,10 @@ const initialize = async () => {
 
   const dirLight = renderStore.createDirectionalLight([0, 0, 0], cubeMesh)
   dirLight.transform.scale = [0.2, 0.2, 1]
-  dirLight.transform.rotation = [45, 0, 45]
+  dirLight.transform.rotation = [25, 0, 0]
+  dirLight.ambient = vec3.scale(dirLight.ambient, dirLight.ambient, 0.7)
+  dirLight.diffuse = vec3.scale(dirLight.diffuse, dirLight.diffuse, 0.7)
+  dirLight.specular = vec3.scale(dirLight.specular, dirLight.specular, 0.7)
 
   const cube = renderStore.createEntity([-5, 0, 0], cubeMesh, null)
   cube.hdrMaterial.diffuse = containerDiffuse

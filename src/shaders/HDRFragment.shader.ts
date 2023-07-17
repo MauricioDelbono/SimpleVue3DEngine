@@ -13,10 +13,6 @@ struct PointLight {
     bool enabled;
     vec3 position;
     
-    float constant;
-    float linear;
-    float quadratic;  
-
     vec3 ambient;
     vec3 diffuse;
     vec3 specular;
@@ -27,9 +23,6 @@ struct SpotLight {
     vec3 position;
     vec3 direction;
     
-    float constant;
-    float linear;
-    float quadratic;  
     float cutOff;
     float outerCutOff;  
 
@@ -91,6 +84,10 @@ void main()
     vec3 emission = texture(material.emission, TexCoords).rgb;
     
     FragColor = vec4(result + emission, 1.0);
+    
+    // apply gamma correction
+    float gamma = 2.2;
+    FragColor.rgb = pow(FragColor.rgb, vec3(1.0/gamma));
 }
 
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
@@ -124,7 +121,7 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     
     // attenuation
     float distance = length(light.position - fragPos);
-    float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
+    float attenuation = 1.0 / distance;
     
     // combine results
     vec3 ambient = light.ambient * (texture(material.diffuse, TexCoords).rgb + material.albedo);
@@ -149,7 +146,7 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     
     // attenuation
     float distance = length(light.position - fragPos);
-    float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
+    float attenuation = 1.0 / distance;
 
     // spotlight intensity
     float theta = dot(lightDir, normalize(-light.direction)); 

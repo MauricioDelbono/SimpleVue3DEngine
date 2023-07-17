@@ -274,9 +274,6 @@ export class HDRPipeline implements Pipeline {
       spotLightAmbient: this.gl.getUniformLocation(this.program, 'spotLight.ambient'),
       spotLightDiffuse: this.gl.getUniformLocation(this.program, 'spotLight.diffuse'),
       spotLightSpecular: this.gl.getUniformLocation(this.program, 'spotLight.specular'),
-      spotLightConstant: this.gl.getUniformLocation(this.program, 'spotLight.constant'),
-      spotLightLinear: this.gl.getUniformLocation(this.program, 'spotLight.linear'),
-      spotLightQuadratic: this.gl.getUniformLocation(this.program, 'spotLight.quadratic'),
       spotLightCutOff: this.gl.getUniformLocation(this.program, 'spotLight.cutOff'),
       spotLightOuterCutOff: this.gl.getUniformLocation(this.program, 'spotLight.outerCutOff'),
 
@@ -298,9 +295,6 @@ export class HDRPipeline implements Pipeline {
       uniformLocations[`pointLights[${index}]Ambient`] = this.gl.getUniformLocation(this.program, `pointLights[${index}].ambient`)
       uniformLocations[`pointLights[${index}]Diffuse`] = this.gl.getUniformLocation(this.program, `pointLights[${index}].diffuse`)
       uniformLocations[`pointLights[${index}]Specular`] = this.gl.getUniformLocation(this.program, `pointLights[${index}].specular`)
-      uniformLocations[`pointLights[${index}]Constant`] = this.gl.getUniformLocation(this.program, `pointLights[${index}].constant`)
-      uniformLocations[`pointLights[${index}]Linear`] = this.gl.getUniformLocation(this.program, `pointLights[${index}].linear`)
-      uniformLocations[`pointLights[${index}]Quadratic`] = this.gl.getUniformLocation(this.program, `pointLights[${index}].quadratic`)
     }
 
     return uniformLocations
@@ -365,9 +359,6 @@ export class HDRPipeline implements Pipeline {
       this.gl.uniform3fv(this.uniforms.spotLightSpecular, scene.spotLight.specular)
       this.gl.uniform1f(this.uniforms.spotLightCutOff, scene.spotLight.cutOff)
       this.gl.uniform1f(this.uniforms.spotLightOuterCutOff, scene.spotLight.outerCutOff)
-      this.gl.uniform1f(this.uniforms.spotLightConstant, scene.spotLight.lightAttenuation.constant)
-      this.gl.uniform1f(this.uniforms.spotLightLinear, scene.spotLight.lightAttenuation.linear)
-      this.gl.uniform1f(this.uniforms.spotLightQuadratic, scene.spotLight.lightAttenuation.quadratic)
     }
 
     for (let index = 0; index < this.maxPointLights; index++) {
@@ -380,9 +371,6 @@ export class HDRPipeline implements Pipeline {
         this.gl.uniform3fv(this.uniforms[`pointLights[${index}]Ambient`], light.ambient)
         this.gl.uniform3fv(this.uniforms[`pointLights[${index}]Diffuse`], light.diffuse)
         this.gl.uniform3fv(this.uniforms[`pointLights[${index}]Specular`], light.specular)
-        this.gl.uniform1f(this.uniforms[`pointLights[${index}]Constant`], light.lightAttenuation.constant)
-        this.gl.uniform1f(this.uniforms[`pointLights[${index}]Linear`], light.lightAttenuation.linear)
-        this.gl.uniform1f(this.uniforms[`pointLights[${index}]Quadratic`], light.lightAttenuation.quadratic)
       }
     }
   }
