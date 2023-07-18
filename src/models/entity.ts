@@ -1,6 +1,6 @@
 import type { Class } from '@/constants/types'
 import { Component } from './component'
-import { HDRMaterial, Material } from './material'
+import { Material } from './material'
 import { Mesh } from './mesh'
 import { Transform } from './transform'
 
@@ -8,7 +8,6 @@ export class Entity {
   public transform: Transform
   public mesh: Mesh
   public material: Material
-  public hdrMaterial: HDRMaterial
   public parent: Entity | null = null
   public children: Entity[] = []
   public components: Component[] = []
@@ -18,7 +17,6 @@ export class Entity {
     this.transform = new Transform(this)
     this.mesh = new Mesh()
     this.material = new Material()
-    this.hdrMaterial = new HDRMaterial()
   }
 
   public update(time: number, renderDelta: number) {

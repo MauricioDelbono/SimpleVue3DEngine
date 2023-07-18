@@ -5,7 +5,7 @@ import { Entity } from '@/models/entity'
 import { Scene } from '@/models/scene'
 import webgl from '@/helpers/webgl'
 import utils from '@/helpers/utils'
-import { DefaultPipeline, SkyboxPipeline, type Pipeline, HDRPipeline, LightPipeline } from '@/models/pipeline'
+import { DefaultPipeline, SkyboxPipeline, type Pipeline, LightPipeline } from '@/models/pipeline'
 
 export const useWebGLStore = defineStore('webgl', () => {
   const canvas: Ref<HTMLCanvasElement> = ref({} as HTMLCanvasElement)
@@ -52,10 +52,9 @@ export const useWebGLStore = defineStore('webgl', () => {
     } else {
       gl.value = glContext
 
-      pipelines.value.default = new DefaultPipeline(gl.value)
       pipelines.value.skybox = new SkyboxPipeline(gl.value)
       pipelines.value.light = new LightPipeline(gl.value)
-      pipelines.value.hdr = new HDRPipeline(gl.value)
+      pipelines.value.default = new DefaultPipeline(gl.value)
     }
 
     return true

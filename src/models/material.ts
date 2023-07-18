@@ -9,22 +9,6 @@ export interface IMaterial {
 }
 
 export class Material {
-  public albedo: vec4
-  public specular: vec4
-  public roughness: number
-  public specularFactor: number
-  public diffuse: WebGLTexture | null
-
-  constructor() {
-    this.albedo = [0.5, 0.5, 0.5, 1]
-    this.specular = [1, 1, 1, 1]
-    this.roughness = 80
-    this.specularFactor = 1
-    this.diffuse = null
-  }
-}
-
-export class HDRMaterial {
   public albedo: vec3
   public diffuse: WebGLTexture | null
   public specular: WebGLTexture | null

@@ -15,7 +15,6 @@ const camera = useCamera()
 const initialize = async () => {
   inputStore.initialize()
   renderStore.scene.fogColor = [0.0, 0.0, 0.0, 1]
-  renderStore.scene.defaultPipeline = 'hdr'
 
   const cubeMesh = Primitives.createCube()
   const sphereMesh = Primitives.createSphere()
@@ -48,20 +47,20 @@ const initialize = async () => {
   dirLight.specular = vec3.scale(dirLight.specular, dirLight.specular, 0.7)
 
   const cube = renderStore.createEntity([-5, 0, 0], cubeMesh, null)
-  cube.hdrMaterial.diffuse = containerDiffuse
-  cube.hdrMaterial.specular = containerSpecular
-  cube.hdrMaterial.emission = containerEmission
+  cube.material.diffuse = containerDiffuse
+  cube.material.specular = containerSpecular
+  cube.material.emission = containerEmission
 
   const sphere = renderStore.createEntity([0, 2, 5], sphereMesh, defaultTexture)
-  sphere.hdrMaterial.albedo = [0.4, 0.2, 0.2]
+  sphere.material.albedo = [0.4, 0.2, 0.2]
 
   const plane = renderStore.createEntity([0, -5, 0], planeMesh, defaultTexture)
-  plane.hdrMaterial.albedo = [1, 0.5, 0.31]
+  plane.material.albedo = [1, 0.5, 0.31]
 
   const cube2 = renderStore.createEntity([10, 5, 2], cubeMesh, null)
-  cube2.hdrMaterial.diffuse = containerDiffuse
-  cube2.hdrMaterial.specular = containerSpecular
-  cube2.hdrMaterial.shininess = 64.0
+  cube2.material.diffuse = containerDiffuse
+  cube2.material.specular = containerSpecular
+  cube2.material.shininess = 64.0
 }
 </script>
 

@@ -54,6 +54,10 @@ uniform DirLight dirLight;
 uniform SpotLight spotLight;
 uniform PointLight pointLights[NR_POINT_LIGHTS];
 
+// uniform vec4 uFogColor;
+// uniform float uFogNear;
+// uniform float uFogFar;
+
 // function prototypes
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
@@ -61,6 +65,9 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 
 void main()
 {
+    // float fogAmount = smoothstep(uFogNear, uFogFar, gl_FragCoord.z);
+    // outColor = mix(outColor, uFogColor, fogAmount);
+
     // properties
     vec3 norm = normalize(Normal);
     vec3 viewDir = normalize(viewPos - FragPos);
