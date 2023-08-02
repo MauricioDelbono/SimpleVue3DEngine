@@ -89,6 +89,12 @@ export const useWebGLStore = defineStore('webgl', () => {
     if (scene.skybox) {
       lastUsedPipeline = 'skybox'
       const pipeline = pipelines.value.skybox
+      let vao = scene.skybox.mesh.vaoMap.skybox
+      if (!scene.skybox.mesh.vaoMap.skybox) {
+        vao = pipeline.createMeshVAO(scene.skybox.mesh, 3)
+        scene.skybox.mesh.vaoMap.skybox = vao
+      }
+
       pipeline.setGlobalUniforms(scene)
       pipeline.render(scene)
     }

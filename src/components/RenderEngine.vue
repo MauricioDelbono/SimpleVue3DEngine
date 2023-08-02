@@ -1,21 +1,29 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, watch } from 'vue'
 import { useWebGLStore } from '../stores/webgl'
 import { storeToRefs } from 'pinia'
 import { useRenderStore } from '../stores/render'
 import { Entity } from '../models/entity'
 import { usePhysicsStore } from '@/stores/physics'
+import { useAssetsStore } from '@/stores/assets'
+import Textures from '@/helpers/texture'
+import { Material } from '@/models/material'
 
 const emit = defineEmits(['ready'])
 
 const store = useWebGLStore()
 const renderStore = useRenderStore()
 const physicsStore = usePhysicsStore()
-const { subscribers, scene, lastRenderTime } = storeToRefs(renderStore)
+const assetsStore = useAssetsStore()
+const { subscribers, scene, lastRenderTime, isRendering } = storeToRefs(renderStore)
+let renderHandle: number = 0
 
 const initialize = () => {
   store.initialize('canvas')
   store.setFieldOfView(60)
+
+  const texture = assetsStore.addTexture('default', Textures.createDefaultTexture())
+  assetsStore.addMaterial('default', new Material(texture))
 
   emit('ready')
 }
@@ -36,7 +44,7 @@ const render = (time: number) => {
   })
 
   store.resize()
-  store.clearCanvas(scene.value.fogColor)
+  store.clearCanvas(scene.value.fog.color)
   store.setGlobalUniforms(scene.value)
   scene.value.updateWorldMatrix()
 
@@ -57,12 +65,19 @@ const render = (time: number) => {
     subscriber.lateUpdate(time, renderDelta)
   })
 
-  requestAnimationFrame(render)
+  renderHandle = requestAnimationFrame(render)
 }
+
+watch(isRendering, () => {
+  if (isRendering.value) {
+    renderHandle = requestAnimationFrame(render)
+  } else {
+    cancelAnimationFrame(renderHandle)
+  }
+})
 
 onMounted(() => {
   initialize()
-  requestAnimationFrame(render)
 })
 </script>
 

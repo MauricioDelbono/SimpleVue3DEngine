@@ -7,16 +7,20 @@ import { Transform } from './transform'
 export class Entity {
   public transform: Transform
   public mesh: Mesh
-  public material: Material
   public parent: Entity | null = null
   public children: Entity[] = []
   public components: Component[] = []
   public pipeline: string | null = null
+  public material: Material
 
   constructor() {
     this.transform = new Transform(this)
     this.mesh = new Mesh()
     this.material = new Material()
+  }
+
+  public setMaterial(material: Material) {
+    this.material = { ...material }
   }
 
   public update(time: number, renderDelta: number) {

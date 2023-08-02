@@ -48,8 +48,24 @@ export class SkyboxPipeline implements Pipeline {
     }
   }
 
-  public createMeshVAO(mesh: Mesh, numberOfComponents: number = 3) {
-    return null
+  public createMeshVAO(mesh: Mesh, numberOfComponents: number = 2) {
+    this.gl.useProgram(this.program)
+    const vao = this.gl.createVertexArray()
+    this.gl.bindVertexArray(vao)
+
+    const positionBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer)
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(mesh.positions), this.gl.STATIC_DRAW)
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer)
+    this.gl.vertexAttribPointer(this.attributes.aPosition, 2, this.gl.FLOAT, false, 0, 0)
+    this.gl.enableVertexAttribArray(this.attributes.aPosition)
+    const indicesBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+    this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(mesh.indices), this.gl.STATIC_DRAW)
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+    this.gl.bindVertexArray(null)
+
+    return vao
   }
 
   public setGlobalUniforms(scene: Scene): void {
@@ -174,7 +190,7 @@ export class DefaultPipeline implements Pipeline {
       spotLightCutOff: this.gl.getUniformLocation(this.program, 'spotLight.cutOff'),
       spotLightOuterCutOff: this.gl.getUniformLocation(this.program, 'spotLight.outerCutOff'),
 
-      albedo: this.gl.getUniformLocation(this.program, 'material.albedo'),
+      color: this.gl.getUniformLocation(this.program, 'material.color'),
       diffuse: this.gl.getUniformLocation(this.program, 'material.diffuse'),
       specular: this.gl.getUniformLocation(this.program, 'material.specular'),
       emission: this.gl.getUniformLocation(this.program, 'material.emission'),
@@ -273,7 +289,7 @@ export class DefaultPipeline implements Pipeline {
   }
 
   public render(scene: Scene, entity: Entity): void {
-    this.gl.uniform3fv(this.uniforms.albedo, entity.material.albedo)
+    this.gl.uniform3fv(this.uniforms.color, entity.material.color)
     this.gl.uniform1i(this.uniforms.diffuse, 0)
     this.gl.uniform1i(this.uniforms.specular, 1)
     this.gl.uniform1i(this.uniforms.emission, 2)

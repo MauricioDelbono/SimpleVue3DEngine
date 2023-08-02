@@ -1,12 +1,3 @@
-export interface IMesh {
-  positions: number[]
-  normals: number[]
-  textureCoords: number[]
-  indices: number[]
-
-  vaoMap: Record<string, WebGLVertexArrayObject | null>
-}
-
 export class Mesh {
   public positions: number[]
   public normals: number[]

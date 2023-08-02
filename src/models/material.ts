@@ -1,25 +1,24 @@
-import type { vec3, vec4 } from 'gl-matrix'
-
-export interface IMaterial {
-  albedo: vec4
-  specular: vec4
-  roughness: number
-  specularFactor: number
-  diffuse: WebGLTexture | null
-}
+import { vec3 } from 'gl-matrix'
+import type { Texture } from './texture'
 
 export class Material {
-  public albedo: vec3
-  public diffuse: WebGLTexture | null
-  public specular: WebGLTexture | null
-  public emission: WebGLTexture | null
+  public color: vec3
+  public diffuse: Texture
+  public specular: Texture
+  public emission: Texture
   public shininess: number
 
-  constructor() {
-    this.albedo = [0, 0, 0]
-    this.diffuse = null
-    this.specular = null
-    this.emission = null
-    this.shininess = 32.0
+  constructor(
+    diffuse: Texture = null,
+    specular: Texture = null,
+    emission: Texture = null,
+    color = vec3.fromValues(0, 0, 0),
+    shininess = 32.0
+  ) {
+    this.color = color
+    this.shininess = shininess
+    this.diffuse = diffuse
+    this.specular = specular
+    this.emission = emission
   }
 }

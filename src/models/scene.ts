@@ -1,33 +1,47 @@
-import { vec4, vec3 } from 'gl-matrix'
+import { vec3, vec4 } from 'gl-matrix'
 import { Entity } from './entity'
 import { Camera } from './camera'
 import { Mesh } from './mesh'
-import type { Pipeline } from './pipeline'
-import type { DirectionalLight, PointLight, SpotLight } from './light'
+import { PointLight, DirectionalLight, SpotLight } from './light'
+import type { Texture } from './texture'
+import Primitives from '@/helpers/primitives'
+import type { Material } from './material'
+import { storeToRefs } from 'pinia'
+import { useAssetsStore } from '@/stores/assets'
 
 export class Skybox {
-  public texture: WebGLTexture
+  public texture: Texture
   public mesh: Mesh
-  public pipeline: Pipeline
+  public pipeline: string
 
-  constructor(texture: WebGLTexture, mesh: Mesh, pipeline: Pipeline) {
+  constructor(texture: Texture, mesh: Mesh) {
     this.texture = texture
     this.mesh = mesh
-    this.pipeline = pipeline
+    this.pipeline = 'skybox'
+  }
+}
+
+export class Fog {
+  public color: vec4
+  public near: number
+  public far: number
+
+  constructor() {
+    this.color = vec4.fromValues(0.5, 0.5, 0.5, 1)
+    this.near = 1
+    this.far = 1
   }
 }
 
 export interface IScene {
-  fogColor: vec4
-  fogNear: number
-  fogFar: number
-  lightDirection: vec3
-  lightColor: vec4
+  fog: Fog
   skybox?: Skybox
   camera: Camera
   entities: Entity[]
   defaultPipeline: string
   lights: Entity[]
+  spotLight: SpotLight | null
+  directionalLight: DirectionalLight | null
 
   addEntity(entity: Entity): void
   removeEntity(entity: Entity): void
@@ -37,11 +51,7 @@ export interface IScene {
 }
 
 export class Scene {
-  public fogColor: vec4
-  public fogNear: number
-  public fogFar: number
-  public lightDirection: vec3
-  public lightColor: vec4
+  public fog: Fog
   public skybox?: Skybox
   public camera: Camera
   public entities: Entity[]
@@ -50,21 +60,15 @@ export class Scene {
   public spotLight: SpotLight | null
   public directionalLight: DirectionalLight | null
 
+  public assets = useAssetsStore()
+
   constructor() {
-    this.fogColor = vec4.fromValues(0.5, 0.5, 0.5, 1)
-    this.fogNear = 1
-    this.fogFar = 1
-    this.lightDirection = vec3.fromValues(1, 8, -10)
-    this.lightColor = vec4.fromValues(1, 1, 1, 1)
+    this.fog = new Fog()
     this.camera = new Camera()
     this.entities = []
     this.pointLights = []
     this.spotLight = null
     this.directionalLight = null
-  }
-
-  public addEntity(entity: Entity) {
-    this.entities.push(entity)
   }
 
   public removeEntity(entity: Entity) {
@@ -78,8 +82,64 @@ export class Scene {
     }
   }
 
-  public setSkybox(skybox: Skybox) {
-    this.skybox = skybox
+  public createEntity(position: vec3, mesh: Mesh, material?: Material, parent?: Entity): Entity {
+    const entity = new Entity()
+    entity.transform.position = position
+    entity.mesh = mesh
+    entity.setMaterial(material ?? this.assets.materials.default)
+
+    if (!parent) {
+      this.entities.push(entity)
+    } else {
+      parent.addChild(entity)
+    }
+
+    return entity
+  }
+
+  public createPointLight(position: vec3, mesh: Mesh, parent?: Entity): PointLight {
+    const light = new PointLight()
+    light.transform.position = position
+    light.mesh = mesh
+    light.pipeline = 'light'
+    if (!parent) {
+      this.entities.push(light)
+    } else {
+      parent.addChild(light)
+    }
+
+    this.pointLights.push(light)
+    return light
+  }
+
+  public createSpotLight(position: vec3, mesh: Mesh, parent?: Entity): SpotLight {
+    const light = new SpotLight()
+    light.transform.position = position
+    light.mesh = mesh
+    light.pipeline = 'light'
+    if (!parent) {
+      this.entities.push(light)
+    } else {
+      parent.addChild(light)
+    }
+
+    this.spotLight = light
+    return light
+  }
+
+  public createDirectionalLight(position?: vec3, mesh?: Mesh): DirectionalLight {
+    const light = new DirectionalLight()
+    light.transform.position = position ?? [0, 0, 0]
+    light.mesh = mesh ?? light.mesh
+    light.pipeline = 'light'
+    this.entities.push(light)
+    this.directionalLight = light
+    return light
+  }
+
+  public setSkybox(texture: Texture) {
+    const mesh = Primitives.createXYQuad()
+    this.skybox = new Skybox(texture, mesh)
   }
 
   public update(time: number, renderDelta: number) {
@@ -93,41 +153,4 @@ export class Scene {
   public updateWorldMatrix() {
     this.entities.forEach((entity) => entity.transform.updateWorldMatrix())
   }
-
-  // public render() {
-  //   this.entities.forEach((entity) => entity.render())
-  // }
-
-  // public renderSkybox() {
-  //   if (this.skybox) {
-  //     const { texture, mesh, pipeline } = this.skybox
-  //     pipeline.use()
-  //     pipeline.setUniform('uSkybox', texture)
-  //     mesh.render()
-  //   }
-  // }
-
-  // public renderDepth() {
-  //   this.entities.forEach(entity => entity.renderDepth())
-  // }
-
-  // public renderShadow() {
-  //   this.entities.forEach(entity => entity.renderShadow())
-  // }
-
-  // public renderGBuffer() {
-  //   this.entities.forEach(entity => entity.renderGBuffer())
-  // }
-
-  // public renderLighting() {
-  //   this.entities.forEach(entity => entity.renderLighting())
-  // }
-
-  // public renderPostProcessing() {
-  //   this.entities.forEach(entity => entity.renderPostProcessing())
-  // }
-
-  // public renderUI() {
-  //   this.entities.forEach(entity => entity.renderUI())
-  // }
 }
