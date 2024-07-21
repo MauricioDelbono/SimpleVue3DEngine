@@ -25,37 +25,38 @@ export function useCamera() {
     const angleY = (mouseDelta.value.y * MAX_DEGREES) / lookSpeed
     mouseDelta.value.x = 0
     mouseDelta.value.y = 0
-    scene.value.camera.rotation[0] -= angleY
-    scene.value.camera.rotation[1] -= angleX
+    scene.value.camera.transform.rotation[0] += angleY
+    scene.value.camera.transform.rotation[1] -= angleX
     vec3.zero(translation)
+    const moveSpeed = input.isKeyPressed(KeyCodes.KEY_SHIFT_LEFT) ? speed * 3 * renderDelta : speed * renderDelta
 
     if (input.isKeyPressed(KeyCodes.KEY_W)) {
-      translation[2] -= speed * renderDelta
+      translation[2] += moveSpeed
     }
 
     if (input.isKeyPressed(KeyCodes.KEY_S)) {
-      translation[2] += speed * renderDelta
+      translation[2] -= moveSpeed
     }
 
     if (input.isKeyPressed(KeyCodes.KEY_A)) {
-      translation[0] -= speed * renderDelta
+      translation[0] += moveSpeed
     }
 
     if (input.isKeyPressed(KeyCodes.KEY_D)) {
-      translation[0] += speed * renderDelta
+      translation[0] -= moveSpeed
     }
 
     if (input.isKeyPressed(KeyCodes.KEY_Q)) {
-      translation[1] -= speed * renderDelta
+      translation[1] += moveSpeed
     }
 
     if (input.isKeyPressed(KeyCodes.KEY_E)) {
-      translation[1] += speed * renderDelta
+      translation[1] -= moveSpeed
     }
 
-    vec3.rotateX(translation, translation, rotationOrigin, utils.degToRad(scene.value.camera.rotation[0]))
-    vec3.rotateY(translation, translation, rotationOrigin, utils.degToRad(scene.value.camera.rotation[1]))
-    vec3.add(scene.value.camera.position, scene.value.camera.position, translation)
+    vec3.rotateX(translation, translation, rotationOrigin, utils.degToRad(scene.value.camera.transform.rotation[0]))
+    vec3.rotateY(translation, translation, rotationOrigin, utils.degToRad(scene.value.camera.transform.rotation[1]))
+    vec3.add(scene.value.camera.transform.position, scene.value.camera.transform.position, translation)
   }
 
   onMounted(() => {

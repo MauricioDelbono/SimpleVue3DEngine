@@ -1,19 +1,11 @@
-import type { vec3 } from 'gl-matrix'
+import { vec3 } from 'gl-matrix'
+import { Entity } from './entity'
 
-export interface ICamera {
-  position: vec3
-  rotation: vec3
-  up: vec3
-}
-
-export class Camera {
-  public position: vec3
-  public rotation: vec3
+export class Camera extends Entity {
   public up: vec3
 
   constructor() {
-    this.position = [0, 0, 0]
-    this.rotation = [0, 0, 0]
+    super()
     this.up = [0, 1, 0]
   }
 

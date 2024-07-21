@@ -51,7 +51,7 @@ export class Transform {
     this.localMatrix = this.getMatrix(this.localMatrix)
 
     if (matrix) {
-      mat4.multiply(this.worldMatrix, matrix, this.localMatrix)
+      mat4.multiply(this.worldMatrix, this.localMatrix, matrix)
     } else {
       mat4.copy(this.worldMatrix, this.localMatrix)
     }
@@ -83,6 +83,13 @@ export class Transform {
     vec3.multiply(this.scale, this.scale, scale)
   }
 
+  public getFrontVector(): vec3 {
+    const front = vec3.fromValues(0, 0, 1)
+    const quaternion = quat.fromEuler([0, 0, 0, 0], this.rotation[0], this.rotation[1], this.rotation[2])
+    vec3.transformQuat(front, front, quaternion)
+    return front
+  }
+
   public getForwardVector(): vec3 {
     const rotation = quat.fromEuler([0, 0, 0, 0], this.rotation[0], this.rotation[1], this.rotation[2])
     const forward = vec3.fromValues(0, 0, 1)
@@ -105,23 +112,21 @@ export class Transform {
   }
 
   public getForwardVectorWorld(): vec3 {
-    const rotation = quat.fromEuler([0, 0, 0, 0], this.worldRotation[0], this.worldRotation[1], this.worldRotation[2])
     const forward = vec3.fromValues(0, 0, 1)
-    vec3.transformQuat(forward, forward, rotation)
+    vec3.transformQuat(forward, forward, this.worldRotation)
+    vec3.normalize(forward, forward)
     return forward
   }
 
   public getRightVectorWorld(): vec3 {
-    const rotation = quat.fromEuler([0, 0, 0, 0], this.worldRotation[0], this.worldRotation[1], this.worldRotation[2])
     const right = vec3.fromValues(1, 0, 0)
-    vec3.transformQuat(right, right, rotation)
+    vec3.transformQuat(right, right, this.worldRotation)
     return right
   }
 
   public getUpVectorWorld(): vec3 {
-    const rotation = quat.fromEuler([0, 0, 0, 0], this.worldRotation[0], this.worldRotation[1], this.worldRotation[2])
     const up = vec3.fromValues(0, 1, 0)
-    vec3.transformQuat(up, up, rotation)
+    vec3.transformQuat(up, up, this.worldRotation)
     return up
   }
 }

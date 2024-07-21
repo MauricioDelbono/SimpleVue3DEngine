@@ -1,8 +1,8 @@
-import { onMounted, ref, type Ref } from 'vue'
+import { ref, type Ref } from 'vue'
 import { defineStore } from 'pinia'
-import { vec3 } from 'gl-matrix'
 import { Entity } from '@/models/entity'
 import { Scene } from '@/models/scene'
+import { useWebGLStore } from './webgl'
 
 interface Render {
   update: (time: number, renderDelta: number) => void
@@ -14,11 +14,12 @@ export const useRenderStore = defineStore('render', () => {
   const isRendering = ref(false)
   const lastRenderTime = ref(0)
   const scene: Ref<Scene> = ref(new Scene())
+  const store = useWebGLStore()
 
-  onMounted(() => {
-    scene.value.camera.position = vec3.fromValues(0, 10, -25)
-    scene.value.camera.rotation = vec3.fromValues(-25, 180, 0)
-  })
+  const initialize = () => {
+    store.initialize('canvas')
+    store.setFieldOfView(60)
+  }
 
   function subscribeToRender(subscriber: Render) {
     subscribers.value.push(subscriber)
@@ -29,6 +30,30 @@ export const useRenderStore = defineStore('render', () => {
     entity.children.forEach((child) => {
       traverseTree(child, callback)
     })
+  }
+
+  const renderScene = () => {
+    scene.value.updateWorldMatrix()
+
+    store.clearCanvas(scene.value.fog.color)
+    store.setRenderShadowMap(scene.value)
+
+    scene.value.entities.forEach((entity) => {
+      traverseTree(entity, (entity: Entity) => {
+        store.renderEntity(scene.value, entity)
+      })
+    })
+
+    store.resize()
+    store.setRenderColor(scene.value)
+
+    scene.value.entities.forEach((entity) => {
+      traverseTree(entity, (entity: Entity) => {
+        store.renderEntity(scene.value, entity)
+      })
+    })
+
+    // store.renderShadowMapTexture(scene.value)
   }
 
   const startRender = () => {
@@ -44,9 +69,11 @@ export const useRenderStore = defineStore('render', () => {
     isRendering,
     lastRenderTime,
     scene,
+    initialize,
     subscribeToRender,
     traverseTree,
     startRender,
-    stopRender
+    stopRender,
+    renderScene
   }
 })

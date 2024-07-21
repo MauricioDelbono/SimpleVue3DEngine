@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onMounted, watch } from 'vue'
-import { useWebGLStore } from '../stores/webgl'
 import { storeToRefs } from 'pinia'
 import { useRenderStore } from '../stores/render'
 import { Entity } from '../models/entity'
@@ -11,7 +10,6 @@ import { Material } from '@/models/material'
 
 const emit = defineEmits(['ready'])
 
-const store = useWebGLStore()
 const renderStore = useRenderStore()
 const physicsStore = usePhysicsStore()
 const assetsStore = useAssetsStore()
@@ -19,8 +17,7 @@ const { subscribers, scene, lastRenderTime, isRendering } = storeToRefs(renderSt
 let renderHandle: number = 0
 
 const initialize = () => {
-  store.initialize('canvas')
-  store.setFieldOfView(60)
+  renderStore.initialize()
 
   const texture = assetsStore.addTexture('default', Textures.createDefaultTexture())
   assetsStore.addMaterial('default', new Material(texture))
@@ -43,17 +40,8 @@ const render = (time: number) => {
     subscriber.update(time, renderDelta)
   })
 
-  store.resize()
-  store.clearCanvas(scene.value.fog.color)
-  store.setGlobalUniforms(scene.value)
-  scene.value.updateWorldMatrix()
-
   // Render
-  scene.value.entities.forEach((entity) => {
-    renderStore.traverseTree(entity, (entity: Entity) => {
-      store.renderEntity(scene.value, entity)
-    })
-  })
+  renderStore.renderScene()
 
   // Late update
   scene.value.entities.forEach((entity) => {
@@ -61,6 +49,7 @@ const render = (time: number) => {
       entity.lateUpdate(time, renderDelta)
     })
   })
+
   subscribers.value.forEach((subscriber) => {
     subscriber.lateUpdate(time, renderDelta)
   })

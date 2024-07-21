@@ -1,9 +1,13 @@
 import skyboxVertexShaderSource from '../shaders/skybox.vs'
 import skyboxFragmentShaderSource from '../shaders/skybox.fs'
-import HDRVertexShaderSource from '../shaders/default.vs'
-import HDRFragmentShaderSource from '../shaders/default.fs'
+import defaultVertexShaderSource from '../shaders/default.vs'
+import defaultFragmentShaderSource from '../shaders/default.fs'
 import lightVertexShaderSource from '../shaders/light.vs'
 import lightFragmentShaderSource from '../shaders/light.fs'
+import shadowVertexShaderSource from '../shaders/shadow.vs'
+import shadowFragmentShaderSource from '../shaders/shadow.fs'
+import quadVertexShaderSource from '../shaders/quad.vs'
+import quadFragmentShaderSource from '../shaders/quad.fs'
 import webgl from '@/helpers/webgl'
 import type { Entity } from './entity'
 import type { Scene } from './scene'
@@ -146,7 +150,149 @@ export class LightPipeline implements Pipeline {
   }
 
   public render(scene: Scene, entity: Entity): void {
+    this.gl.depthFunc(this.gl.LESS)
+    this.gl.useProgram(this.program)
     this.gl.uniformMatrix4fv(this.uniforms.model, false, entity.transform.worldMatrix)
+
+    this.gl.drawElements(this.gl.TRIANGLES, entity.mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
+  }
+}
+
+export class ShadowPipeline implements Pipeline {
+  gl: WebGL2RenderingContext
+  program: WebGLProgram
+  attributes: Record<string, number>
+  uniforms: Record<string, WebGLUniformLocation | null>
+  store = useWebGLStore()
+
+  constructor(gl: WebGL2RenderingContext) {
+    this.gl = gl
+    this.program = webgl.createProgram(gl, shadowVertexShaderSource, shadowFragmentShaderSource)
+    this.attributes = this.createAttributes()
+    this.uniforms = this.createUniforms()
+  }
+
+  private createAttributes() {
+    return {
+      position: this.gl.getAttribLocation(this.program, 'aPosition')
+    }
+  }
+
+  private createUniforms() {
+    return {
+      model: this.gl.getUniformLocation(this.program, 'model'),
+      viewProjection: this.gl.getUniformLocation(this.program, 'viewProjection')
+    }
+  }
+
+  public createMeshVAO(mesh: Mesh, numberOfComponents: number = 3) {
+    this.gl.useProgram(this.program)
+    const vao = this.gl.createVertexArray()
+    this.gl.bindVertexArray(vao)
+
+    const positionBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer)
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(mesh.positions), this.gl.STATIC_DRAW)
+    const indicesBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+    this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(mesh.indices), this.gl.STATIC_DRAW)
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer)
+    this.gl.vertexAttribPointer(this.attributes.position, numberOfComponents, this.gl.FLOAT, false, 0, 0)
+    this.gl.enableVertexAttribArray(this.attributes.position)
+
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+
+    this.gl.bindVertexArray(null)
+
+    return vao
+  }
+
+  public setGlobalUniforms(scene: Scene): void {
+    this.gl.depthFunc(this.gl.LESS)
+    this.gl.useProgram(this.program)
+    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.store.getDepthFrameBuffer())
+    this.gl.uniformMatrix4fv(this.uniforms.viewProjection, false, this.store.getLightViewProjectionMatrix())
+  }
+
+  public render(scene: Scene, entity: Entity): void {
+    this.gl.depthFunc(this.gl.LESS)
+    this.gl.useProgram(this.program)
+    this.gl.uniformMatrix4fv(this.uniforms.model, false, entity.transform.worldMatrix)
+
+    this.gl.drawElements(this.gl.TRIANGLES, entity.mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
+  }
+}
+
+export class QuadPipeline implements Pipeline {
+  gl: WebGL2RenderingContext
+  program: WebGLProgram
+  attributes: Record<string, number>
+  uniforms: Record<string, WebGLUniformLocation | null>
+  store = useWebGLStore()
+
+  constructor(gl: WebGL2RenderingContext) {
+    this.gl = gl
+    this.program = webgl.createProgram(gl, quadVertexShaderSource, quadFragmentShaderSource)
+    this.attributes = this.createAttributes()
+    this.uniforms = this.createUniforms()
+  }
+
+  private createAttributes() {
+    return {
+      position: this.gl.getAttribLocation(this.program, 'aPosition'),
+      textureCoords: this.gl.getAttribLocation(this.program, 'aTextureCoords')
+    }
+  }
+
+  private createUniforms() {
+    return {
+      shadowMap: this.gl.getUniformLocation(this.program, 'shadowMap'),
+      nearPlane: this.gl.getUniformLocation(this.program, 'nearPlane'),
+      farPlane: this.gl.getUniformLocation(this.program, 'farPlane')
+    }
+  }
+
+  public createMeshVAO(mesh: Mesh, numberOfComponents: number = 2) {
+    this.gl.useProgram(this.program)
+    const vao = this.gl.createVertexArray()
+    this.gl.bindVertexArray(vao)
+
+    const positionBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer)
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(mesh.positions), this.gl.STATIC_DRAW)
+    const textureCoordsBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, textureCoordsBuffer)
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(mesh.textureCoords), this.gl.STATIC_DRAW)
+    const indicesBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+    this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(mesh.indices), this.gl.STATIC_DRAW)
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer)
+    this.gl.vertexAttribPointer(this.attributes.position, numberOfComponents, this.gl.FLOAT, false, 0, 0)
+    this.gl.enableVertexAttribArray(this.attributes.position)
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, textureCoordsBuffer)
+    this.gl.vertexAttribPointer(this.attributes.texture, 2, this.gl.FLOAT, false, 0, 0)
+    this.gl.enableVertexAttribArray(this.attributes.texture)
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+
+    this.gl.bindVertexArray(null)
+
+    return vao
+  }
+
+  public setGlobalUniforms(scene: Scene): void {
+    this.gl.depthFunc(this.gl.ALWAYS)
+    this.gl.useProgram(this.program)
+    this.gl.uniform1f(this.uniforms.nearPlane, 0)
+    this.gl.uniform1f(this.uniforms.farPlane, 100)
+    this.gl.uniform1i(this.uniforms.shadowMap, 0)
+    this.gl.activeTexture(this.gl.TEXTURE0)
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.store.getShadowMap())
+  }
+
+  public render(scene: Scene, entity: Entity): void {
+    this.gl.drawElements(this.gl.TRIANGLES, entity.mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
   }
 }
 
@@ -160,7 +306,7 @@ export class DefaultPipeline implements Pipeline {
 
   constructor(gl: WebGL2RenderingContext) {
     this.gl = gl
-    this.program = webgl.createProgram(gl, HDRVertexShaderSource, HDRFragmentShaderSource)
+    this.program = webgl.createProgram(gl, defaultVertexShaderSource, defaultFragmentShaderSource)
     this.attributes = this.createAttributes()
     this.uniforms = this.createUniforms()
   }
@@ -199,7 +345,9 @@ export class DefaultPipeline implements Pipeline {
       viewPosition: this.gl.getUniformLocation(this.program, 'viewPos'),
       model: this.gl.getUniformLocation(this.program, 'model'),
       view: this.gl.getUniformLocation(this.program, 'view'),
-      projection: this.gl.getUniformLocation(this.program, 'projection')
+      projection: this.gl.getUniformLocation(this.program, 'projection'),
+      lightViewProjectionMatrix: this.gl.getUniformLocation(this.program, 'lightViewProjectionMatrix'),
+      shadowMap: this.gl.getUniformLocation(this.program, 'shadowMap')
     }
 
     for (let index = 0; index < this.maxPointLights; index++) {
@@ -249,11 +397,15 @@ export class DefaultPipeline implements Pipeline {
 
   public setGlobalUniforms(scene: Scene): void {
     this.gl.depthFunc(this.gl.LESS)
+    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null)
+    this.gl.activeTexture(this.gl.TEXTURE0)
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.store.getShadowMap())
     this.gl.useProgram(this.program)
 
     this.gl.uniformMatrix4fv(this.uniforms.view, false, this.store.getViewMatrix())
     this.gl.uniformMatrix4fv(this.uniforms.projection, false, this.store.getProjectionMatrix())
-    this.gl.uniform3fv(this.uniforms.viewPosition, scene.camera.position)
+    this.gl.uniform3fv(this.uniforms.viewPosition, scene.camera.transform.position)
+    this.gl.uniformMatrix4fv(this.uniforms.lightViewProjectionMatrix, false, this.store.getLightViewProjectionMatrix())
 
     if (scene.directionalLight) {
       this.gl.uniform1i(this.uniforms.dirLightEnabled, 1)
@@ -286,23 +438,31 @@ export class DefaultPipeline implements Pipeline {
         this.gl.uniform3fv(this.uniforms[`pointLights[${index}]Specular`], light.specular)
       }
     }
+
+    this.gl.uniform1i(this.uniforms.shadowMap, 0)
+    // this.gl.activeTexture(this.gl.TEXTURE0)
+    // this.gl.bindTexture(this.gl.TEXTURE_2D, this.store.getShadowMap())
   }
 
   public render(scene: Scene, entity: Entity): void {
+    this.gl.depthFunc(this.gl.LESS)
+    this.gl.useProgram(this.program)
     this.gl.uniform3fv(this.uniforms.color, entity.material.color)
-    this.gl.uniform1i(this.uniforms.diffuse, 0)
-    this.gl.uniform1i(this.uniforms.specular, 1)
-    this.gl.uniform1i(this.uniforms.emission, 2)
+    this.gl.uniform1i(this.uniforms.diffuse, 1)
+    this.gl.uniform1i(this.uniforms.specular, 2)
+    this.gl.uniform1i(this.uniforms.emission, 3)
     this.gl.uniform1f(this.uniforms.shininess, entity.material.shininess)
     this.gl.uniformMatrix4fv(this.uniforms.model, false, entity.transform.worldMatrix)
 
-    this.gl.activeTexture(this.gl.TEXTURE0)
+    this.gl.activeTexture(this.gl.TEXTURE1)
     this.gl.bindTexture(this.gl.TEXTURE_2D, entity.material.diffuse)
 
-    this.gl.activeTexture(this.gl.TEXTURE1)
+    this.gl.activeTexture(this.gl.TEXTURE2)
     this.gl.bindTexture(this.gl.TEXTURE_2D, entity.material.specular)
 
-    this.gl.activeTexture(this.gl.TEXTURE2)
+    this.gl.activeTexture(this.gl.TEXTURE3)
     this.gl.bindTexture(this.gl.TEXTURE_2D, entity.material.emission)
+
+    this.gl.drawElements(this.gl.TRIANGLES, entity.mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
   }
 }

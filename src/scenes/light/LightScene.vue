@@ -55,7 +55,7 @@ const initialize = async () => {
   spotLight.transform.scale = [0.2, 0.2, 1]
   spotLight.transform.rotation = [0, -90, 0]
 
-  const dirLight = scene.value.createDirectionalLight([0, 0, 0], meshes.value.cube)
+  const dirLight = scene.value.createDirectionalLight([0, 20, -10], meshes.value.cube)
   dirLight.transform.scale = [0.2, 0.2, 1]
   dirLight.transform.rotation = [25, 0, 0]
   dirLight.ambient = vec3.scale(dirLight.ambient, dirLight.ambient, 0.7)
@@ -68,19 +68,20 @@ const initialize = async () => {
   sphere.material.color = [0.4, 0.2, 0.2]
 
   const plane = scene.value.createEntity([0, -5, 0], meshes.value.plane, materials.value.default)
+  plane.transform.scale = [10, 1, 10]
   plane.material.color = [1, 0.5, 0.31]
 
   const cube2 = scene.value.createEntity([10, 5, 2], meshes.value.cube, materials.value.container)
   cube2.material.shininess = 64.0
 
-  // renderStore.startRender()
+  renderStore.startRender()
 }
 </script>
 
 <template>
   <RenderEngine @ready="initialize">
     <FPSInfo />
-    <SceneControls />
+    <!-- <SceneControls /> -->
   </RenderEngine>
 </template>
 

@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import type { Mesh } from '@/models/mesh'
 import type { Material } from '@/models/material'
 import type { Pipeline } from '@/models/pipeline'
-import type { Texture } from '@/models/texture'
+import type { Texture } from '@/models/types'
 
 export const useAssetsStore = defineStore('assets', () => {
   const textures: Ref<Record<string, Texture>> = ref({})
