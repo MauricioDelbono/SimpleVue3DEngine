@@ -1,3 +1,5 @@
+import { v4 as uuid } from 'uuid'
+
 import type { Class } from '@/constants/types'
 import { Component } from './component'
 import { Material } from './material'
@@ -12,6 +14,8 @@ export class Entity {
   public components: Component[] = []
   public pipeline: string | null = null
   public material: Material
+  public name: string = 'Untitled'
+  public uuid: string = uuid()
 
   constructor() {
     this.transform = new Transform(this)

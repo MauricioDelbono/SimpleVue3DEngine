@@ -71,17 +71,29 @@ onMounted(() => {
 </script>
 
 <template>
-  <slot></slot>
-  <canvas id="canvas" tabindex="0"></canvas>
+  <div class="render-engine">
+    <slot name="left"></slot>
+    <slot></slot>
+    <canvas id="canvas" tabindex="0"></canvas>
+    <slot name="right"></slot>
+  </div>
 </template>
 
 <style scoped lang="scss">
-#canvas {
-  width: 100%;
-  height: 100%;
+.render-engine {
+  display: grid;
+  grid-template-areas: 'left main right';
+  width: inherit;
+  overflow: hidden;
 
-  &:focus {
-    outline: none;
+  #canvas {
+    width: 100%;
+    height: 100%;
+    grid-area: main;
+
+    &:focus {
+      outline: none;
+    }
   }
 }
 </style>

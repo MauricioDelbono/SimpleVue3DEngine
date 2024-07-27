@@ -2,7 +2,15 @@
 import { ref, watch } from 'vue'
 
 const props = defineProps({
-  modelValue: { type: [String, Number], required: true }
+  modelValue: {
+    type: [String, Number],
+    required: true
+  },
+  block: {
+    type: Boolean,
+    required: false,
+    default: false
+  }
 })
 
 const emits = defineEmits(['update:modelValue', 'change'])
@@ -23,11 +31,11 @@ watch(
 </script>
 
 <template>
-  <input v-model="value" v-bind="$attrs" class="input" @change="event_updateValue" />
+  <input v-model="value" v-bind="$attrs" class="v-input" :class="{ block }" @change="event_updateValue" />
 </template>
 
 <style scoped lang="scss">
-input {
+.v-input {
   background: #2d2d2d;
   border: 1px solid gray;
   border-radius: 4px;
@@ -45,6 +53,10 @@ input {
 
   &:active {
     transform: scale(0.95);
+  }
+
+  &.block {
+    width: 100%;
   }
 }
 </style>

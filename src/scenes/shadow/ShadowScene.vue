@@ -8,7 +8,8 @@ import FPSInfo from '@/components/FPSInfo.vue'
 import { vec3 } from 'gl-matrix'
 import { useAssetsStore } from '@/stores/assets'
 import { storeToRefs } from 'pinia'
-import CameraSettings from '@/components/CameraSettings.vue'
+import SceneInspector from '@/components/SceneInspector/SceneInspector.vue'
+import SceneControls from '@/components/SceneControls.vue'
 
 const renderStore = useRenderStore()
 const { scene } = storeToRefs(renderStore)
@@ -50,14 +51,20 @@ const initialize = async () => {
   const cubeFloor = scene.value.createEntity([0, -2, 0], meshes.value.cube)
   cubeFloor.transform.scale = [15, 0.1, 15]
 
-  renderStore.startRender()
+  // renderStore.startRender()
 }
 </script>
 
 <template>
   <RenderEngine @ready="initialize">
-    <FPSInfo />
-    <CameraSettings />
+    <template #default>
+      <FPSInfo />
+      <SceneControls />
+    </template>
+
+    <template #right>
+      <SceneInspector />
+    </template>
   </RenderEngine>
 </template>
 

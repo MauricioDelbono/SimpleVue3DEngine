@@ -14,7 +14,6 @@ export const useWebGLStore = defineStore('webgl', () => {
   const gl: Ref<WebGL2RenderingContext> = ref({} as WebGL2RenderingContext)
   const pipelines: Ref<Record<string, Pipeline>> = ref({})
 
-  // let lastUsedVertexArray: WebGLVertexArrayObject | null = null
   let lastUsedPipeline: string | null = null
 
   const cameraQuaternion = quat.create()
@@ -32,8 +31,6 @@ export const useWebGLStore = defineStore('webgl', () => {
   const viewDirectionProjectionMatrix = mat4.create()
   const viewDirectionProjectionInverseMatrix = mat4.create()
 
-  // const modelMatrix = mat4.create()
-  // const modelQuaternion = quat.create()
   const modelViewProjectionMatrix = mat4.create()
   const modelInverseMatrix = mat4.create()
 
@@ -51,8 +48,6 @@ export const useWebGLStore = defineStore('webgl', () => {
     gl.value.enable(gl.value.CULL_FACE)
     gl.value.enable(gl.value.DEPTH_TEST)
     gl.value.clear(gl.value.COLOR_BUFFER_BIT | gl.value.DEPTH_BUFFER_BIT)
-
-    // lastUsedVertexArray = null
   }
 
   function initialize(canvasId: string) {

@@ -57,18 +57,4 @@ const resizeCanvasToDisplaySize = (canvas: HTMLCanvasElement) => {
   return false
 }
 
-// // Create array buffer
-// const buffer = new ArrayBuffer(16 * vertices.length)
-// // Fill array buffer
-// const dv = new DataView(buffer)
-// vertices.forEach((vertex, i) => {
-//   dv.setFloat32(16 * i, vertex.position[0], true)
-//   dv.setFloat32(16 * i + 4, vertex.position[1], true)
-//   dv.setFloat32(16 * i + 8, vertex.position[2], true)
-//   dv.setInt8(16 * i + 12, vertex.normal[0] * 0x7f)
-//   dv.setInt8(16 * i + 13, vertex.normal[1] * 0x7f)
-//   dv.setInt8(16 * i + 14, vertex.normal[2] * 0x7f)
-//   dv.setInt8(16 * i + 15, 0)
-// })
-
 export default { createProgram, resizeCanvasToDisplaySize }

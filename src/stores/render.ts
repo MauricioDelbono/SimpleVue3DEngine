@@ -60,9 +60,15 @@ export const useRenderStore = defineStore('render', () => {
     isRendering.value = true
   }
 
+  const pauseRender = () => {
+    isRendering.value = true
+  }
+
   const stopRender = () => {
     isRendering.value = false
   }
+
+  const stepRender = () => {}
 
   return {
     subscribers,
@@ -73,7 +79,9 @@ export const useRenderStore = defineStore('render', () => {
     subscribeToRender,
     traverseTree,
     startRender,
+    pauseRender,
     stopRender,
+    stepRender,
     renderScene
   }
 })

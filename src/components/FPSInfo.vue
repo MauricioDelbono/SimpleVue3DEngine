@@ -41,9 +41,7 @@ onMounted(() => {
   top: 0;
   left: 0;
   z-index: 1;
-  color: green;
-  font-size: 16px;
-  line-height: 20px;
+  color: var(--success-color);
   padding: 10px;
   background: rgba(0, 0, 0, 0.5);
   display: flex;

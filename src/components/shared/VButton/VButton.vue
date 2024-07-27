@@ -1,11 +1,11 @@
 <script setup lang="ts"></script>
 
 <template>
-  <button v-bind="$attrs"><slot /></button>
+  <button class="v-button" v-bind="$attrs"><slot /></button>
 </template>
 
 <style scoped lang="scss">
-button {
+.v-button {
   background: #2d2d2d;
   border: 1px solid gray;
   border-radius: 4px;
