@@ -19,15 +19,15 @@ const state = reactive({
   tabs: [] as ITab[]
 })
 
-const setActiveTab = (tabId: string) => {
+function setActiveTab(tabId: string) {
   state.activeTab = state.tabs.find((tab) => tab.id === tabId) ?? state.tabs[0]
 }
 
-const isActiveTab = (tabId: string) => {
+function isActiveTab(tabId: string) {
   return state.activeTab.id === tabId
 }
 
-const registerTab = (id: string, name: string) => {
+function registerTab(id: string, name: string) {
   state.tabs.push({ id, name })
   state.activeTab = state.tabs[0]
 }

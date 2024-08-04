@@ -4,7 +4,6 @@ import { useInputStore } from '@/stores/input'
 import { useRenderStore } from '@/stores/render'
 import { vec3 } from 'gl-matrix'
 import { storeToRefs } from 'pinia'
-import { onMounted } from 'vue'
 
 const MAX_DEGREES = 360
 const PIXELS_PER_ROUND = 1000
@@ -20,7 +19,13 @@ export function useCamera() {
   const speed = 0.01
   const lookSpeed = PIXELS_PER_ROUND * MOUSE_SENSITIVITY
 
-  const update = (time: number, renderDelta: number) => {
+  function initialize() {
+    vec3.set(rotationOrigin, 0, 0, 0)
+    vec3.set(translation, 0, 0, 0)
+    store.subscribeToRender({ update, lateUpdate: () => {} })
+  }
+
+  function update(time: number, renderDelta: number) {
     const angleX = (mouseDelta.value.x * MAX_DEGREES) / lookSpeed
     const angleY = (mouseDelta.value.y * MAX_DEGREES) / lookSpeed
     mouseDelta.value.x = 0
@@ -59,9 +64,5 @@ export function useCamera() {
     vec3.add(scene.value.camera.transform.position, scene.value.camera.transform.position, translation)
   }
 
-  onMounted(() => {
-    store.subscribeToRender({ update, lateUpdate: () => {} })
-  })
-
-  return {}
+  return { initialize }
 }

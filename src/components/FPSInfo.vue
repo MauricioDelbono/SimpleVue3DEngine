@@ -1,27 +1,42 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, watch } from 'vue'
 import { useRenderStore } from '@/stores/render'
+import { storeToRefs } from 'pinia'
 
 const FPS = ref(0)
 const minFPS = ref(1000)
 const maxFPS = ref(0)
-const avgFPS = ref(0)
 const frameDelta = ref(0)
 
 const store = useRenderStore()
+const { isRendering, hasStarted } = storeToRefs(store)
 
-const update = (time: number, renderDelta: number) => {
+function reset() {
+  FPS.value = 0
+  minFPS.value = 1000
+  maxFPS.value = 0
+  frameDelta.value = 0
+}
+
+function update(time: number, renderDelta: number) {
   frameDelta.value = Math.round(renderDelta * 100) / 100
   FPS.value = Math.round(1000 / frameDelta.value)
   minFPS.value = Math.min(minFPS.value, FPS.value)
   maxFPS.value = Math.max(maxFPS.value, FPS.value)
-  // avgFPS.value = Math.round((avgFPS.value + FPS.value) / 2)
 }
 
-onMounted(() => {
-  setTimeout(() => {
+watch(isRendering, () => {
+  if (!isRendering.value) {
+    reset()
+  }
+})
+
+watch(hasStarted, () => {
+  if (!hasStarted.value) {
+    reset()
+  } else {
     store.subscribeToRender({ update, lateUpdate: () => {} })
-  }, 500)
+  }
 })
 </script>
 
@@ -30,7 +45,6 @@ onMounted(() => {
     <span>FPS: {{ FPS }}</span>
     <span>Min FPS: {{ minFPS }}</span>
     <span>Max FPS: {{ maxFPS }}</span>
-    <span>Avg FPS: {{ avgFPS }}</span>
     <span>Frame delta: {{ frameDelta }}ms</span>
   </div>
 </template>

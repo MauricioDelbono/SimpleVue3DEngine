@@ -1,7 +1,31 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import VIcon from '@/components/shared/VIcon/VIcon.vue'
+
+const props = defineProps({
+  icon: {
+    type: Boolean,
+    required: false,
+    default: false
+  },
+  iconLeft: {
+    type: [String, Boolean],
+    required: false,
+    default: false
+  },
+  iconRight: {
+    type: [String, Boolean],
+    required: false,
+    default: false
+  }
+})
+</script>
 
 <template>
-  <button class="v-button" v-bind="$attrs"><slot /></button>
+  <button class="v-button" v-bind="$attrs">
+    <VIcon v-if="props.iconLeft" :name="props.iconLeft" />
+    <slot v-if="!props.icon" />
+    <VIcon v-if="props.iconRight" :name="props.iconRight" />
+  </button>
 </template>
 
 <style scoped lang="scss">

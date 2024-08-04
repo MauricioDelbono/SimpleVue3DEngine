@@ -5,6 +5,7 @@ import { Component } from './component'
 import { Material } from './material'
 import { Mesh } from './mesh'
 import { Transform } from './transform'
+import type { vec3 } from 'gl-matrix'
 
 export class Entity {
   public transform: Transform
@@ -14,13 +15,15 @@ export class Entity {
   public components: Component[] = []
   public pipeline: string | null = null
   public material: Material
-  public name: string = 'Untitled'
+  public name: string = 'Empty'
   public uuid: string = uuid()
 
-  constructor() {
+  constructor(name: string = 'Empty', mesh: Mesh | undefined, position: vec3 = [0, 0, 0]) {
     this.transform = new Transform(this)
-    this.mesh = new Mesh()
+    this.transform.position = position
+    this.mesh = mesh ?? new Mesh(name)
     this.material = new Material()
+    this.name = this.mesh.name
   }
 
   public setMaterial(material: Material) {

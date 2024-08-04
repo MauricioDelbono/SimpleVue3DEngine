@@ -18,7 +18,7 @@ export default class Primitives {
       0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11, 12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23
     ]
 
-    const cube = new Mesh(positions, normals, textureCoords, indices)
+    const cube = new Mesh('Cube', positions, normals, textureCoords, indices)
     return cube
   }
 
@@ -57,7 +57,7 @@ export default class Primitives {
       }
     }
 
-    const plane = new Mesh(positions, normals, textureCoords, indices)
+    const plane = new Mesh('Plane', positions, normals, textureCoords, indices)
     return plane
   }
 
@@ -122,7 +122,7 @@ export default class Primitives {
       }
     }
 
-    const sphere = new Mesh(positions, normals, textureCoords, indices)
+    const sphere = new Mesh('Sphere', positions, normals, textureCoords, indices)
     return sphere
   }
 
@@ -207,7 +207,7 @@ export default class Primitives {
       }
     }
 
-    const cone = new Mesh(positions, normals, textureCoords, indices)
+    const cone = new Mesh('TCone', positions, normals, textureCoords, indices)
     return cone
   }
 
@@ -261,7 +261,7 @@ export default class Primitives {
       }
     }
 
-    const torus = new Mesh(positions, normals, textureCoords, indices)
+    const torus = new Mesh('Torus', positions, normals, textureCoords, indices)
     return torus
   }
 
@@ -281,7 +281,7 @@ export default class Primitives {
     const textureCoords = [0, 0, 1, 0, 0, 1, 1, 1]
     const indices = [0, 1, 2, 2, 1, 3]
 
-    const quad = new Mesh(positions, normals, textureCoords, indices)
+    const quad = new Mesh('Quad', positions, normals, textureCoords, indices)
     return quad
   }
 }

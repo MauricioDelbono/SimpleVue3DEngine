@@ -83,9 +83,7 @@ export class Scene {
   }
 
   public createEntity(position: vec3, mesh: Mesh, material?: Material, parent?: Entity): Entity {
-    const entity = new Entity()
-    entity.transform.position = position
-    entity.mesh = mesh
+    const entity = new Entity(mesh.name, mesh, position)
     entity.setMaterial(material ?? this.assets.materials.default)
 
     if (!parent) {
@@ -98,10 +96,7 @@ export class Scene {
   }
 
   public createPointLight(position: vec3, mesh: Mesh, parent?: Entity): PointLight {
-    const light = new PointLight()
-    light.transform.position = position
-    light.mesh = mesh
-    light.pipeline = 'light'
+    const light = new PointLight(mesh, position)
     if (!parent) {
       this.entities.push(light)
     } else {
@@ -113,10 +108,7 @@ export class Scene {
   }
 
   public createSpotLight(position: vec3, mesh: Mesh, parent?: Entity): SpotLight {
-    const light = new SpotLight()
-    light.transform.position = position
-    light.mesh = mesh
-    light.pipeline = 'light'
+    const light = new SpotLight(mesh, position)
     if (!parent) {
       this.entities.push(light)
     } else {
@@ -128,10 +120,7 @@ export class Scene {
   }
 
   public createDirectionalLight(position?: vec3, mesh?: Mesh): DirectionalLight {
-    const light = new DirectionalLight()
-    light.transform.position = position ?? [0, 0, 0]
-    light.mesh = mesh ?? light.mesh
-    light.pipeline = 'light'
+    const light = new DirectionalLight(mesh, position)
     this.entities.push(light)
     this.directionalLight = light
     return light

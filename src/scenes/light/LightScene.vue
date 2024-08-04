@@ -19,7 +19,7 @@ const { textures, materials, meshes } = storeToRefs(assetsStore)
 const inputStore = useInputStore()
 const camera = useCamera()
 
-const loadAssets = async () => {
+async function loadAssets() {
   assetsStore.addTexture('containerDiffuse', await Textures.createTextureFromImage('./src/assets/images/containerDiffuse.png'))
   assetsStore.addTexture('containerSpecular', await Textures.createTextureFromImage('./src/assets/images/containerSpecular.png', false))
   assetsStore.addTexture('containerEmission', await Textures.createTextureFromImage('./src/assets/images/containerEmission.jpg'))
@@ -35,7 +35,7 @@ const loadAssets = async () => {
   assetsStore.addMesh('plane', Primitives.createPlane())
 }
 
-const initialize = async () => {
+async function initialize() {
   inputStore.initialize()
   scene.value.fog.color = [0.0, 0.0, 0.0, 1]
 

@@ -11,6 +11,13 @@ export const useAssetsStore = defineStore('assets', () => {
   const materials: Ref<Record<string, Material>> = ref({})
   const pipelines: Ref<Record<string, Pipeline>> = ref({})
 
+  function reset() {
+    textures.value = {}
+    meshes.value = {}
+    materials.value = {}
+    pipelines.value = {}
+  }
+
   function addTexture(key: string, texture: Texture): Texture {
     textures.value[key] = texture
     return texture
@@ -41,6 +48,7 @@ export const useAssetsStore = defineStore('assets', () => {
     addTexture,
     addMesh,
     addMaterial,
-    addPipeline
+    addPipeline,
+    reset
   }
 })

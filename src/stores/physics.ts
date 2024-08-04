@@ -16,35 +16,43 @@ export const usePhysicsStore = defineStore('physics', () => {
   const solvers: Solver[] = []
   const gravity = vec3.fromValues(0, -9.81, 0)
 
+  function reset() {
+    objects.splice(0, objects.length)
+    solvers.splice(0, solvers.length)
+    gravity[0] = 0
+    gravity[1] = -9.81
+    gravity[2] = 0
+  }
+
   onMounted(() => {
     addSolver(new ImpulseSolver())
     addSolver(new PositionSolver())
     store.subscribeToRender({ update: step, lateUpdate: () => {} })
   })
 
-  const addObject = (object: Rigidbody) => {
+  function addObject(object: Rigidbody) {
     objects.push(object)
   }
 
-  const removeObject = (object: Rigidbody) => {
+  function removeObject(object: Rigidbody) {
     const index = objects.indexOf(object)
     if (index > -1) {
       objects.splice(index, 1)
     }
   }
 
-  const addSolver = (solver: Solver) => {
+  function addSolver(solver: Solver) {
     solvers.push(solver)
   }
 
-  const removeSolver = (solver: Solver) => {
+  function removeSolver(solver: Solver) {
     const index = solvers.indexOf(solver)
     if (index > -1) {
       solvers.splice(index, 1)
     }
   }
 
-  const step = (time: number, delta: number) => {
+  function step(time: number, delta: number) {
     // Dynamics
     applyForces()
     moveObjects(delta)
@@ -55,21 +63,21 @@ export const usePhysicsStore = defineStore('physics', () => {
     resolveCollisions(delta, collisions)
   }
 
-  const applyForces = () => {
+  function applyForces() {
     objects.forEach((object) => {
       if (object.isStatic) return
       object.applyForce(gravity)
     })
   }
 
-  const moveObjects = (delta: number) => {
+  function moveObjects(delta: number) {
     objects.forEach((object) => {
       if (object.isStatic) return
       object.move(delta)
     })
   }
 
-  const broadPhaseCollisions = () => {
+  function broadPhaseCollisions() {
     const colliderPairs: CollisionPair[] = []
     // First iterate over all rigidbodies
     objects.reverse().forEach((object, i) => {
@@ -95,7 +103,7 @@ export const usePhysicsStore = defineStore('physics', () => {
     return colliderPairs
   }
 
-  const narrowPhaseCollisions = (collisionPairs: CollisionPair[]) => {
+  function narrowPhaseCollisions(collisionPairs: CollisionPair[]) {
     const collisions: Collision[] = []
     collisionPairs.forEach((collisionPair: CollisionPair) => {
       const collisionPoints = collisionPair.colliderA.testCollision(collisionPair.colliderB)
@@ -107,12 +115,12 @@ export const usePhysicsStore = defineStore('physics', () => {
     return collisions
   }
 
-  const resolveCollisions = (delta: number, collisions: Collision[]) => {
+  function resolveCollisions(delta: number, collisions: Collision[]) {
     solvers.forEach((solver) => {
       if (collisions.length === 0) return
       solver.solve(collisions, delta)
     })
   }
 
-  return { addObject, removeObject, addSolver, removeSolver }
+  return { addObject, removeObject, addSolver, removeSolver, reset }
 })

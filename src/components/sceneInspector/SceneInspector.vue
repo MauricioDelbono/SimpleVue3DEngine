@@ -29,11 +29,10 @@ function event_selectEntity(entity: Entity, setActiveTab: Function) {
 
 <style scoped lang="scss">
 .scene-inspector {
-  width: 100px;
+  width: 350px;
   min-width: 350px;
   background-color: var(--background-color);
   color: var(--text-color);
-  grid-area: right;
   display: flex;
   flex-direction: column;
   border-left: 1px solid var(--border-color);

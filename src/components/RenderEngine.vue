@@ -2,59 +2,47 @@
 import { onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRenderStore } from '../stores/render'
-import { Entity } from '../models/entity'
 import { usePhysicsStore } from '@/stores/physics'
 import { useAssetsStore } from '@/stores/assets'
 import Textures from '@/helpers/texture'
 import { Material } from '@/models/material'
+
+const props = defineProps({
+  autoPlay: {
+    type: Boolean,
+    required: false,
+    default: false
+  }
+})
 
 const emit = defineEmits(['ready'])
 
 const renderStore = useRenderStore()
 const physicsStore = usePhysicsStore()
 const assetsStore = useAssetsStore()
-const { subscribers, scene, lastRenderTime, isRendering } = storeToRefs(renderStore)
+const { stepForward, isRendering, hasStarted } = storeToRefs(renderStore)
 let renderHandle: number = 0
 
-const initialize = () => {
+function initialize() {
   renderStore.initialize()
 
   const texture = assetsStore.addTexture('default', Textures.createDefaultTexture())
   assetsStore.addMaterial('default', new Material(texture))
 
-  emit('ready')
+  emit('ready', afterInitialize)
 }
 
-const render = (time: number) => {
-  const renderDelta = time - lastRenderTime.value
-  lastRenderTime.value = time
+function afterInitialize() {
+  if (props.autoPlay) {
+    renderStore.startRender()
+  }
+}
 
-  // Update
-  scene.value.entities.forEach((entity) => {
-    renderStore.traverseTree(entity, (entity: Entity) => {
-      entity.update(time, renderDelta)
-    })
-  })
-
-  subscribers.value.forEach((subscriber) => {
-    subscriber.update(time, renderDelta)
-  })
-
-  // Render
-  renderStore.renderScene()
-
-  // Late update
-  scene.value.entities.forEach((entity) => {
-    renderStore.traverseTree(entity, (entity: Entity) => {
-      entity.lateUpdate(time, renderDelta)
-    })
-  })
-
-  subscribers.value.forEach((subscriber) => {
-    subscriber.lateUpdate(time, renderDelta)
-  })
-
-  renderHandle = requestAnimationFrame(render)
+function render(time: number) {
+  renderStore.render(time)
+  if (isRendering.value) {
+    renderHandle = requestAnimationFrame(render)
+  }
 }
 
 watch(isRendering, () => {
@@ -62,6 +50,24 @@ watch(isRendering, () => {
     renderHandle = requestAnimationFrame(render)
   } else {
     cancelAnimationFrame(renderHandle)
+  }
+})
+
+watch(stepForward, () => {
+  if (stepForward.value > 0) {
+    renderHandle = requestAnimationFrame(render)
+  } else {
+    cancelAnimationFrame(renderHandle)
+  }
+})
+
+watch(hasStarted, () => {
+  if (!hasStarted.value) {
+    cancelAnimationFrame(renderHandle)
+    assetsStore.reset()
+    physicsStore.reset()
+    renderStore.reset()
+    initialize()
   }
 })
 
@@ -82,14 +88,13 @@ onMounted(() => {
 <style scoped lang="scss">
 .render-engine {
   display: grid;
-  grid-template-areas: 'left main right';
+  grid-template-columns: 1fr auto;
   width: inherit;
   overflow: hidden;
 
   #canvas {
     width: 100%;
     height: 100%;
-    grid-area: main;
 
     &:focus {
       outline: none;

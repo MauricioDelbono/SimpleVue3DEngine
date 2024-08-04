@@ -2,7 +2,6 @@
 import { useRenderStore } from '@/stores/render'
 import { storeToRefs } from 'pinia'
 import VButton from './shared/VButton/VButton.vue'
-import VIcon from './shared/VIcon/VIcon.vue'
 
 const store = useRenderStore()
 const { isRendering } = storeToRefs(store)
@@ -10,14 +9,10 @@ const { isRendering } = storeToRefs(store)
 
 <template>
   <div class="overlay">
-    <VIcon name="play" />
-    <VIcon name="pause" />
-    <VIcon name="stop" />
-    <VIcon name="step-forward" />
-    <VButton v-if="!isRendering" @click="store.startRender()">Play</VButton>
-    <VButton v-else @click="store.pauseRender()">Pause</VButton>
-    <VButton :disabled="!isRendering" @click="store.stopRender()">Stop</VButton>
-    <VButton :disabled="isRendering" @click="store.stepRender()">Step</VButton>
+    <VButton v-if="!isRendering" icon icon-left="play" @click="store.startRender()">Play</VButton>
+    <VButton v-else icon icon-left="pause" @click="store.pauseRender()">Pause</VButton>
+    <VButton icon icon-left="stop" :disabled="!isRendering" @click="store.stopRender()">Stop</VButton>
+    <VButton icon icon-left="step-forward" :disabled="isRendering" @click="store.stepRender()">Step</VButton>
   </div>
 </template>
 

@@ -1,4 +1,4 @@
-const compileShader = (gl: WebGL2RenderingContext, shaderSource: string, shaderType: number): WebGLShader => {
+function compileShader(gl: WebGL2RenderingContext, shaderSource: string, shaderType: number): WebGLShader {
   const shader = gl.createShader(shaderType)
   if (!shader) {
     throw 'Error creating shader'
@@ -15,7 +15,7 @@ const compileShader = (gl: WebGL2RenderingContext, shaderSource: string, shaderT
   return shader
 }
 
-const createShadersFromScript = (gl: WebGL2RenderingContext, vertexShaderSource: string, fragmentShaderSource: string) => {
+function createShadersFromScript(gl: WebGL2RenderingContext, vertexShaderSource: string, fragmentShaderSource: string) {
   if (!vertexShaderSource || !fragmentShaderSource) {
     throw '*** Error: at least one shader file not found'
   }
@@ -25,7 +25,7 @@ const createShadersFromScript = (gl: WebGL2RenderingContext, vertexShaderSource:
   return { vertexShader, fragmentShader }
 }
 
-const createProgram = (gl: WebGL2RenderingContext, vertexShaderSource: string, fragmentShaderSource: string): WebGLProgram => {
+function createProgram(gl: WebGL2RenderingContext, vertexShaderSource: string, fragmentShaderSource: string): WebGLProgram {
   const { vertexShader, fragmentShader } = createShadersFromScript(gl, vertexShaderSource, fragmentShaderSource)
   const program = gl.createProgram()
   if (!program) {
@@ -44,7 +44,7 @@ const createProgram = (gl: WebGL2RenderingContext, vertexShaderSource: string, f
   return program
 }
 
-const resizeCanvasToDisplaySize = (canvas: HTMLCanvasElement) => {
+function resizeCanvasToDisplaySize(canvas: HTMLCanvasElement) {
   const width = canvas.clientWidth
   const height = canvas.clientHeight
 

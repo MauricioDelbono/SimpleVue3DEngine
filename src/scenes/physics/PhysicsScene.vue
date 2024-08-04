@@ -18,12 +18,12 @@ const assetsStore = useAssetsStore()
 const { meshes } = storeToRefs(assetsStore)
 const camera = useCamera()
 
-const loadAssets = async () => {
+async function loadAssets() {
   assetsStore.addMesh('bigSphereMesh', Primitives.createSphere(1, 100, 100))
   assetsStore.addMesh('sphereMesh', Primitives.createSphere())
 }
 
-const initialize = async () => {
+async function initialize() {
   inputStore.initialize()
   renderStore.scene.fog.color = [0.0, 0.0, 0.0, 1]
 

@@ -2,6 +2,8 @@
   "extends": "@tsconfig/node18/tsconfig.json",
   "include": ["vite.config.*", "vitest.config.*", "cypress.config.*", "playwright.config.*"],
   "compilerOptions": {
+    "module": "es2022",
+    "moduleResolution": "Node",
     "composite": true,
     "types": ["node"]
   }

@@ -8,27 +8,28 @@ import FPSInfo from '@/components/FPSInfo.vue'
 import { vec3 } from 'gl-matrix'
 import { useAssetsStore } from '@/stores/assets'
 import { storeToRefs } from 'pinia'
-import SceneInspector from '@/components/SceneInspector/SceneInspector.vue'
+import SceneInspector from '@/components/sceneInspector/SceneInspector.vue'
 import SceneControls from '@/components/SceneControls.vue'
 
 const renderStore = useRenderStore()
 const { scene } = storeToRefs(renderStore)
 const assetsStore = useAssetsStore()
-const { textures, materials, meshes } = storeToRefs(assetsStore)
+const { meshes } = storeToRefs(assetsStore)
 const inputStore = useInputStore()
 const camera = useCamera()
 
-const loadAssets = async () => {
+async function loadAssets() {
   assetsStore.addMesh('cube', Primitives.createCube())
   assetsStore.addMesh('sphere', Primitives.createSphere())
   assetsStore.addMesh('plane', Primitives.createPlane())
 }
 
-const initialize = async () => {
+async function initialize(done: () => {}) {
   inputStore.initialize()
   scene.value.fog.color = [0.0, 0.0, 0.0, 1]
   scene.value.camera.transform.position = vec3.fromValues(-20, 21, -20)
   scene.value.camera.transform.rotation = vec3.fromValues(40, 45, 0)
+  camera.initialize()
 
   await loadAssets()
 
@@ -50,8 +51,9 @@ const initialize = async () => {
 
   const cubeFloor = scene.value.createEntity([0, -2, 0], meshes.value.cube)
   cubeFloor.transform.scale = [15, 0.1, 15]
+  cubeFloor.name = 'floor'
 
-  // renderStore.startRender()
+  done()
 }
 </script>
 

@@ -1,4 +1,5 @@
 export class Mesh {
+  public name: string
   public positions: number[]
   public normals: number[]
   public textureCoords: number[]
@@ -6,7 +7,8 @@ export class Mesh {
 
   public vaoMap: Record<string, WebGLVertexArrayObject | null>
 
-  constructor(positions: number[] = [], normals: number[] = [], textureCoords: number[] = [], indices: number[] = []) {
+  constructor(name: string, positions: number[] = [], normals: number[] = [], textureCoords: number[] = [], indices: number[] = []) {
+    this.name = name
     this.positions = positions
     this.normals = normals
     this.textureCoords = textureCoords

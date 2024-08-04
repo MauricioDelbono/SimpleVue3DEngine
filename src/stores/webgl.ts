@@ -1,6 +1,6 @@
 import { ref, type Ref } from 'vue'
 import { defineStore } from 'pinia'
-import { mat4, quat, vec3, vec4 } from 'gl-matrix'
+import { mat4, vec3, vec4 } from 'gl-matrix'
 import { Entity } from '@/models/entity'
 import { Scene } from '@/models/scene'
 import webgl from '@/helpers/webgl'
@@ -16,7 +16,6 @@ export const useWebGLStore = defineStore('webgl', () => {
 
   let lastUsedPipeline: string | null = null
 
-  const cameraQuaternion = quat.create()
   const cameraMatrix = mat4.create()
   const viewMatrix = mat4.create()
   const projectionMatrix = mat4.create()
@@ -42,6 +41,29 @@ export const useWebGLStore = defineStore('webgl', () => {
   let depthTexture: Texture = null
   let depthFrameBuffer: FrameBuffer = null
   let useShadowMapPipeline = false
+
+  function reset() {
+    clearCanvas()
+    lastUsedPipeline = null
+    pipelines.value = {}
+    mat4.identity(cameraMatrix)
+    mat4.identity(viewMatrix)
+    mat4.identity(projectionMatrix)
+    mat4.identity(viewProjectionMatrix)
+    mat4.identity(lightViewMatrix)
+    mat4.identity(lightProjectionMatrix)
+    mat4.identity(lightViewProjectionMatrix)
+    mat4.identity(viewDirectionMatrix)
+    mat4.identity(viewDirectionProjectionMatrix)
+    mat4.identity(viewDirectionProjectionInverseMatrix)
+    mat4.identity(modelViewProjectionMatrix)
+    mat4.identity(modelInverseMatrix)
+    fieldOfViewRadians = 0
+    aspect = 16 / 9
+    depthTexture = null
+    depthFrameBuffer = null
+    useShadowMapPipeline = false
+  }
 
   function clearCanvas(color: vec4 = [0, 0, 0, 1]) {
     gl.value.clearColor(color[0], color[1], color[2], color[3])
@@ -70,18 +92,18 @@ export const useWebGLStore = defineStore('webgl', () => {
     return true
   }
 
-  const setFieldOfView = (fieldOfViewDegrees: number) => {
+  function setFieldOfView(fieldOfViewDegrees: number) {
     fieldOfViewRadians = utils.degToRad(fieldOfViewDegrees)
     recalculateViewport()
   }
 
-  const recalculateViewport = () => {
+  function recalculateViewport() {
     gl.value.viewport(0, 0, canvas.value.width, canvas.value.height)
     aspect = canvas.value.clientWidth / canvas.value.clientHeight
     mat4.perspective(projectionMatrix, fieldOfViewRadians, aspect, zNear, zFar)
   }
 
-  const resize = () => {
+  function resize() {
     const result = webgl.resizeCanvasToDisplaySize(canvas.value)
     gl.value.viewport(0, 0, canvas.value.width, canvas.value.height)
     if (result) {
@@ -89,7 +111,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     }
   }
 
-  const initializeShadowMap = () => {
+  function initializeShadowMap() {
     depthTexture = gl.value.createTexture()
     gl.value.bindTexture(gl.value.TEXTURE_2D, depthTexture)
 
@@ -112,12 +134,11 @@ export const useWebGLStore = defineStore('webgl', () => {
     gl.value.bindTexture(gl.value.TEXTURE_2D, null)
   }
 
-  const renderShadowMapTexture = (scene: Scene) => {
-    const entity = new Entity()
+  function renderShadowMapTexture(scene: Scene) {
     const pipeline = pipelines.value.quad
     const mesh = Primitives.createXYQuad()
     mesh.vaoMap.quad = pipeline.createMeshVAO(mesh, 2)
-    entity.mesh = mesh
+    const entity = new Entity(mesh.name, mesh)
 
     gl.value.bindVertexArray(mesh.vaoMap.quad)
     pipeline.setGlobalUniforms(scene)
@@ -125,7 +146,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     lastUsedPipeline = 'quad'
   }
 
-  const setRenderShadowMap = (scene: Scene) => {
+  function setRenderShadowMap(scene: Scene) {
     if (!scene.directionalLight) return
 
     const lightTransform = scene.directionalLight.transform
@@ -146,7 +167,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     pipelines.value.shadow.setGlobalUniforms(scene)
   }
 
-  const setRenderColor = (scene: Scene) => {
+  function setRenderColor(scene: Scene) {
     useShadowMapPipeline = false
     gl.value.cullFace(gl.value.BACK)
 
@@ -177,7 +198,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     pipelines.value.default.setGlobalUniforms(scene)
   }
 
-  const renderEntity = (scene: Scene, entity: Entity) => {
+  function renderEntity(scene: Scene, entity: Entity) {
     // don't render lights with shadow map pipeline
     if (useShadowMapPipeline && entity.pipeline === 'light') return
 
@@ -203,7 +224,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     pipeline.render(scene, entity)
   }
 
-  const getViewDirectionProjectionInverseMatrix = () => {
+  function getViewDirectionProjectionInverseMatrix() {
     mat4.copy(viewDirectionMatrix, viewMatrix)
     viewDirectionMatrix[12] = 0
     viewDirectionMatrix[13] = 0
@@ -213,49 +234,49 @@ export const useWebGLStore = defineStore('webgl', () => {
     return viewDirectionProjectionInverseMatrix
   }
 
-  const getModelInverseMatrix = (entity: Entity) => {
+  function getModelInverseMatrix(entity: Entity) {
     mat4.transpose(modelInverseMatrix, mat4.invert(modelInverseMatrix, entity.transform.worldMatrix))
     return modelInverseMatrix
   }
 
-  const getModelViewProjectionMatrix = (entity: Entity) => {
+  function getModelViewProjectionMatrix(entity: Entity) {
     mat4.multiply(modelViewProjectionMatrix, viewProjectionMatrix, entity.transform.worldMatrix)
     return modelViewProjectionMatrix
   }
 
-  const getCameraMatrix = () => {
+  function getCameraMatrix() {
     return cameraMatrix
   }
 
-  const getProjectionMatrix = () => {
+  function getProjectionMatrix() {
     return projectionMatrix
   }
 
-  const getViewMatrix = () => {
+  function getViewMatrix() {
     return viewMatrix
   }
 
-  const getViewProjectionMatrix = () => {
+  function getViewProjectionMatrix() {
     return viewProjectionMatrix
   }
 
-  const getLightProjectionMatrix = () => {
+  function getLightProjectionMatrix() {
     return lightProjectionMatrix
   }
 
-  const getLightViewMatrix = () => {
+  function getLightViewMatrix() {
     return lightViewMatrix
   }
 
-  const getLightViewProjectionMatrix = () => {
+  function getLightViewProjectionMatrix() {
     return lightViewProjectionMatrix
   }
 
-  const getShadowMap = () => {
+  function getShadowMap() {
     return depthTexture
   }
 
-  const getDepthFrameBuffer = () => {
+  function getDepthFrameBuffer() {
     return depthFrameBuffer
   }
 
@@ -282,6 +303,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     getModelViewProjectionMatrix,
     getViewDirectionProjectionInverseMatrix,
     getShadowMap,
-    getDepthFrameBuffer
+    getDepthFrameBuffer,
+    reset
   }
 })

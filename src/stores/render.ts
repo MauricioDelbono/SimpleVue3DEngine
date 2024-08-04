@@ -2,6 +2,7 @@ import { ref, type Ref } from 'vue'
 import { defineStore } from 'pinia'
 import { Entity } from '@/models/entity'
 import { Scene } from '@/models/scene'
+import utils from '@/helpers/utils'
 import { useWebGLStore } from './webgl'
 
 interface Render {
@@ -11,12 +12,23 @@ interface Render {
 
 export const useRenderStore = defineStore('render', () => {
   const subscribers: Ref<Render[]> = ref([])
+  const hasStarted = ref(false)
   const isRendering = ref(false)
+  const stepForward = ref(0)
   const lastRenderTime = ref(0)
   const scene: Ref<Scene> = ref(new Scene())
   const store = useWebGLStore()
 
-  const initialize = () => {
+  function reset() {
+    store.reset()
+    subscribers.value = []
+    isRendering.value = false
+    stepForward.value = 0
+    scene.value = new Scene()
+    hasStarted.value = false
+  }
+
+  function initialize() {
     store.initialize('canvas')
     store.setFieldOfView(60)
   }
@@ -25,14 +37,48 @@ export const useRenderStore = defineStore('render', () => {
     subscribers.value.push(subscriber)
   }
 
-  const traverseTree = (entity: Entity, callback: (entity: Entity) => void) => {
+  function traverseTree(entity: Entity, callback: (entity: Entity) => void) {
     callback(entity)
     entity.children.forEach((child) => {
       traverseTree(child, callback)
     })
   }
 
-  const renderScene = () => {
+  function render(time: number) {
+    const renderDelta = time - lastRenderTime.value
+    lastRenderTime.value = time
+
+    // Update
+    scene.value.entities.forEach((entity) => {
+      traverseTree(entity, (entity: Entity) => {
+        entity.update(time, renderDelta)
+      })
+    })
+
+    subscribers.value.forEach((subscriber) => {
+      subscriber.update(time, renderDelta)
+    })
+
+    // Render
+    renderScene()
+
+    // Late update
+    scene.value.entities.forEach((entity) => {
+      traverseTree(entity, (entity: Entity) => {
+        entity.lateUpdate(time, renderDelta)
+      })
+    })
+
+    subscribers.value.forEach((subscriber) => {
+      subscriber.lateUpdate(time, renderDelta)
+    })
+
+    if (stepForward.value > 0) {
+      stepForward.value--
+    }
+  }
+
+  function renderScene() {
     scene.value.updateWorldMatrix()
 
     store.clearCanvas(scene.value.fog.color)
@@ -56,32 +102,41 @@ export const useRenderStore = defineStore('render', () => {
     // store.renderShadowMapTexture(scene.value)
   }
 
-  const startRender = () => {
+  function startRender() {
+    lastRenderTime.value = performance.now()
+    if (!hasStarted.value) {
+      // scene.value = staticScene.value
+    }
+
+    hasStarted.value = true
     isRendering.value = true
   }
 
-  const pauseRender = () => {
-    isRendering.value = true
-  }
-
-  const stopRender = () => {
+  function pauseRender() {
     isRendering.value = false
   }
 
-  const stepRender = () => {}
+  function stopRender() {
+    hasStarted.value = false
+  }
+
+  function stepRender() {
+    isRendering.value = false
+    stepForward.value = 1
+  }
 
   return {
-    subscribers,
+    stepForward,
     isRendering,
-    lastRenderTime,
+    hasStarted,
     scene,
     initialize,
     subscribeToRender,
-    traverseTree,
     startRender,
     pauseRender,
     stopRender,
     stepRender,
-    renderScene
+    render,
+    reset
   }
 })
