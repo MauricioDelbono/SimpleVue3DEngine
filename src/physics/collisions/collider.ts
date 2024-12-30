@@ -23,15 +23,11 @@ export class Collider extends Component {
     throw new Error('Not implemented in base class')
   }
 
-  public isWithinBounds(collider: Collider): boolean {
-    if (this.min[0] < collider.max[0] && this.max[0] > collider.min[0]) {
-      if (this.min[1] < collider.max[1] && this.max[1] > collider.min[1]) {
-        if (this.min[2] < collider.max[2] && this.max[2] > collider.min[2]) {
-          return true
-        }
-      }
-    }
+  public intersects(collider: Collider): boolean {
+    const overlapX = this.min[0] <= collider.max[0] && this.max[0] >= collider.min[0]
+    const overlapY = this.min[1] <= collider.max[1] && this.max[1] >= collider.min[1]
+    const overlapZ = this.min[2] <= collider.max[2] && this.max[2] >= collider.min[2]
 
-    return false
+    return overlapX && overlapY && overlapZ
   }
 }

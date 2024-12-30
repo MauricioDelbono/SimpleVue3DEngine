@@ -5,13 +5,31 @@ import { SphereCollider } from './sphereCollider'
 import type { CollisionPoints } from './collisionPoints'
 
 export class PlaneCollider extends Collider {
-  public plane: vec3 = vec3.create()
-  public distance: number = 0
+  public planeNormal: vec3 = vec3.create()
 
-  constructor(plane: vec3, distance: number) {
+  constructor(planeNormal: vec3) {
     super()
-    this.plane = plane
-    this.distance = distance
+    this.planeNormal = planeNormal
+  }
+
+  public get min(): vec3 {
+    const min = vec3.fromValues(Infinity, Infinity, Infinity)
+
+    this.entity.mesh.vertices.forEach((vertex) => {
+      vec3.min(min, min, this.entity.transform.toWorldSpace(vertex))
+    })
+
+    return min
+  }
+
+  public get max(): vec3 {
+    const max = vec3.fromValues(-Infinity, -Infinity, -Infinity)
+
+    this.entity.mesh.vertices.forEach((vertex) => {
+      vec3.max(max, max, this.entity.transform.toWorldSpace(vertex))
+    })
+
+    return max
   }
 
   public testCollision<T extends Collider>(collider: T): CollisionPoints {
@@ -26,7 +44,7 @@ export class PlaneCollider extends Collider {
   }
 
   public testSphereCollision(collider: SphereCollider): CollisionPoints {
-    return CollisionsHelper.getPlaneSphereCollision(this, collider)
+    return CollisionsHelper.getSpherePlaneCollision(collider, this)
   }
 
   public testPlaneCollision(collider: PlaneCollider): CollisionPoints {

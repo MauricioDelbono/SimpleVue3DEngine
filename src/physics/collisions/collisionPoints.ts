@@ -16,6 +16,6 @@ export class CollisionPoints {
     this.b = b
     this.normal = normal
     this.depth = depth
-    this.hasCollision = depth > 0
+    this.hasCollision = depth >= 0
   }
 }
