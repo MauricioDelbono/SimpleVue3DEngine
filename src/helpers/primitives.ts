@@ -23,10 +23,10 @@ export default class Primitives {
   }
 
   static createPlane(width: number = 20, depth: number = 20, subdivisionsWidth: number = 1, subdivisionsDepth: number = 1): Mesh {
-    width = width || 1
-    depth = depth || 1
-    subdivisionsWidth = subdivisionsWidth || 1
-    subdivisionsDepth = subdivisionsDepth || 1
+    width = width ?? 1
+    depth = depth ?? 1
+    subdivisionsWidth = subdivisionsWidth ?? 1
+    subdivisionsDepth = subdivisionsDepth ?? 1
 
     const positions = []
     const normals = []
@@ -46,7 +46,6 @@ export default class Primitives {
     const indices = []
 
     for (let z = 0; z < subdivisionsDepth; z++) {
-      // eslint-disable-line
       for (let x = 0; x < subdivisionsWidth; x++) {
         // eslint-disable-line
         // Make triangle 1 of quad.

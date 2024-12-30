@@ -1,11 +1,11 @@
 <script setup lang="ts">
 // import LightScene from './scenes/light/LightScene.vue'
-import ShadowScene from './scenes/shadow/ShadowScene.vue'
-// import PhysicsScene from './scenes/physics/PhysicsScene.vue'
+// import ShadowScene from './scenes/shadow/ShadowScene.vue'
+import PhysicsScene from './scenes/physics/PhysicsScene.vue'
 </script>
 
 <template>
-  <ShadowScene />
+  <PhysicsScene />
 </template>
 
 <style lang="scss">

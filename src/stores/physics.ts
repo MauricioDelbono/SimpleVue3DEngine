@@ -8,6 +8,7 @@ import type { Rigidbody } from '@/physics/dynamics/rigidBody'
 import { PositionSolver } from '@/physics/dynamics/positionSolver'
 import { ImpulseSolver } from '@/physics/dynamics/impulseSolver'
 import { CollisionPair } from '@/physics/collisions/collisionPair'
+import type { Time } from '@/models/time'
 
 export const usePhysicsStore = defineStore('physics', () => {
   const store = useRenderStore()
@@ -52,15 +53,15 @@ export const usePhysicsStore = defineStore('physics', () => {
     }
   }
 
-  function step(time: number, delta: number) {
+  function step(time: Time) {
     // Dynamics
     applyForces()
-    moveObjects(delta)
+    updateObjects(time)
 
     // Collisions
     const collisionPairs = broadPhaseCollisions()
     const collisions = narrowPhaseCollisions(collisionPairs)
-    resolveCollisions(delta, collisions)
+    resolveCollisions(time, collisions)
   }
 
   function applyForces() {
@@ -70,10 +71,10 @@ export const usePhysicsStore = defineStore('physics', () => {
     })
   }
 
-  function moveObjects(delta: number) {
+  function updateObjects(time: Time) {
     objects.forEach((object) => {
       if (object.isStatic) return
-      object.move(delta)
+      object.update(time)
     })
   }
 
@@ -92,7 +93,7 @@ export const usePhysicsStore = defineStore('physics', () => {
         // Then iterate over all colliders of each of the rigidbodies
         objectColliders.forEach((collider) => {
           otherObjectColliders.forEach((otherCollider) => {
-            if (collider.isWithinBounds(otherCollider)) {
+            if (collider.intersects(otherCollider)) {
               colliderPairs.push(new CollisionPair(object, otherObject, collider, otherCollider))
             }
           })
@@ -115,10 +116,10 @@ export const usePhysicsStore = defineStore('physics', () => {
     return collisions
   }
 
-  function resolveCollisions(delta: number, collisions: Collision[]) {
+  function resolveCollisions(time: Time, collisions: Collision[]) {
     solvers.forEach((solver) => {
       if (collisions.length === 0) return
-      solver.solve(collisions, delta)
+      solver.solve(collisions, time)
     })
   }
 

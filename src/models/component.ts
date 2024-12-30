@@ -1,4 +1,5 @@
 import { Entity } from './entity'
+import type { Time } from './time'
 
 export abstract class Component {
   public entity: Entity
@@ -10,7 +11,7 @@ export abstract class Component {
 
   public awake() {}
   public start() {}
-  public update(time: number, renderDelta: number) {}
-  public lateUpdate(time: number, renderDelta: number) {}
+  public update(time: Time) {}
+  public lateUpdate(time: Time) {}
   public destroy() {}
 }

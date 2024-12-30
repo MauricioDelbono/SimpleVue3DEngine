@@ -6,6 +6,7 @@ import { Material } from './material'
 import { Mesh } from './mesh'
 import { Transform } from './transform'
 import type { vec3 } from 'gl-matrix'
+import type { Time } from './time'
 
 export class Entity {
   public transform: Transform
@@ -30,12 +31,12 @@ export class Entity {
     this.material = { ...material }
   }
 
-  public update(time: number, renderDelta: number) {
-    this.components.forEach((component) => component.update(time, renderDelta))
+  public update(time: Time) {
+    this.components.forEach((component) => component.update(time))
   }
 
-  public lateUpdate(time: number, renderDelta: number) {
-    this.components.forEach((component) => component.lateUpdate(time, renderDelta))
+  public lateUpdate(time: Time) {
+    this.components.forEach((component) => component.lateUpdate(time))
   }
 
   public destroy() {

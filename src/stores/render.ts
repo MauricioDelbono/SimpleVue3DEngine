@@ -2,12 +2,12 @@ import { ref, type Ref } from 'vue'
 import { defineStore } from 'pinia'
 import { Entity } from '@/models/entity'
 import { Scene } from '@/models/scene'
-import utils from '@/helpers/utils'
 import { useWebGLStore } from './webgl'
+import { Time } from '@/models/time'
 
 interface Render {
-  update: (time: number, renderDelta: number) => void
-  lateUpdate: (time: number, renderDelta: number) => void
+  update: (time: Time) => void
+  lateUpdate: (time: Time) => void
 }
 
 export const useRenderStore = defineStore('render', () => {
@@ -15,7 +15,7 @@ export const useRenderStore = defineStore('render', () => {
   const hasStarted = ref(false)
   const isRendering = ref(false)
   const stepForward = ref(0)
-  const lastRenderTime = ref(0)
+  const lastRenderTime: Ref<Time> = ref(new Time(0))
   const scene: Ref<Scene> = ref(new Scene())
   const store = useWebGLStore()
 
@@ -44,19 +44,19 @@ export const useRenderStore = defineStore('render', () => {
     })
   }
 
-  function render(time: number) {
-    const renderDelta = time - lastRenderTime.value
+  function render(timestamp: number) {
+    const time = new Time(timestamp, lastRenderTime.value)
     lastRenderTime.value = time
 
     // Update
     scene.value.entities.forEach((entity) => {
       traverseTree(entity, (entity: Entity) => {
-        entity.update(time, renderDelta)
+        entity.update(time)
       })
     })
 
     subscribers.value.forEach((subscriber) => {
-      subscriber.update(time, renderDelta)
+      subscriber.update(time)
     })
 
     // Render
@@ -65,12 +65,12 @@ export const useRenderStore = defineStore('render', () => {
     // Late update
     scene.value.entities.forEach((entity) => {
       traverseTree(entity, (entity: Entity) => {
-        entity.lateUpdate(time, renderDelta)
+        entity.lateUpdate(time)
       })
     })
 
     subscribers.value.forEach((subscriber) => {
-      subscriber.lateUpdate(time, renderDelta)
+      subscriber.lateUpdate(time)
     })
 
     if (stepForward.value > 0) {
@@ -103,7 +103,7 @@ export const useRenderStore = defineStore('render', () => {
   }
 
   function startRender() {
-    lastRenderTime.value = performance.now()
+    lastRenderTime.value = new Time(performance.now())
     if (!hasStarted.value) {
       // scene.value = staticScene.value
     }

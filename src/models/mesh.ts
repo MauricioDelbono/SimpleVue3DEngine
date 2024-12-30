@@ -1,9 +1,12 @@
+import { vec3 } from 'gl-matrix'
+
 export class Mesh {
   public name: string
   public positions: number[]
   public normals: number[]
   public textureCoords: number[]
   public indices: number[]
+  public vertices: vec3[] = []
 
   public vaoMap: Record<string, WebGLVertexArrayObject | null>
 
@@ -13,6 +16,10 @@ export class Mesh {
     this.normals = normals
     this.textureCoords = textureCoords
     this.indices = indices
+
+    for (let i = 0; i < positions.length; i += 3) {
+      this.vertices.push(vec3.fromValues(positions[i], positions[i + 1], positions[i + 2]))
+    }
 
     this.vaoMap = {}
   }

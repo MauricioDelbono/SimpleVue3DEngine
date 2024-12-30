@@ -1,5 +1,6 @@
 import KeyCodes from '@/constants/keyCodes'
 import utils from '@/helpers/utils'
+import type { Time } from '@/models/time'
 import { useInputStore } from '@/stores/input'
 import { useRenderStore } from '@/stores/render'
 import { vec3 } from 'gl-matrix'
@@ -25,7 +26,7 @@ export function useCamera() {
     store.subscribeToRender({ update, lateUpdate: () => {} })
   }
 
-  function update(time: number, renderDelta: number) {
+  function update(time: Time) {
     const angleX = (mouseDelta.value.x * MAX_DEGREES) / lookSpeed
     const angleY = (mouseDelta.value.y * MAX_DEGREES) / lookSpeed
     mouseDelta.value.x = 0
@@ -33,7 +34,7 @@ export function useCamera() {
     scene.value.camera.transform.rotation[0] += angleY
     scene.value.camera.transform.rotation[1] -= angleX
     vec3.zero(translation)
-    const moveSpeed = input.isKeyPressed(KeyCodes.KEY_SHIFT_LEFT) ? speed * 3 * renderDelta : speed * renderDelta
+    const moveSpeed = input.isKeyPressed(KeyCodes.KEY_SHIFT_LEFT) ? speed * 3 * time.delta : speed * time.delta
 
     if (input.isKeyPressed(KeyCodes.KEY_W)) {
       translation[2] += moveSpeed

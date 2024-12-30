@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import { useRenderStore } from '@/stores/render'
 import { storeToRefs } from 'pinia'
+import type { Time } from '@/models/time'
 
 const FPS = ref(0)
 const minFPS = ref(1000)
@@ -18,8 +19,8 @@ function reset() {
   frameDelta.value = 0
 }
 
-function update(time: number, renderDelta: number) {
-  frameDelta.value = Math.round(renderDelta * 100) / 100
+function update(time: Time) {
+  frameDelta.value = Math.round(time.delta * 100) / 100
   FPS.value = Math.round(1000 / frameDelta.value)
   minFPS.value = Math.min(minFPS.value, FPS.value)
   maxFPS.value = Math.max(maxFPS.value, FPS.value)

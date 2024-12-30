@@ -1,9 +1,10 @@
 import { vec3 } from 'gl-matrix'
 import type { Collision } from '../collisions/collision'
 import { Solver } from './solver'
+import type { Time } from '@/models/time'
 
 export class PositionSolver extends Solver {
-  public solve(collisions: Collision[], delta: number) {
+  public solve(collisions: Collision[], time: Time) {
     collisions.forEach((collision) => {
       if (!collision.entityA.isDynamic && collision.entityB.isDynamic) {
         vec3.add(
