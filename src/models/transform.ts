@@ -38,6 +38,11 @@ export class Transform {
     return vec3.transformMat4([0, 0, 0], point, this.worldMatrix)
   }
 
+  public toLocalSpace(worldVector: vec3): vec3 {
+    const inverseWorldMatrix = mat4.invert(mat4.create(), this.worldMatrix)
+    return vec3.transformMat4(vec3.create(), worldVector, inverseWorldMatrix)
+  }
+
   public getMatrix(destination: mat4): mat4 {
     return mat4.fromRotationTranslationScale(
       destination,

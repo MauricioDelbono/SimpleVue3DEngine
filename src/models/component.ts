@@ -5,7 +5,7 @@ export abstract class Component {
   public entity: Entity
 
   constructor() {
-    this.entity = new Entity()
+    this.entity = new Entity(undefined, undefined)
     this.start()
   }
 

@@ -1,7 +1,12 @@
+import { vec3 } from 'gl-matrix'
 import { toRaw } from 'vue'
 
 function radToDeg(r: number) {
   return (r * 180) / Math.PI
+}
+
+function radToDegVec3(radians: vec3) {
+  return vec3.scale(radians, radians, 180 / Math.PI)
 }
 
 function degToRad(d: number) {
@@ -26,4 +31,4 @@ function toRawDeep<T>(observed: T): T {
   return val
 }
 
-export default { radToDeg, degToRad, toRawDeep }
+export default { radToDeg, radToDegVec3, degToRad, toRawDeep }

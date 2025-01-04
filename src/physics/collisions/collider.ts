@@ -1,6 +1,6 @@
 import { Component } from '@/models/component'
 import type { CollisionPoints } from './collisionPoints'
-import { vec3 } from 'gl-matrix'
+import { mat3, vec3 } from 'gl-matrix'
 
 export class Collider extends Component {
   public center: vec3 = vec3.create()
@@ -29,5 +29,9 @@ export class Collider extends Component {
     const overlapZ = this.min[2] <= collider.max[2] && this.max[2] >= collider.min[2]
 
     return overlapX && overlapY && overlapZ
+  }
+
+  public calculateInertiaTensor(mass: number): mat3 {
+    throw new Error('Not implemented in base class')
   }
 }

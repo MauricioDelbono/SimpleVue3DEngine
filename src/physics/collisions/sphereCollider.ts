@@ -1,4 +1,4 @@
-import { vec3 } from 'gl-matrix'
+import { mat3, vec3 } from 'gl-matrix'
 import { Collider } from './collider'
 import type { CollisionPoints } from './collisionPoints'
 import CollisionsHelper from '../helpers/collisions'
@@ -40,5 +40,12 @@ export class SphereCollider extends Collider {
   public get max(): vec3 {
     const localMax = vec3.add(vec3.create(), this.center, vec3.fromValues(this.radius, this.radius, this.radius))
     return this.entity.transform.toWorldSpace(localMax)
+  }
+
+  public calculateInertiaTensor(mass: number): mat3 {
+    const inertiaTensor = mat3.create()
+    const coefficient = (2 / 5) * mass * this.radius * this.radius
+    mat3.set(inertiaTensor, coefficient, 0, 0, 0, coefficient, 0, 0, 0, coefficient)
+    return inertiaTensor
   }
 }

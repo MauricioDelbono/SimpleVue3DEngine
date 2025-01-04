@@ -20,9 +20,7 @@ export const usePhysicsStore = defineStore('physics', () => {
   function reset() {
     objects.splice(0, objects.length)
     solvers.splice(0, solvers.length)
-    gravity[0] = 0
-    gravity[1] = -9.81
-    gravity[2] = 0
+    vec3.set(gravity, 0, -9.81, 0)
   }
 
   onMounted(() => {

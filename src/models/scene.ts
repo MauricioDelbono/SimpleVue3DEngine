@@ -6,8 +6,8 @@ import { PointLight, DirectionalLight, SpotLight } from './light'
 import type { Texture } from './types'
 import Primitives from '@/helpers/primitives'
 import type { Material } from './material'
-import { storeToRefs } from 'pinia'
 import { useAssetsStore } from '@/stores/assets'
+import type { Time } from './time'
 
 export class Skybox {
   public texture: Texture
@@ -72,6 +72,7 @@ export class Scene {
   }
 
   public removeEntity(entity: Entity) {
+    entity.destroy()
     if (entity.parent) {
       entity.parent.removeChild(entity)
     } else {
@@ -131,12 +132,12 @@ export class Scene {
     this.skybox = new Skybox(texture, mesh)
   }
 
-  public update(time: number, renderDelta: number) {
-    this.entities.forEach((entity) => entity.update(time, renderDelta))
+  public update(time: Time) {
+    this.entities.forEach((entity) => entity.update(time))
   }
 
-  public lateUpdate(time: number, renderDelta: number) {
-    this.entities.forEach((entity) => entity.lateUpdate(time, renderDelta))
+  public lateUpdate(time: Time) {
+    this.entities.forEach((entity) => entity.lateUpdate(time))
   }
 
   public updateWorldMatrix() {
