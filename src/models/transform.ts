@@ -35,7 +35,7 @@ export class Transform {
   }
 
   public toWorldSpace(point: vec3): vec3 {
-    return vec3.transformMat4([0, 0, 0], point, this.worldMatrix)
+    return vec3.transformMat4(vec3.create(), point, this.worldMatrix)
   }
 
   public toLocalSpace(worldVector: vec3): vec3 {

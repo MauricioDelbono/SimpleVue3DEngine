@@ -33,13 +33,15 @@ export class SphereCollider extends Collider {
   }
 
   public get min(): vec3 {
-    const localMin = vec3.subtract(vec3.create(), this.center, vec3.fromValues(this.radius, this.radius, this.radius))
-    return this.entity.transform.toWorldSpace(localMin)
+    const worldCenter = this.entity.transform.toWorldSpace(this.center)
+    const worldMin = vec3.subtract(vec3.create(), worldCenter, vec3.fromValues(this.radius, this.radius, this.radius))
+    return worldMin
   }
 
   public get max(): vec3 {
-    const localMax = vec3.add(vec3.create(), this.center, vec3.fromValues(this.radius, this.radius, this.radius))
-    return this.entity.transform.toWorldSpace(localMax)
+    const worldCenter = this.entity.transform.toWorldSpace(this.center)
+    const worldMax = vec3.add(vec3.create(), worldCenter, vec3.fromValues(this.radius, this.radius, this.radius))
+    return worldMax
   }
 
   public calculateInertiaTensor(mass: number): mat3 {
