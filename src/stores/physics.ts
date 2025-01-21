@@ -65,7 +65,7 @@ export const usePhysicsStore = defineStore('physics', () => {
   function applyForces() {
     objects.forEach((object) => {
       if (object.isStatic) return
-      object.applyForce(gravity)
+      object.applyForce(vec3.scale(vec3.create(), gravity, object.mass))
     })
   }
 

@@ -34,4 +34,8 @@ export class Collider extends Component {
   public calculateInertiaTensor(mass: number): mat3 {
     throw new Error('Not implemented in base class')
   }
+
+  public getInertiaTensor(mass: number): number {
+    return Infinity
+  }
 }

@@ -79,9 +79,9 @@ async function initialize() {
 </script>
 
 <template>
-  <RenderEngine @ready="initialize">
+  <RenderEngine autoPlay @ready="initialize">
     <FPSInfo />
-    <!-- <SceneControls /> -->
+    <SceneControls />
   </RenderEngine>
 </template>
 

@@ -1,15 +1,24 @@
-import { vec3 } from 'gl-matrix'
+import { mat4, vec3 } from 'gl-matrix'
 import { Collider } from './collider'
 import CollisionsHelper from '../helpers/collisions'
 import { SphereCollider } from './sphereCollider'
 import type { CollisionPoints } from './collisionPoints'
 
 export class PlaneCollider extends Collider {
-  public planeNormal: vec3 = vec3.create()
+  private planeNormal: vec3 = vec3.create()
 
-  constructor(planeNormal: vec3) {
+  constructor(planeNormal: vec3 = vec3.fromValues(0, 1, 0)) {
     super()
     this.planeNormal = planeNormal
+  }
+
+  public get normal(): vec3 {
+    const worldNormal = vec3.transformMat4(
+      vec3.create(),
+      this.planeNormal,
+      mat4.fromQuat(mat4.create(), this.entity.transform.worldRotation)
+    )
+    return vec3.normalize(vec3.create(), worldNormal)
   }
 
   public get min(): vec3 {

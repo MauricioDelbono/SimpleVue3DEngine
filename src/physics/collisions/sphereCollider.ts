@@ -50,4 +50,8 @@ export class SphereCollider extends Collider {
     mat3.set(inertiaTensor, coefficient, 0, 0, 0, coefficient, 0, 0, 0, coefficient)
     return inertiaTensor
   }
+
+  public getInertiaTensor(mass: number): number {
+    return (2 / 5) * mass * this.radius * this.radius
+  }
 }

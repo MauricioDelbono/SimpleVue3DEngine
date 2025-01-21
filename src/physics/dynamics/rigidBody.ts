@@ -17,14 +17,16 @@ export class Rigidbody extends Component {
   public torque: vec3 = vec3.fromValues(0, 0, 0)
   public isDynamic: boolean = true
   public isTrigger: boolean = false
-  public inertiaTensor: mat3 = mat3.create()
-  public inverseInertiaTensor: mat3 = mat3.create()
-  public angularDamping: number = 0.5 // Damping factor for angular velocity
+  public inertiaTensorMatrix: mat3 = mat3.create()
+  public inverseInertiaTensorMatrix: mat3 = mat3.create()
+  public angularDamping: number = 0.05 // Damping factor for angular velocity
+  public linearDamping: number = 0.05 // Damping factor for linear velocity
 
-  constructor() {
+  constructor(mass: number = 1) {
     super()
+    this.mass = mass
     usePhysicsStore().addObject(this)
-    this.calculateInertiaTensor()
+    this.calculateInertiaTensorMatrix()
   }
 
   public destroy() {
@@ -47,8 +49,23 @@ export class Rigidbody extends Component {
     return this.entity.getComponents(Collider)
   }
 
+  public get inertiaTensor() {
+    if (!this.isDynamic) return Infinity
+    const collider = this.entity.getComponents(Collider)[0]
+    return collider?.getInertiaTensor(this.mass) ?? Infinity
+  }
+
+  public get inverseInertiaTensor() {
+    if (!this.isDynamic) return 0
+    return 1 / this.inertiaTensor
+  }
+
   public get isStatic() {
     return !this.isDynamic
+  }
+
+  public get isRotating() {
+    return !this.angularVelocity.every((v) => v === 0)
   }
 
   public applyForce(force: vec3) {
@@ -65,40 +82,35 @@ export class Rigidbody extends Component {
     vec3.add(this.velocity, this.velocity, impulse)
   }
 
-  public applyAngularImpulseOld(distance: vec3, force: vec3) {
-    // L = Iω = r * p = r * mv = r * F * dt => ω = I^-1 * r * m * v = v / r
-    // const impulse = vec3.cross(vec3.create(), distance, force) // angular impulse = Iω
-    vec3.scale(force, force, this.inverseMass)
-    const impulseVelocity = vec3.divide(vec3.create(), force, distance) // angular velocity = ω
-    vec3.add(this.angularVelocity, this.angularVelocity, impulseVelocity)
-  }
-
   public applyAngularImpulse(impulse: vec3) {
-    const angularImpulse = vec3.transformMat3(vec3.create(), impulse, this.inverseInertiaTensor)
+    const angularImpulse = vec3.scale(vec3.create(), impulse, this.inverseInertiaTensor)
     vec3.add(this.angularVelocity, this.angularVelocity, angularImpulse)
   }
 
   public move(time: Time) {
-    vec3.scale(this.force, this.force, this.inverseMass)
     vec3.scale(this.force, this.force, time.deltaSeconds)
+    vec3.scale(this.force, this.force, this.inverseMass)
     vec3.add(this.velocity, this.velocity, this.force)
     vec3.scale(this.force, this.velocity, time.deltaSeconds)
     vec3.add(this.position, this.position, this.force)
+
+    // Apply linear damping
+    // const dampingFactor = Math.pow(this.linearDamping, time.deltaSeconds)
+    // vec3.scale(this.velocity, this.velocity, dampingFactor)
 
     vec3.set(this.force, 0, 0, 0)
   }
 
   public rotate(time: Time) {
-    // T = F * r => angular impulse (ai) = F * r * dt(s)
     vec3.scale(this.torque, this.torque, time.deltaSeconds) //angular velocity
-    vec3.transformMat3(this.torque, this.torque, this.inverseInertiaTensor)
+    vec3.scale(this.torque, this.torque, this.inverseInertiaTensor)
     vec3.add(this.angularVelocity, this.angularVelocity, this.torque) // total angular velocity
-    vec3.scale(this.torque, this.angularVelocity, time.deltaSeconds) // angular impulse
+    vec3.scale(this.torque, this.angularVelocity, time.deltaSeconds) // rotation radians
     vec3.add(this.rotation, this.rotation, utils.radToDegVec3(this.torque)) // rotation
 
     // Apply angular damping
-    const dampingFactor = Math.pow(this.angularDamping, time.deltaSeconds)
-    vec3.scale(this.angularVelocity, this.angularVelocity, dampingFactor)
+    // const dampingFactor = Math.pow(this.angularDamping, time.deltaSeconds)
+    // vec3.scale(this.angularVelocity, this.angularVelocity, dampingFactor)
 
     vec3.set(this.torque, 0, 0, 0)
   }
@@ -108,12 +120,12 @@ export class Rigidbody extends Component {
     this.rotate(time)
   }
 
-  private calculateInertiaTensor() {
-    mat3.identity(this.inertiaTensor)
+  private calculateInertiaTensorMatrix() {
+    mat3.identity(this.inertiaTensorMatrix)
     this.colliders.forEach((collider) => {
       const colliderInertiaTensor = collider.calculateInertiaTensor(this.mass)
-      mat3.add(this.inertiaTensor, this.inertiaTensor, colliderInertiaTensor)
+      mat3.add(this.inertiaTensorMatrix, this.inertiaTensorMatrix, colliderInertiaTensor)
     })
-    mat3.invert(this.inverseInertiaTensor, this.inertiaTensor)
+    mat3.invert(this.inverseInertiaTensorMatrix, this.inertiaTensorMatrix)
   }
 }
