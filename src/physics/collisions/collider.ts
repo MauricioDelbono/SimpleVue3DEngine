@@ -5,6 +5,11 @@ import { mat3, vec3 } from 'gl-matrix'
 export class Collider extends Component {
   public center: vec3 = vec3.create()
 
+  constructor() {
+    super()
+    this.isDisplayed = false
+  }
+
   public get worldPosition() {
     const worldPos = vec3.create()
     vec3.add(worldPos, this.entity.transform.worldPosition, this.center)

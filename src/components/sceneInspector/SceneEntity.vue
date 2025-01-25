@@ -3,6 +3,9 @@ import { useRenderStore } from '@/stores/render'
 import { storeToRefs } from 'pinia'
 import { Entity } from '@/models/entity'
 import VInput from '../shared/VInput/VInput.vue'
+import VCheckbox from '../shared/VCheckbox/VCheckbox.vue'
+import { computed, onMounted } from 'vue'
+import { EditorPropType } from '@/models/component'
 
 const props = defineProps({
   entity: {
@@ -17,6 +20,12 @@ const entity = props.entity
 const transform = props.entity.transform
 const material = props.entity.material
 const mesh = props.entity.mesh
+
+const components = computed(() => {
+  return props.entity.components.filter((component) => component.isDisplayed)
+})
+
+onMounted(() => {})
 </script>
 
 <template>
@@ -74,7 +83,26 @@ const mesh = props.entity.mesh
 
     <div class="mesh card">
       <div class="card-title">Mesh</div>
+      <VInput v-model="mesh.name" readonly />
       TODO
+    </div>
+
+    <div v-for="(component, index) in components" :key="index" class="component card">
+      <div class="card-title">{{ component.constructor?.name }}</div>
+
+      <div v-for="(prop, propIndex) in component.editorProps" :key="propIndex" class="scene-entity-prop">
+        <span>{{ prop.label }}</span>
+        <div style="flex: 1"></div>
+        <VCheckbox v-if="prop.type === EditorPropType.boolean" v-model="(component as any)[prop.name]" />
+        <VInput v-else-if="prop.type === EditorPropType.number" v-model="(component as any)[prop.name]" type="number" block />
+        <VInput v-else-if="prop.type === EditorPropType.string" v-model="(component as any)[prop.name]" readonly />
+
+        <template v-else-if="prop.type === EditorPropType.vec3">
+          <VInput v-model="(component as any)[prop.name][0]" readonly />
+          <VInput v-model="(component as any)[prop.name][1]" readonly />
+          <VInput v-model="(component as any)[prop.name][2]" readonly />
+        </template>
+      </div>
     </div>
   </div>
 </template>
@@ -95,7 +123,8 @@ const mesh = props.entity.mesh
 
   .transform,
   .material,
-  .mesh {
+  .mesh,
+  .component {
     display: flex;
     flex-direction: column;
     justify-content: center;

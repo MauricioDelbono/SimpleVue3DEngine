@@ -6,8 +6,8 @@ import PhysicsSimpleScene from './scenes/physics/PhysicsSimpleScene.vue'
 </script>
 
 <template>
-  <!-- <PhysicsSimpleScene /> -->
-  <PhysicsScene />
+  <PhysicsSimpleScene />
+  <!-- <PhysicsScene /> -->
 </template>
 
 <style lang="scss">

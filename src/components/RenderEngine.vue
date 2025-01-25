@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRenderStore } from '../stores/render'
+import { useRenderStore } from '@/stores/render'
 import { usePhysicsStore } from '@/stores/physics'
 import { useAssetsStore } from '@/stores/assets'
 import Textures from '@/helpers/texture'

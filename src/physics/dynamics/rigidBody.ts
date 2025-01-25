@@ -1,4 +1,4 @@
-import { Component } from '@/models/component'
+import { Component, EditorProp, EditorPropType } from '@/models/component'
 import { mat3, vec3 } from 'gl-matrix'
 import { usePhysicsStore } from '@/stores/physics'
 import { Collider } from '../collisions/collider'
@@ -27,6 +27,18 @@ export class Rigidbody extends Component {
     this.mass = mass
     usePhysicsStore().addObject(this)
     this.calculateInertiaTensorMatrix()
+
+    // Add editor props
+    this.addEditorProp(new EditorProp('isDynamic', EditorPropType.boolean))
+    this.addEditorProp(new EditorProp('isTrigger', EditorPropType.boolean))
+    this.addEditorProp(new EditorProp('mass', EditorPropType.number))
+    this.addEditorProp(new EditorProp('restitution', EditorPropType.number))
+    this.addEditorProp(new EditorProp('staticFriction', EditorPropType.number))
+    this.addEditorProp(new EditorProp('dynamicFriction', EditorPropType.number))
+    this.addEditorProp(new EditorProp('linearDamping', EditorPropType.number))
+    this.addEditorProp(new EditorProp('angularDamping', EditorPropType.number))
+    this.addEditorProp(new EditorProp('velocity', EditorPropType.vec3, true))
+    this.addEditorProp(new EditorProp('angularVelocity', EditorPropType.vec3, true))
   }
 
   public destroy() {
