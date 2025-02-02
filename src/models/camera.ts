@@ -6,7 +6,7 @@ export class Camera extends Entity {
   public up: vec3
 
   constructor() {
-    super()
+    super('Camera')
     this.up = [0, 1, 0]
   }
 

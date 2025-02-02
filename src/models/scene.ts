@@ -69,6 +69,11 @@ export class Scene {
     this.pointLights = []
     this.spotLight = null
     this.directionalLight = null
+    this.addCamera(this.camera)
+  }
+
+  public addCamera(camera: Camera) {
+    this.entities.push(camera)
   }
 
   public removeEntity(entity: Entity) {

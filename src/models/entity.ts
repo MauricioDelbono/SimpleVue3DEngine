@@ -19,7 +19,7 @@ export class Entity {
   public name: string = 'Empty'
   public uuid: string = uuid()
 
-  constructor(name: string = 'Empty', mesh: Mesh | undefined, position: vec3 = [0, 0, 0]) {
+  constructor(name: string = 'Empty', mesh: Mesh | null = null, position: vec3 = [0, 0, 0]) {
     this.transform = new Transform(this)
     this.transform.position = position
     this.mesh = mesh ?? new Mesh(name)

@@ -11,6 +11,7 @@ import SceneControls from './SceneControls.vue'
 import FPSInfo from './FPSInfo.vue'
 import { useInputStore } from '@/stores/input'
 import { useCamera } from '@/composables/camera'
+import { Camera } from '@/models/camera'
 
 const props = defineProps({
   autoPlay: {
@@ -35,6 +36,7 @@ function initialize() {
   physicsStore.initialize()
   inputStore.initialize()
   camera.initialize()
+  renderStore.scene.camera = new Camera()
 
   const texture = assetsStore.addTexture('default', Textures.createDefaultTexture())
   assetsStore.addMaterial('default', new Material(texture))
