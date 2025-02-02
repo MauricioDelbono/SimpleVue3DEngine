@@ -23,7 +23,7 @@ export function useCamera() {
   function initialize() {
     vec3.set(rotationOrigin, 0, 0, 0)
     vec3.set(translation, 0, 0, 0)
-    store.subscribeToRender({ update, lateUpdate: () => {} })
+    // store.subscribeToRender({ update, lateUpdate: () => {} })
   }
 
   function update(time: Time) {
@@ -65,5 +65,5 @@ export function useCamera() {
     vec3.add(scene.value.camera.transform.position, scene.value.camera.transform.position, translation)
   }
 
-  return { initialize }
+  return { initialize, update }
 }

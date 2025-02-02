@@ -46,6 +46,8 @@ export const useWebGLStore = defineStore('webgl', () => {
     clearCanvas()
     lastUsedPipeline = null
     pipelines.value = {}
+    gl.value = {} as WebGL2RenderingContext
+    canvas.value = {} as HTMLCanvasElement
     mat4.identity(cameraMatrix)
     mat4.identity(viewMatrix)
     mat4.identity(projectionMatrix)

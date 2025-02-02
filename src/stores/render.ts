@@ -15,6 +15,7 @@ export const useRenderStore = defineStore('render', () => {
   const hasStarted = ref(false)
   const isRendering = ref(false)
   const stepForward = ref(0)
+  const stepSize = ref(10)
   const lastRenderTime: Ref<Time> = ref(new Time(0))
   const scene: Ref<Scene> = ref(new Scene())
   const store = useWebGLStore()
@@ -44,37 +45,51 @@ export const useRenderStore = defineStore('render', () => {
     })
   }
 
-  function render(timestamp: number) {
+  function getTime() {
+    return lastRenderTime.value
+  }
+
+  function setTime(timestamp: number) {
     const time = new Time(timestamp, lastRenderTime.value)
     lastRenderTime.value = time
+  }
 
+  function render(time: Time) {
     // Update
-    scene.value.entities.forEach((entity) => {
-      traverseTree(entity, (entity: Entity) => {
-        entity.update(time)
+    if (isRendering.value) {
+      scene.value.entities.forEach((entity) => {
+        traverseTree(entity, (entity: Entity) => {
+          entity.update(time)
+        })
       })
-    })
 
-    subscribers.value.forEach((subscriber) => {
-      subscriber.update(time)
-    })
+      subscribers.value.forEach((subscriber) => {
+        subscriber.update(time)
+      })
+    }
 
     // Render
     renderScene()
 
     // Late update
-    scene.value.entities.forEach((entity) => {
-      traverseTree(entity, (entity: Entity) => {
-        entity.lateUpdate(time)
+    if (isRendering.value) {
+      scene.value.entities.forEach((entity) => {
+        traverseTree(entity, (entity: Entity) => {
+          entity.lateUpdate(time)
+        })
       })
-    })
 
-    subscribers.value.forEach((subscriber) => {
-      subscriber.lateUpdate(time)
-    })
+      subscribers.value.forEach((subscriber) => {
+        subscriber.lateUpdate(time)
+      })
+    }
 
     if (stepForward.value > 0) {
       stepForward.value--
+
+      if (stepForward.value === 0) {
+        isRendering.value = false
+      }
     }
   }
 
@@ -104,10 +119,6 @@ export const useRenderStore = defineStore('render', () => {
 
   function startRender() {
     lastRenderTime.value = new Time(performance.now())
-    if (!hasStarted.value) {
-      // scene.value = staticScene.value
-    }
-
     hasStarted.value = true
     isRendering.value = true
   }
@@ -121,7 +132,7 @@ export const useRenderStore = defineStore('render', () => {
   }
 
   function stepRender() {
-    isRendering.value = false
+    isRendering.value = true
     stepForward.value = 1
   }
 
@@ -136,6 +147,8 @@ export const useRenderStore = defineStore('render', () => {
     pauseRender,
     stopRender,
     stepRender,
+    getTime,
+    setTime,
     render,
     reset
   }

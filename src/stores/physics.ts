@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { useRenderStore } from './render'
-import { onMounted } from 'vue'
 import { vec3 } from 'gl-matrix'
 import type { Solver } from '@/physics/dynamics/solver'
 import { Collision } from '@/physics/collisions/collision'
@@ -23,11 +22,11 @@ export const usePhysicsStore = defineStore('physics', () => {
     vec3.set(gravity, 0, -9.81, 0)
   }
 
-  onMounted(() => {
+  function initialize() {
     addSolver(new ImpulseSolver())
     addSolver(new PositionSolver())
     store.subscribeToRender({ update: step, lateUpdate: () => {} })
-  })
+  }
 
   function addObject(object: Rigidbody) {
     objects.push(object)
@@ -121,5 +120,5 @@ export const usePhysicsStore = defineStore('physics', () => {
     })
   }
 
-  return { addObject, removeObject, addSolver, removeSolver, reset }
+  return { addObject, removeObject, addSolver, removeSolver, reset, initialize }
 })

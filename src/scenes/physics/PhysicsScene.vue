@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import RenderEngine from '@/components/RenderEngine.vue'
 import FPSInfo from '@/components/FPSInfo.vue'
-import { useCamera } from '@/composables/camera'
 import Primitives from '@/helpers/primitives'
 import { SphereCollider } from '@/physics/collisions/sphereCollider'
 import { Rigidbody } from '@/physics/dynamics/rigidBody'
-import { useInputStore } from '@/stores/input'
 import { useRenderStore } from '@/stores/render'
 import { vec3 } from 'gl-matrix'
 import { useAssetsStore } from '@/stores/assets'
@@ -18,10 +16,8 @@ import { PlaneCollider } from '@/physics/collisions/planeCollider'
 
 const renderStore = useRenderStore()
 const { scene } = storeToRefs(renderStore)
-const inputStore = useInputStore()
 const assetsStore = useAssetsStore()
 const { textures, materials, meshes } = storeToRefs(assetsStore)
-const camera = useCamera()
 
 async function loadAssets() {
   assetsStore.addTexture('chessBoard', await Textures.createTextureFromImage('./src/assets/images/chessBoard.png'))
@@ -33,8 +29,6 @@ async function loadAssets() {
 }
 
 async function initialize(done: () => {}) {
-  inputStore.initialize()
-  camera.initialize()
   scene.value.fog.color = [0.0, 0.0, 0.0, 1]
   scene.value.camera.transform.position = vec3.fromValues(0, 0, -25)
   scene.value.camera.transform.rotation = vec3.fromValues(15, 0, 0)

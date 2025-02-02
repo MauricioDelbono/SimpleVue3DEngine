@@ -6,11 +6,6 @@ import { usePhysicsStore } from '@/stores/physics'
 import { useAssetsStore } from '@/stores/assets'
 import Textures from '@/helpers/texture'
 import { Material } from '@/models/material'
-import SceneInspector from './sceneInspector/SceneInspector.vue'
-import SceneControls from './SceneControls.vue'
-import FPSInfo from './FPSInfo.vue'
-import { useInputStore } from '@/stores/input'
-import { useCamera } from '@/composables/camera'
 
 const props = defineProps({
   autoPlay: {
@@ -25,16 +20,12 @@ const emit = defineEmits(['ready'])
 const renderStore = useRenderStore()
 const physicsStore = usePhysicsStore()
 const assetsStore = useAssetsStore()
-const inputStore = useInputStore()
-const camera = useCamera()
 const { hasStarted } = storeToRefs(renderStore)
 let renderHandle: number = 0
 
 function initialize() {
   renderStore.initialize()
   physicsStore.initialize()
-  inputStore.initialize()
-  camera.initialize()
 
   const texture = assetsStore.addTexture('default', Textures.createDefaultTexture())
   assetsStore.addMaterial('default', new Material(texture))
@@ -50,7 +41,6 @@ function afterInitialize() {
 
 function render(time: number) {
   renderStore.setTime(time)
-  camera.update(renderStore.getTime())
   renderStore.render(renderStore.getTime())
   renderHandle = requestAnimationFrame(render)
 }
@@ -73,20 +63,15 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="render-engine">
-    <FPSInfo />
-    <SceneControls />
+  <div class="render-scene">
     <canvas id="canvas" tabindex="0"></canvas>
-    <SceneInspector />
   </div>
 </template>
 
 <style scoped lang="scss">
-.render-engine {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  width: inherit;
-  height: inherit;
+.render-scene {
+  width: 100%;
+  height: 100%;
   overflow: hidden;
 
   #canvas {
