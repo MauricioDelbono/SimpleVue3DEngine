@@ -94,7 +94,7 @@ export const useRenderStore = defineStore('render', () => {
   }
 
   function renderScene() {
-    scene.value.updateWorldMatrix()
+    scene.value.updateTransformMatrices()
 
     store.clearCanvas(scene.value.fog.color)
     store.setRenderShadowMap(scene.value)

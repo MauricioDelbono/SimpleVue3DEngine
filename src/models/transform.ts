@@ -1,25 +1,18 @@
 import { mat4, quat, vec3 } from 'gl-matrix'
-import { Entity } from './entity'
 
 export class Transform {
   public position: vec3
   public rotation: vec3
   public scale: vec3
-  public entity: Entity
   public localMatrix: mat4
   public worldMatrix: mat4
 
-  constructor(entity: Entity) {
-    this.entity = entity
+  constructor() {
     this.position = vec3.create()
     this.rotation = vec3.create()
     this.scale = vec3.fromValues(1, 1, 1)
     this.localMatrix = mat4.create()
     this.worldMatrix = mat4.create()
-  }
-
-  public get parentTransform(): Transform | null {
-    return this.entity.parent ? this.entity.parent.transform : null
   }
 
   public get worldPosition(): vec3 {
@@ -60,10 +53,6 @@ export class Transform {
     } else {
       mat4.copy(this.worldMatrix, this.localMatrix)
     }
-
-    this.entity.children.forEach((child) => {
-      child.transform.updateWorldMatrix(this.worldMatrix)
-    })
   }
 
   public lookAt(target: vec3) {

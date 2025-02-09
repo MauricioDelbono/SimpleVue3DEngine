@@ -38,7 +38,7 @@ async function initialize(done: () => {}) {
   entity.transform.scaleBy(vec3.fromValues(10, 10, 10))
   const rigidbody = new Rigidbody()
   rigidbody.isDynamic = false
-  const collider = new SphereCollider(vec3.fromValues(0, 0, 0), 10)
+  const collider = new SphereCollider(undefined, 10)
   entity.addComponent(rigidbody)
   entity.addComponent(collider)
 
@@ -47,7 +47,7 @@ async function initialize(done: () => {}) {
   plane.transform.rotate([10, 0, 0])
   const planeRigidbody = new Rigidbody()
   planeRigidbody.isDynamic = false
-  const planeCollider = new PlaneCollider()
+  const planeCollider = new PlaneCollider(undefined, 100, 100)
   plane.addComponent(planeRigidbody)
   plane.addComponent(planeCollider)
 
@@ -72,7 +72,7 @@ function createSphere() {
   )
   sphere.name = 'Sphere (Instance)'
   const sphereRigidbody = new Rigidbody(1)
-  const sphereCollider = new SphereCollider(vec3.fromValues(0, 0, 0), 1)
+  const sphereCollider = new SphereCollider()
   sphere.addComponent(sphereRigidbody)
   sphere.addComponent(sphereCollider)
 }
@@ -84,7 +84,7 @@ function createSphere() {
       <VButton icon-left="plus" class="create-sphere" @click="createSphere">Create Sphere</VButton>
     </div>
 
-    <RenderEngine autoPlay @ready="initialize" />
+    <RenderEngine @ready="initialize" />
   </div>
 </template>
 

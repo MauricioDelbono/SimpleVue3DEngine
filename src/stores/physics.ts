@@ -106,7 +106,9 @@ export const usePhysicsStore = defineStore('physics', () => {
     collisionPairs.forEach((collisionPair: CollisionPair) => {
       const collisionPoints = collisionPair.colliderA.testCollision(collisionPair.colliderB)
       if (collisionPoints.hasCollision) {
-        collisions.push(new Collision(collisionPair.entityA, collisionPair.entityB, collisionPoints))
+        collisions.push(
+          new Collision(collisionPair.bodyA, collisionPair.bodyB, collisionPair.colliderA, collisionPair.colliderB, collisionPoints)
+        )
       }
     })
 

@@ -1,14 +1,19 @@
 import type { Rigidbody } from '../dynamics/rigidBody'
+import type { Collider } from './collider'
 import type { CollisionPoints } from './collisionPoints'
 
 export class Collision {
-  public entityA: Rigidbody
-  public entityB: Rigidbody
+  public bodyA: Rigidbody
+  public bodyB: Rigidbody
+  public colliderA: Collider
+  public colliderB: Collider
   public points: CollisionPoints
 
-  constructor(entityA: Rigidbody, entityB: Rigidbody, points: CollisionPoints) {
-    this.entityA = entityA
-    this.entityB = entityB
+  constructor(bodyA: Rigidbody, bodyB: Rigidbody, colliderA: Collider, colliderB: Collider, points: CollisionPoints) {
+    this.bodyA = bodyA
+    this.bodyB = bodyB
+    this.colliderA = colliderA
+    this.colliderB = colliderB
     this.points = points
   }
 }

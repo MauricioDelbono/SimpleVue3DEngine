@@ -5,8 +5,9 @@ import { Component } from './component'
 import { Material } from './material'
 import { Mesh } from './mesh'
 import { Transform } from './transform'
-import type { vec3 } from 'gl-matrix'
+import { mat4, type vec3 } from 'gl-matrix'
 import type { Time } from './time'
+import { Collider } from '@/physics/collisions/collider'
 
 export class Entity {
   public transform: Transform
@@ -20,7 +21,7 @@ export class Entity {
   public uuid: string = uuid()
 
   constructor(name: string = 'Empty', mesh: Mesh | null = null, position: vec3 = [0, 0, 0]) {
-    this.transform = new Transform(this)
+    this.transform = new Transform()
     this.transform.position = position
     this.mesh = mesh ?? new Mesh(name)
     this.material = new Material()
@@ -80,6 +81,19 @@ export class Entity {
       this.children[index].parent = null
       this.children.splice(index, 1)
     }
+  }
+
+  public updateTransformMatrix(matrix?: mat4) {
+    this.transform.updateWorldMatrix(matrix)
+
+    this.children.forEach((child) => {
+      child.updateTransformMatrix(this.transform.worldMatrix)
+    })
+
+    const colliders = this.getComponents(Collider)
+    colliders.forEach((collider) => {
+      collider.transform.updateWorldMatrix(this.transform.worldMatrix)
+    })
   }
 
   // public render() {

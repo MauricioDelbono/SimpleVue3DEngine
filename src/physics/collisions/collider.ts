@@ -1,18 +1,32 @@
-import { Component } from '@/models/component'
+import { Component, EditorProp, EditorPropType } from '@/models/component'
 import type { CollisionPoints } from './collisionPoints'
 import { mat3, vec3 } from 'gl-matrix'
+import { Mesh } from '@/models/mesh'
+import { Transform } from '@/models/transform'
 
 export class Collider extends Component {
-  public center: vec3 = vec3.create()
+  public transform: Transform
+  public mesh: Mesh
 
   constructor() {
     super()
-    this.isDisplayed = false
+    this.mesh = new Mesh('Mesh')
+    this.transform = new Transform()
+    this.addEditorProp(new EditorProp('position', EditorPropType.vec3))
+  }
+
+  public setMesh(mesh: Mesh) {
+    this.mesh = mesh
+    this.transform = new Transform()
+  }
+
+  public get position() {
+    return this.transform.position
   }
 
   public get worldPosition() {
     const worldPos = vec3.create()
-    vec3.add(worldPos, this.entity.transform.worldPosition, this.center)
+    vec3.add(worldPos, this.transform.worldPosition, this.transform.position)
     return worldPos
   }
 

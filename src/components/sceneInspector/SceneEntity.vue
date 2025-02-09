@@ -93,14 +93,20 @@ onMounted(() => {})
       <div v-for="(prop, propIndex) in component.editorProps" :key="propIndex" class="scene-entity-prop">
         <span>{{ prop.label }}</span>
         <div style="flex: 1"></div>
-        <VCheckbox v-if="prop.type === EditorPropType.boolean" v-model="(component as any)[prop.name]" />
-        <VInput v-else-if="prop.type === EditorPropType.number" v-model="(component as any)[prop.name]" type="number" block />
-        <VInput v-else-if="prop.type === EditorPropType.string" v-model="(component as any)[prop.name]" readonly />
+        <VCheckbox v-if="prop.type === EditorPropType.boolean" v-model="(component as any)[prop.name]" :readonly="prop.isReadonly" />
+        <VInput
+          v-else-if="prop.type === EditorPropType.number"
+          v-model="(component as any)[prop.name]"
+          type="number"
+          block
+          :readonly="prop.isReadonly"
+        />
+        <VInput v-else-if="prop.type === EditorPropType.string" v-model="(component as any)[prop.name]" :readonly="prop.isReadonly" />
 
         <template v-else-if="prop.type === EditorPropType.vec3">
-          <VInput v-model="(component as any)[prop.name][0]" readonly />
-          <VInput v-model="(component as any)[prop.name][1]" readonly />
-          <VInput v-model="(component as any)[prop.name][2]" readonly />
+          <VInput v-model="(component as any)[prop.name][0]" type="number" :readonly="prop.isReadonly" />
+          <VInput v-model="(component as any)[prop.name][1]" type="number" :readonly="prop.isReadonly" />
+          <VInput v-model="(component as any)[prop.name][2]" type="number" :readonly="prop.isReadonly" />
         </template>
       </div>
     </div>

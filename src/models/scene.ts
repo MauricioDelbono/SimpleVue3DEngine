@@ -145,7 +145,7 @@ export class Scene {
     this.entities.forEach((entity) => entity.lateUpdate(time))
   }
 
-  public updateWorldMatrix() {
-    this.entities.forEach((entity) => entity.transform.updateWorldMatrix())
+  public updateTransformMatrices() {
+    this.entities.forEach((entity) => entity.updateTransformMatrix())
   }
 }
