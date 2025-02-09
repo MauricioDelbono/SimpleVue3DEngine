@@ -1,5 +1,5 @@
 export default `#version 300 es
-precision highp float;
+precision mediump float;
 
 out vec4 FragColor;
 

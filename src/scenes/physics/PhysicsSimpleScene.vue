@@ -38,7 +38,7 @@ async function initialize(done: () => {}) {
   entity.transform.scaleBy(vec3.fromValues(10, 10, 10))
   const rigidbody = new Rigidbody()
   rigidbody.isDynamic = false
-  const collider = new SphereCollider(undefined, 10)
+  const collider = new SphereCollider(undefined, 1)
   entity.addComponent(rigidbody)
   entity.addComponent(collider)
 

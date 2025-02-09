@@ -4,6 +4,7 @@ import { Entity } from '@/models/entity'
 import { Scene } from '@/models/scene'
 import { useWebGLStore } from './webgl'
 import { Time } from '@/models/time'
+import { Collider } from '@/physics/collisions/collider'
 
 interface Render {
   update: (time: Time) => void
@@ -111,6 +112,11 @@ export const useRenderStore = defineStore('render', () => {
     scene.value.entities.forEach((entity) => {
       traverseTree(entity, (entity: Entity) => {
         store.renderEntity(scene.value, entity)
+
+        const colliders = entity.getComponents(Collider)
+        colliders.forEach((collider) => {
+          store.renderCollider(scene.value, collider)
+        })
       })
     })
 

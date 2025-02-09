@@ -5,9 +5,18 @@ import { Entity } from '@/models/entity'
 import { Scene } from '@/models/scene'
 import webgl from '@/helpers/webgl'
 import utils from '@/helpers/utils'
-import { DefaultPipeline, SkyboxPipeline, type Pipeline, LightPipeline, ShadowPipeline, QuadPipeline } from '@/models/pipeline'
+import {
+  DefaultPipeline,
+  SkyboxPipeline,
+  type Pipeline,
+  LightPipeline,
+  ShadowPipeline,
+  QuadPipeline,
+  WireframePipeline
+} from '@/models/pipeline'
 import type { FrameBuffer, Texture } from '@/models/types'
 import Primitives from '@/helpers/primitives'
+import type { Collider } from '@/physics/collisions/collider'
 
 export const useWebGLStore = defineStore('webgl', () => {
   const canvas: Ref<HTMLCanvasElement> = ref({} as HTMLCanvasElement)
@@ -88,6 +97,7 @@ export const useWebGLStore = defineStore('webgl', () => {
       pipelines.value.shadow = new ShadowPipeline(gl.value)
       pipelines.value.quad = new QuadPipeline(gl.value)
       pipelines.value.default = new DefaultPipeline(gl.value)
+      pipelines.value.wireframe = new WireframePipeline(gl.value)
       initializeShadowMap()
     }
 
@@ -197,6 +207,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     }
 
     pipelines.value.light.setGlobalUniforms(scene)
+    pipelines.value.wireframe.setGlobalUniforms(scene)
     pipelines.value.default.setGlobalUniforms(scene)
   }
 
@@ -224,6 +235,34 @@ export const useWebGLStore = defineStore('webgl', () => {
     // render entity
     gl.value.bindVertexArray(vao)
     pipeline.render(scene, entity)
+  }
+
+  function renderCollider(scene: Scene, collider: Collider) {
+    // get pipeline
+    const pipelineKey = 'wireframe'
+    const pipeline = pipelines.value[pipelineKey]
+    let vao = collider.mesh.vaoMap[pipelineKey]
+
+    // create vao if it doesn't exist
+    if (!vao) {
+      console.log('Creating collider vao')
+      vao = pipeline.createMeshVAO(collider.mesh, 3)
+      collider.mesh.vaoMap[pipelineKey] = vao
+    }
+
+    // set global uniforms if pipeline has changed
+    if (lastUsedPipeline !== pipelineKey) {
+      lastUsedPipeline = pipelineKey
+    }
+
+    // render entity
+    gl.value.cullFace(gl.value.FRONT)
+    gl.value.enable(gl.value.POLYGON_OFFSET_FILL)
+    gl.value.polygonOffset(-10, -10)
+    gl.value.bindVertexArray(vao)
+    pipeline.renderMesh(scene, collider.mesh, collider.transform)
+    gl.value.disable(gl.value.POLYGON_OFFSET_FILL)
+    gl.value.cullFace(gl.value.BACK)
   }
 
   function getViewDirectionProjectionInverseMatrix() {
@@ -294,6 +333,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     setRenderShadowMap,
     setRenderColor,
     renderEntity,
+    renderCollider,
     getCameraMatrix,
     getViewMatrix,
     getProjectionMatrix,
