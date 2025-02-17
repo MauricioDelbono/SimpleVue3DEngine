@@ -1,20 +1,48 @@
-import { mat3, vec3 } from 'gl-matrix'
+import { mat3, mat4, vec3 } from 'gl-matrix'
 import { Collider } from './collider'
 import type { CollisionPoints } from './collisionPoints'
 import CollisionsHelper from '../helpers/collisions'
 import { PlaneCollider } from './planeCollider'
 import { EditorProp, EditorPropType } from '@/models/component'
 import Primitives from '@/helpers/primitives'
+import { SphereTransform } from '@/models/sphereTransform'
 
 export class SphereCollider extends Collider {
-  public radius: number = 1
-
-  constructor(center: vec3 = vec3.fromValues(0, 0, 0), radius: number = 1) {
+  constructor(radius: number = 1, center: vec3 = vec3.fromValues(0, 0, 0)) {
     super()
+    this.transform = new SphereTransform()
     this.transform.position = center
-    this.radius = radius
-    this.setMesh(Primitives.createSphere(radius))
-    this.addEditorProp(new EditorProp('radius', EditorPropType.number))
+    this.radiusScale = radius
+    this.mesh = Primitives.createSphere(radius)
+    this.addEditorProp(new EditorProp('radiusScale', EditorPropType.number))
+  }
+
+  public get radius(): number {
+    return this.transform.worldScale[0]
+  }
+
+  public get radiusScale(): number {
+    return this.transform.scale[0]
+  }
+
+  public set radiusScale(value) {
+    this.transform.scale = vec3.fromValues(value, value, value)
+  }
+
+  public get min(): vec3 {
+    const worldCenter = this.transform.toWorldSpace(this.transform.position)
+    const worldMin = vec3.subtract(vec3.create(), worldCenter, vec3.fromValues(this.radius, this.radius, this.radius))
+    return worldMin
+  }
+
+  public get max(): vec3 {
+    const worldCenter = this.transform.toWorldSpace(this.transform.position)
+    const worldMax = vec3.add(vec3.create(), worldCenter, vec3.fromValues(this.radius, this.radius, this.radius))
+    return worldMax
+  }
+
+  public updateTransformMatrix(matrix?: mat4) {
+    this.transform.updateWorldMatrix(matrix)
   }
 
   public testCollision<T extends Collider>(collider: T): CollisionPoints {
@@ -34,18 +62,6 @@ export class SphereCollider extends Collider {
 
   public testPlaneCollision(collider: PlaneCollider): CollisionPoints {
     return CollisionsHelper.getSpherePlaneCollision(this, collider)
-  }
-
-  public get min(): vec3 {
-    const worldCenter = this.transform.toWorldSpace(this.transform.position)
-    const worldMin = vec3.subtract(vec3.create(), worldCenter, vec3.fromValues(this.radius, this.radius, this.radius))
-    return worldMin
-  }
-
-  public get max(): vec3 {
-    const worldCenter = this.transform.toWorldSpace(this.transform.position)
-    const worldMax = vec3.add(vec3.create(), worldCenter, vec3.fromValues(this.radius, this.radius, this.radius))
-    return worldMax
   }
 
   public calculateInertiaTensor(mass: number): mat3 {

@@ -40,7 +40,7 @@ async function initialize(done: () => {}) {
   entity.transform.scaleBy(vec3.fromValues(10, 10, 10))
   const rigidbody = new Rigidbody()
   rigidbody.isDynamic = false
-  const collider = new SphereCollider(vec3.fromValues(0, 0, 0), 10)
+  const collider = new SphereCollider()
   entity.addComponent(rigidbody)
   entity.addComponent(collider)
 
@@ -48,7 +48,7 @@ async function initialize(done: () => {}) {
   const plane = scene.value.createEntity([0, -20, 0], meshes.value.planeMesh)
   const planeRigidbody = new Rigidbody()
   planeRigidbody.isDynamic = false
-  const planeCollider = new PlaneCollider(vec3.fromValues(0, 1, 0))
+  const planeCollider = new PlaneCollider()
   plane.addComponent(planeRigidbody)
   plane.addComponent(planeCollider)
 
@@ -61,7 +61,7 @@ async function initialize(done: () => {}) {
     const sphere = scene.value.createEntity([Math.random(), 5, Math.random()], meshes.value.sphereMesh, materials.value.chessBoard)
     sphere.name = 'Sphere (Instance)'
     const sphereRigidbody = new Rigidbody()
-    const sphereCollider = new SphereCollider(vec3.fromValues(0, 0, 0), 1)
+    const sphereCollider = new SphereCollider()
     sphere.addComponent(sphereRigidbody)
     sphere.addComponent(sphereCollider)
 

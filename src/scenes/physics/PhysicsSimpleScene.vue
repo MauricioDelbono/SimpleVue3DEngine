@@ -38,7 +38,7 @@ async function initialize(done: () => {}) {
   entity.transform.scaleBy(vec3.fromValues(10, 10, 10))
   const rigidbody = new Rigidbody()
   rigidbody.isDynamic = false
-  const collider = new SphereCollider(undefined, 1)
+  const collider = new SphereCollider()
   entity.addComponent(rigidbody)
   entity.addComponent(collider)
 
@@ -47,7 +47,7 @@ async function initialize(done: () => {}) {
   plane.transform.rotate([10, 0, 0])
   const planeRigidbody = new Rigidbody()
   planeRigidbody.isDynamic = false
-  const planeCollider = new PlaneCollider(undefined, 100, 100)
+  const planeCollider = new PlaneCollider(100, 100)
   plane.addComponent(planeRigidbody)
   plane.addComponent(planeCollider)
 

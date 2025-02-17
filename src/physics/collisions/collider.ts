@@ -1,6 +1,6 @@
 import { Component, EditorProp, EditorPropType } from '@/models/component'
 import type { CollisionPoints } from './collisionPoints'
-import { mat3, vec3 } from 'gl-matrix'
+import { mat3, mat4, vec3 } from 'gl-matrix'
 import { Mesh } from '@/models/mesh'
 import { Transform } from '@/models/transform'
 
@@ -10,14 +10,9 @@ export class Collider extends Component {
 
   constructor() {
     super()
+    this.transform = new Transform()
     this.mesh = new Mesh('Mesh')
-    this.transform = new Transform()
     this.addEditorProp(new EditorProp('position', EditorPropType.vec3))
-  }
-
-  public setMesh(mesh: Mesh) {
-    this.mesh = mesh
-    this.transform = new Transform()
   }
 
   public get position() {
@@ -28,6 +23,10 @@ export class Collider extends Component {
     const worldPos = vec3.create()
     vec3.add(worldPos, this.transform.worldPosition, this.transform.position)
     return worldPos
+  }
+
+  public updateTransformMatrix(matrix?: mat4) {
+    this.transform.updateWorldMatrix(matrix)
   }
 
   public testCollision<T extends Collider>(collider: T): CollisionPoints {
