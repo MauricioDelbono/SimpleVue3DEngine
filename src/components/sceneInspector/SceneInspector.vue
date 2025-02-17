@@ -6,6 +6,7 @@ import type { Entity } from '@/models/entity'
 import VTabs from '../shared/VTabs/VTabs.vue'
 import VTab from '../shared/VTabs/VTab.vue'
 import VIcon from '../shared/VIcon/VIcon.vue'
+import SceneSettings from './SceneSettings.vue'
 
 const selectedEntity: Ref<Entity | undefined> = ref(undefined)
 
@@ -46,6 +47,9 @@ function onMouseDown(event: MouseEvent) {
       </VTab>
       <VTab id="inspector" name="Inspector">
         <SceneEntity v-if="selectedEntity" :entity="selectedEntity" />
+      </VTab>
+      <VTab id="settings" name="Settings">
+        <SceneSettings />
       </VTab>
     </VTabs>
   </div>

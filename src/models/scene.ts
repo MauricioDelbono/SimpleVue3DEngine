@@ -42,6 +42,8 @@ export interface IScene {
   lights: Entity[]
   spotLight: SpotLight | null
   directionalLight: DirectionalLight | null
+  wireframe: boolean
+  debugColliders: boolean
 
   addEntity(entity: Entity): void
   removeEntity(entity: Entity): void
@@ -59,6 +61,8 @@ export class Scene {
   public pointLights: PointLight[]
   public spotLight: SpotLight | null
   public directionalLight: DirectionalLight | null
+  public wireframe: boolean = false
+  public debugColliders: boolean = false
 
   public assets = useAssetsStore()
 
