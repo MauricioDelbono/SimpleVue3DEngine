@@ -16,7 +16,18 @@ import {
 } from '@/models/pipeline'
 import type { FrameBuffer, Texture } from '@/models/types'
 import Primitives from '@/helpers/primitives'
-import type { Collider } from '@/physics/collisions/collider'
+import type { Mesh } from '@/models/mesh'
+import type { Transform } from '@/models/transform'
+import type { Material } from '@/models/material'
+
+export const pipelineKeys = {
+  skybox: 'skybox',
+  light: 'light',
+  shadow: 'shadow',
+  quad: 'quad',
+  default: 'default',
+  wireframe: 'wireframe'
+}
 
 export const useWebGLStore = defineStore('webgl', () => {
   const canvas: Ref<HTMLCanvasElement> = ref({} as HTMLCanvasElement)
@@ -49,7 +60,6 @@ export const useWebGLStore = defineStore('webgl', () => {
   const depthTextureSize = 1024
   let depthTexture: Texture = null
   let depthFrameBuffer: FrameBuffer = null
-  let useShadowMapPipeline = false
 
   function reset() {
     clearCanvas()
@@ -73,7 +83,6 @@ export const useWebGLStore = defineStore('webgl', () => {
     aspect = 16 / 9
     depthTexture = null
     depthFrameBuffer = null
-    useShadowMapPipeline = false
   }
 
   function clearCanvas(color: vec4 = [0, 0, 0, 1]) {
@@ -92,12 +101,12 @@ export const useWebGLStore = defineStore('webgl', () => {
     } else {
       gl.value = glContext
 
-      pipelines.value.skybox = new SkyboxPipeline(gl.value)
-      pipelines.value.light = new LightPipeline(gl.value)
-      pipelines.value.shadow = new ShadowPipeline(gl.value)
-      pipelines.value.quad = new QuadPipeline(gl.value)
-      pipelines.value.default = new DefaultPipeline(gl.value)
-      pipelines.value.wireframe = new WireframePipeline(gl.value)
+      pipelines.value[pipelineKeys.skybox] = new SkyboxPipeline(gl.value)
+      pipelines.value[pipelineKeys.light] = new LightPipeline(gl.value)
+      pipelines.value[pipelineKeys.shadow] = new ShadowPipeline(gl.value)
+      pipelines.value[pipelineKeys.quad] = new QuadPipeline(gl.value)
+      pipelines.value[pipelineKeys.default] = new DefaultPipeline(gl.value)
+      pipelines.value[pipelineKeys.wireframe] = new WireframePipeline(gl.value)
       initializeShadowMap()
     }
 
@@ -154,7 +163,7 @@ export const useWebGLStore = defineStore('webgl', () => {
 
     gl.value.bindVertexArray(mesh.vaoMap.quad)
     pipeline.setGlobalUniforms(scene)
-    pipeline.render(scene, entity)
+    pipeline.render(scene, entity.mesh, entity.transform)
     lastUsedPipeline = 'quad'
   }
 
@@ -175,12 +184,10 @@ export const useWebGLStore = defineStore('webgl', () => {
     gl.value.cullFace(gl.value.FRONT)
     gl.value.clear(gl.value.COLOR_BUFFER_BIT | gl.value.DEPTH_BUFFER_BIT)
 
-    useShadowMapPipeline = true
     pipelines.value.shadow.setGlobalUniforms(scene)
   }
 
   function setRenderColor(scene: Scene) {
-    useShadowMapPipeline = false
     gl.value.cullFace(gl.value.BACK)
 
     const cameraTransform = scene.camera.transform
@@ -211,43 +218,16 @@ export const useWebGLStore = defineStore('webgl', () => {
     pipelines.value.default.setGlobalUniforms(scene)
   }
 
-  function renderEntity(scene: Scene, entity: Entity) {
-    // don't render lights with shadow map pipeline
-    if (useShadowMapPipeline && entity.pipeline === 'light') return
-
+  function renderObject(scene: Scene, pipelineKey: string, mesh: Mesh, transform: Transform, material?: Material) {
     // get pipeline
-    const pipelineKey = useShadowMapPipeline ? 'shadow' : entity.pipeline ?? scene.defaultPipeline
+    pipelineKey = pipelineKey ?? scene.defaultPipeline
     const pipeline = pipelines.value[pipelineKey]
-    let vao = entity.mesh.vaoMap[pipelineKey]
+    let vao = mesh.vaoMap[pipelineKey]
 
     // create vao if it doesn't exist
     if (!vao) {
-      vao = pipeline.createMeshVAO(entity.mesh, 3)
-      entity.mesh.vaoMap[pipelineKey] = vao
-    }
-
-    // set global uniforms if pipeline has changed
-    if (lastUsedPipeline !== pipelineKey) {
-      lastUsedPipeline = pipelineKey
-      // pipeline.setGlobalUniforms(scene)
-    }
-
-    // render entity
-    gl.value.bindVertexArray(vao)
-    pipeline.render(scene, entity)
-  }
-
-  function renderCollider(scene: Scene, collider: Collider) {
-    // get pipeline
-    const pipelineKey = 'wireframe'
-    const pipeline = pipelines.value[pipelineKey]
-    let vao = collider.mesh.vaoMap[pipelineKey]
-
-    // create vao if it doesn't exist
-    if (!vao) {
-      console.log('Creating collider vao')
-      vao = pipeline.createMeshVAO(collider.mesh, 3)
-      collider.mesh.vaoMap[pipelineKey] = vao
+      vao = pipeline.createMeshVAO(mesh, 3)
+      mesh.vaoMap[pipelineKey] = vao
     }
 
     // set global uniforms if pipeline has changed
@@ -256,13 +236,8 @@ export const useWebGLStore = defineStore('webgl', () => {
     }
 
     // render entity
-    gl.value.cullFace(gl.value.FRONT)
-    gl.value.enable(gl.value.POLYGON_OFFSET_FILL)
-    gl.value.polygonOffset(-10, -10)
     gl.value.bindVertexArray(vao)
-    pipeline.renderMesh(scene, collider.mesh, collider.transform)
-    gl.value.disable(gl.value.POLYGON_OFFSET_FILL)
-    gl.value.cullFace(gl.value.BACK)
+    pipeline.render(scene, mesh, transform, material)
   }
 
   function getViewDirectionProjectionInverseMatrix() {
@@ -332,8 +307,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     renderShadowMapTexture,
     setRenderShadowMap,
     setRenderColor,
-    renderEntity,
-    renderCollider,
+    renderObject,
     getCameraMatrix,
     getViewMatrix,
     getProjectionMatrix,

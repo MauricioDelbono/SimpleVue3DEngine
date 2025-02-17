@@ -11,11 +11,11 @@ import quadFragmentShaderSource from '../shaders/quad.fs'
 import wireframeVertexShaderSource from '../shaders/wireframe.vs'
 import wireframeFragmentShaderSource from '../shaders/wireframe.fs'
 import webgl from '@/helpers/webgl'
-import type { Entity } from './entity'
 import type { Scene } from './scene'
 import { useWebGLStore } from '@/stores/webgl'
 import type { Mesh } from './mesh'
 import type { Transform } from './transform'
+import type { Material } from './material'
 
 export interface Pipeline {
   program: WebGLProgram
@@ -25,8 +25,7 @@ export interface Pipeline {
 
   createMeshVAO(mesh: Mesh, numberOfComponents: number): WebGLVertexArrayObject | null
   setGlobalUniforms(scene: Scene): void
-  render(scene: Scene, entity?: Entity): void
-  renderMesh(scene: Scene, mesh: Mesh, transform: Transform): void
+  render(scene: Scene, mesh?: Mesh, transform?: Transform, material?: Material): void
 }
 
 export class SkyboxPipeline implements Pipeline {
@@ -86,16 +85,12 @@ export class SkyboxPipeline implements Pipeline {
     }
   }
 
-  public render(scene: Scene, entity?: Entity): void {
+  public render(scene: Scene, mesh?: Mesh, transform?: Transform, material?: Material): void {
     if (scene.skybox) {
       this.gl.activeTexture(this.gl.TEXTURE0)
       this.gl.bindTexture(this.gl.TEXTURE_CUBE_MAP, scene.skybox.texture)
       this.gl.drawElements(this.gl.TRIANGLES, scene.skybox.mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
     }
-  }
-
-  public renderMesh(scene: Scene, mesh: Mesh, transform: Transform): void {
-    throw new Error('Method not implemented.')
   }
 }
 
@@ -157,16 +152,12 @@ export class LightPipeline implements Pipeline {
     this.gl.uniformMatrix4fv(this.uniforms.projection, false, this.store.getProjectionMatrix())
   }
 
-  public render(scene: Scene, entity: Entity): void {
+  public render(scene: Scene, mesh: Mesh, transform: Transform, material?: Material): void {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
-    this.gl.uniformMatrix4fv(this.uniforms.model, false, entity.transform.worldMatrix)
+    this.gl.uniformMatrix4fv(this.uniforms.model, false, transform.worldMatrix)
 
-    this.gl.drawElements(this.gl.TRIANGLES, entity.mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
-  }
-
-  public renderMesh(scene: Scene, mesh: Mesh, transform: Transform): void {
-    throw new Error('Method not implemented.')
+    this.gl.drawElements(this.gl.TRIANGLES, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
   }
 }
 
@@ -228,21 +219,12 @@ export class WireframePipeline implements Pipeline {
     this.gl.uniformMatrix4fv(this.uniforms.projection, false, this.store.getProjectionMatrix())
   }
 
-  public render(scene: Scene, entity: Entity): void {
-    this.gl.depthFunc(this.gl.LESS)
-    this.gl.useProgram(this.program)
-    this.gl.uniformMatrix4fv(this.uniforms.model, false, entity.transform.worldMatrix)
-
-    this.gl.drawElements(this.gl.TRIANGLES, entity.mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
-  }
-
-  public renderMesh(scene: Scene, mesh: Mesh, transform: Transform): void {
+  public render(scene: Scene, mesh: Mesh, transform: Transform, material?: Material): void {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
     this.gl.uniformMatrix4fv(this.uniforms.model, false, transform.worldMatrix)
 
-    this.gl.lineWidth(5)
-    this.gl.drawElements(this.gl.LINES, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
+    this.gl.drawElements(this.gl.LINE_LOOP, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
   }
 }
 
@@ -303,16 +285,12 @@ export class ShadowPipeline implements Pipeline {
     this.gl.uniformMatrix4fv(this.uniforms.viewProjection, false, this.store.getLightViewProjectionMatrix())
   }
 
-  public render(scene: Scene, entity: Entity): void {
+  public render(scene: Scene, mesh: Mesh, transform: Transform, material?: Material): void {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
-    this.gl.uniformMatrix4fv(this.uniforms.model, false, entity.transform.worldMatrix)
+    this.gl.uniformMatrix4fv(this.uniforms.model, false, transform.worldMatrix)
 
-    this.gl.drawElements(this.gl.TRIANGLES, entity.mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
-  }
-
-  public renderMesh(scene: Scene, mesh: Mesh, transform: Transform): void {
-    throw new Error('Method not implemented.')
+    this.gl.drawElements(this.gl.TRIANGLES, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
   }
 }
 
@@ -383,12 +361,8 @@ export class QuadPipeline implements Pipeline {
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.store.getShadowMap())
   }
 
-  public render(scene: Scene, entity: Entity): void {
-    this.gl.drawElements(this.gl.TRIANGLES, entity.mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
-  }
-
-  public renderMesh(scene: Scene, mesh: Mesh, transform: Transform): void {
-    throw new Error('Method not implemented.')
+  public render(scene: Scene, mesh: Mesh, transform?: Transform, material?: Material): void {
+    this.gl.drawElements(this.gl.TRIANGLES, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
   }
 }
 
@@ -540,29 +514,25 @@ export class DefaultPipeline implements Pipeline {
     // this.gl.bindTexture(this.gl.TEXTURE_2D, this.store.getShadowMap())
   }
 
-  public render(scene: Scene, entity: Entity): void {
+  public render(scene: Scene, mesh: Mesh, transform: Transform, material: Material): void {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
-    this.gl.uniform3fv(this.uniforms.color, entity.material.color)
+    this.gl.uniform3fv(this.uniforms.color, material.color)
     this.gl.uniform1i(this.uniforms.diffuse, 1)
     this.gl.uniform1i(this.uniforms.specular, 2)
     this.gl.uniform1i(this.uniforms.emission, 3)
-    this.gl.uniform1f(this.uniforms.shininess, entity.material.shininess)
-    this.gl.uniformMatrix4fv(this.uniforms.model, false, entity.transform.worldMatrix)
+    this.gl.uniform1f(this.uniforms.shininess, material.shininess)
+    this.gl.uniformMatrix4fv(this.uniforms.model, false, transform.worldMatrix)
 
     this.gl.activeTexture(this.gl.TEXTURE1)
-    this.gl.bindTexture(this.gl.TEXTURE_2D, entity.material.diffuse)
+    this.gl.bindTexture(this.gl.TEXTURE_2D, material.diffuse)
 
     this.gl.activeTexture(this.gl.TEXTURE2)
-    this.gl.bindTexture(this.gl.TEXTURE_2D, entity.material.specular)
+    this.gl.bindTexture(this.gl.TEXTURE_2D, material.specular)
 
     this.gl.activeTexture(this.gl.TEXTURE3)
-    this.gl.bindTexture(this.gl.TEXTURE_2D, entity.material.emission)
+    this.gl.bindTexture(this.gl.TEXTURE_2D, material.emission)
 
-    this.gl.drawElements(this.gl.TRIANGLES, entity.mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
-  }
-
-  public renderMesh(scene: Scene, mesh: Mesh, transform: Transform): void {
-    throw new Error('Method not implemented.')
+    this.gl.drawElements(this.gl.TRIANGLES, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
   }
 }

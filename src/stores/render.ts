@@ -2,7 +2,7 @@ import { ref, type Ref } from 'vue'
 import { defineStore } from 'pinia'
 import { Entity } from '@/models/entity'
 import { Scene } from '@/models/scene'
-import { useWebGLStore } from './webgl'
+import { pipelineKeys, useWebGLStore } from './webgl'
 import { Time } from '@/models/time'
 import { Collider } from '@/physics/collisions/collider'
 
@@ -98,25 +98,32 @@ export const useRenderStore = defineStore('render', () => {
     scene.value.updateTransformMatrices()
 
     store.clearCanvas(scene.value.fog.color)
-    store.setRenderShadowMap(scene.value)
+    if (!scene.value.wireframe) {
+      store.setRenderShadowMap(scene.value)
 
-    scene.value.entities.forEach((entity) => {
-      traverseTree(entity, (entity: Entity) => {
-        store.renderEntity(scene.value, entity)
+      scene.value.entities.forEach((entity) => {
+        traverseTree(entity, (entity: Entity) => {
+          if (entity.pipeline !== pipelineKeys.light) {
+            store.renderObject(scene.value, pipelineKeys.shadow, entity.mesh, entity.transform, entity.material)
+          }
+        })
       })
-    })
+    }
 
     store.resize()
     store.setRenderColor(scene.value)
 
     scene.value.entities.forEach((entity) => {
       traverseTree(entity, (entity: Entity) => {
-        store.renderEntity(scene.value, entity)
+        const pipeline = scene.value.wireframe ? pipelineKeys.wireframe : entity.pipeline ?? scene.value.defaultPipeline
+        store.renderObject(scene.value, pipeline, entity.mesh, entity.transform, entity.material)
 
-        const colliders = entity.getComponents(Collider)
-        colliders.forEach((collider) => {
-          store.renderCollider(scene.value, collider)
-        })
+        if (scene.value.debugColliders) {
+          const colliders = entity.getComponents(Collider)
+          colliders.forEach((collider) => {
+            store.renderObject(scene.value, pipelineKeys.wireframe, collider.mesh, collider.transform)
+          })
+        }
       })
     })
 
