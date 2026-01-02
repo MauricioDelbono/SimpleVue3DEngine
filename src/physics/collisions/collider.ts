@@ -7,11 +7,15 @@ import { Transform } from '@/models/transform'
 export class Collider extends Component {
   public transform: Transform
   public mesh: Mesh
+  public min: vec3
+  public max: vec3
 
   constructor() {
     super()
     this.transform = new Transform()
     this.mesh = new Mesh('Mesh')
+    this.min = vec3.create()
+    this.max = vec3.create()
     this.addEditorProp(new EditorProp('position', EditorPropType.vec3))
   }
 
@@ -20,9 +24,7 @@ export class Collider extends Component {
   }
 
   public get worldPosition() {
-    const worldPos = vec3.create()
-    vec3.add(worldPos, this.transform.worldPosition, this.transform.position)
-    return worldPos
+    return this.transform.worldPosition
   }
 
   public updateTransformMatrix(matrix?: mat4) {
@@ -30,14 +32,6 @@ export class Collider extends Component {
   }
 
   public testCollision<T extends Collider>(collider: T): CollisionPoints {
-    throw new Error('Not implemented in base class')
-  }
-
-  public get min(): vec3 {
-    throw new Error('Not implemented in base class')
-  }
-
-  public get max(): vec3 {
     throw new Error('Not implemented in base class')
   }
 

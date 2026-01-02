@@ -56,14 +56,22 @@ export const useRenderStore = defineStore('render', () => {
   }
 
   function render(time: Time) {
+    // Update transform matrices first (for initial setup)
+    scene.value.updateTransformMatrices()
+
     // Update
     if (isRendering.value) {
+      // First update entities (including rigidbody physics)
       scene.value.entities.forEach((entity) => {
         traverseTree(entity, (entity: Entity) => {
           entity.update(time)
         })
       })
 
+      // Update transform matrices again after physics to ensure colliders have latest positions
+      scene.value.updateTransformMatrices()
+
+      // Then run physics collision detection and response
       subscribers.value.forEach((subscriber) => {
         subscriber.update(time)
       })
@@ -95,8 +103,6 @@ export const useRenderStore = defineStore('render', () => {
   }
 
   function renderScene() {
-    scene.value.updateTransformMatrices()
-
     store.clearCanvas(scene.value.fog.color)
     if (!scene.value.wireframe) {
       store.setRenderShadowMap(scene.value)
@@ -104,7 +110,7 @@ export const useRenderStore = defineStore('render', () => {
       scene.value.entities.forEach((entity) => {
         traverseTree(entity, (entity: Entity) => {
           if (entity.pipeline !== pipelineKeys.light) {
-            store.renderObject(scene.value, pipelineKeys.shadow, entity.mesh, entity.transform, entity.material)
+            store.renderMesh(scene.value, pipelineKeys.shadow, entity.mesh, entity.transform, entity.material)
           }
         })
       })
@@ -116,12 +122,12 @@ export const useRenderStore = defineStore('render', () => {
     scene.value.entities.forEach((entity) => {
       traverseTree(entity, (entity: Entity) => {
         const pipeline = scene.value.wireframe ? pipelineKeys.wireframe : entity.pipeline ?? scene.value.defaultPipeline
-        store.renderObject(scene.value, pipeline, entity.mesh, entity.transform, entity.material)
+        store.renderMesh(scene.value, pipeline, entity.mesh, entity.transform, entity.material)
 
         if (scene.value.debugColliders) {
           const colliders = entity.getComponents(Collider)
           colliders.forEach((collider) => {
-            store.renderObject(scene.value, pipelineKeys.wireframe, collider.mesh, collider.transform)
+            store.renderMesh(scene.value, pipelineKeys.wireframe, collider.mesh, collider.transform, undefined, { color: [1, 0, 0] })
           })
         }
       })
