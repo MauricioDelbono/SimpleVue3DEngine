@@ -99,15 +99,20 @@ export const useRenderStore = defineStore('render', () => {
 
     store.clearCanvas(scene.value.fog.color)
     if (!scene.value.wireframe) {
-      store.setRenderShadowMap(scene.value)
+      if (scene.value.directionalLight) {
+        const cascadeCount = store.getCascadeCount()
+        for (let i = 0; i < cascadeCount; i++) {
+          store.prepareShadowCascade(scene.value, i)
 
-      scene.value.entities.forEach((entity) => {
-        traverseTree(entity, (entity: Entity) => {
-          if (entity.pipeline !== pipelineKeys.light) {
-            store.renderObject(scene.value, pipelineKeys.shadow, entity.mesh, entity.transform, entity.material)
-          }
-        })
-      })
+          scene.value.entities.forEach((entity) => {
+            traverseTree(entity, (entity: Entity) => {
+              if (entity.pipeline !== pipelineKeys.light) {
+                store.renderObject(scene.value, pipelineKeys.shadow, entity.mesh, entity.transform, entity.material)
+              }
+            })
+          })
+        }
+      }
     }
 
     store.resize()
