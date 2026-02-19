@@ -1,5 +1,6 @@
 export default `#version 300 es
 precision highp float;
+precision mediump sampler2DArray;
 
 struct Material {
     vec3 color;
@@ -45,7 +46,6 @@ out vec4 FragColor;
 in vec3 Normal;
 in vec3 FragPos;
 in vec2 TexCoords;
-in vec4 FragPosLightSpace;
 
 #define NR_POINT_LIGHTS 4
 
@@ -54,23 +54,21 @@ uniform Material material;
 uniform DirLight dirLight;
 uniform SpotLight spotLight;
 uniform PointLight pointLights[NR_POINT_LIGHTS];
-uniform sampler2D shadowMap;
+uniform sampler2DArray shadowMap;
 
-// uniform vec4 uFogColor;
-// uniform float uFogNear;
-// uniform float uFogFar;
+uniform int cascadeCount;
+uniform float cascadePlaneDistances[4];
+uniform mat4 lightSpaceMatrices[4];
+uniform mat4 view;
 
 // function prototypes
-float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir);
+float ShadowCalculation(vec3 fragPosWorld, vec3 normal, vec3 lightDir);
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 
 void main()
 {
-    // float fogAmount = smoothstep(uFogNear, uFogFar, gl_FragCoord.z);
-    // outColor = mix(outColor, uFogColor, fogAmount);
-
     // properties
     vec3 norm = normalize(Normal);
     vec3 viewDir = normalize(viewPos - FragPos);
@@ -117,7 +115,7 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
     vec3 specular = light.specular * spec * texture(material.specular, TexCoords).rgb;
     
     // calculate shadow
-    float shadow = ShadowCalculation(FragPosLightSpace, normal, lightDir);
+    float shadow = ShadowCalculation(FragPos, normal, lightDir);
     return ambient + (1.0 - shadow) * (diffuse + specular);
 }
 
@@ -178,35 +176,56 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     return (ambient + diffuse + specular);
 }
 
-float ShadowCalculation(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir)
+float ShadowCalculation(vec3 fragPosWorld, vec3 normal, vec3 lightDir)
 {
-    // perform perspective divide
+    // Get view space depth
+    vec4 fragPosView = view * vec4(fragPosWorld, 1.0);
+    float depthValue = abs(fragPosView.z);
+    
+    int layer = -1;
+    for(int i = 0; i < cascadeCount; ++i)
+    {
+        if (depthValue < cascadePlaneDistances[i])
+        {
+            layer = i;
+            break;
+        }
+    }
+    if (layer == -1)
+    {
+        layer = cascadeCount - 1; // Last cascade
+    }
+
+    vec4 fragPosLightSpace = lightSpaceMatrices[layer] * vec4(fragPosWorld, 1.0);
     vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
-    
-    // transform to [0,1] range
     projCoords = projCoords * 0.5 + 0.5;
-    
-    if(projCoords.z > 1.0)
+
+    float currentDepth = projCoords.z;
+    if (currentDepth > 1.0)
         return 0.0;
 
-    // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
-    float closestDepth = texture(shadowMap, projCoords.xy).r;
+    float bias = max(0.005 * (1.0 - dot(normal, lightDir)), 0.0005);
+    if (layer == cascadeCount)
+    {
+        bias *= 1.0 / (50.0 * 0.5);
+    }
+    else
+    {
+        bias *= 1.0 / (cascadePlaneDistances[layer] * 0.5);
+    }
     
-    // get depth of current fragment from light's perspective with bias
-    float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.006);
-    
-    // PCF  - check whether current frag pos is in shadow
     float shadow = 0.0;
-    vec2 texelSize = vec2(1.0, 1.0) / vec2(textureSize(shadowMap, 0));
+    vec2 texelSize = 1.0 / vec2(textureSize(shadowMap, 0).xy);
     for(int x = -1; x <= 1; ++x)
     {
         for(int y = -1; y <= 1; ++y)
         {
-            float pcfDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r; 
-            shadow += projCoords.z - bias > pcfDepth ? 1.0 : 0.0;        
+            float pcfDepth = texture(shadowMap, vec3(projCoords.xy + vec2(x, y) * texelSize, float(layer))).r;
+            shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
         }    
     }
+    shadow /= 9.0;
 
-    return shadow / 9.0;
+    return shadow;
 }
 `
