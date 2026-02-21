@@ -423,8 +423,10 @@ export class DefaultPipeline implements Pipeline {
       model: this.gl.getUniformLocation(this.program, 'model'),
       view: this.gl.getUniformLocation(this.program, 'view'),
       projection: this.gl.getUniformLocation(this.program, 'projection'),
-      lightViewProjectionMatrix: this.gl.getUniformLocation(this.program, 'lightViewProjectionMatrix'),
-      shadowMap: this.gl.getUniformLocation(this.program, 'shadowMap')
+      shadowMap: this.gl.getUniformLocation(this.program, 'shadowMap'),
+      cascadeCount: this.gl.getUniformLocation(this.program, 'cascadeCount'),
+      cascadePlaneDistances: this.gl.getUniformLocation(this.program, 'cascadePlaneDistances'),
+      lightSpaceMatrices: this.gl.getUniformLocation(this.program, 'lightSpaceMatrices')
     }
 
     for (let index = 0; index < this.maxPointLights; index++) {
@@ -476,13 +478,30 @@ export class DefaultPipeline implements Pipeline {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null)
     this.gl.activeTexture(this.gl.TEXTURE0)
-    this.gl.bindTexture(this.gl.TEXTURE_2D, this.store.getShadowMap())
+    this.gl.bindTexture(this.gl.TEXTURE_2D_ARRAY, this.store.getShadowMap())
     this.gl.useProgram(this.program)
 
     this.gl.uniformMatrix4fv(this.uniforms.view, false, this.store.getViewMatrix())
     this.gl.uniformMatrix4fv(this.uniforms.projection, false, this.store.getProjectionMatrix())
     this.gl.uniform3fv(this.uniforms.viewPosition, scene.camera.transform.position)
-    this.gl.uniformMatrix4fv(this.uniforms.lightViewProjectionMatrix, false, this.store.getLightViewProjectionMatrix())
+
+    const splits = this.store.getCascadeSplitsArray()
+    const cascadeCount = this.store.getCascadeCount()
+    const lightMatrices = this.store.getLightSpaceMatrices()
+
+    this.gl.uniform1i(this.uniforms.cascadeCount, cascadeCount)
+
+    if (splits.length > 1) {
+      this.gl.uniform1fv(this.uniforms.cascadePlaneDistances, new Float32Array(splits.slice(1)))
+    }
+
+    if (lightMatrices.length > 0) {
+      const flatMatrices = new Float32Array(lightMatrices.length * 16)
+      for (let i = 0; i < lightMatrices.length; i++) {
+        flatMatrices.set(lightMatrices[i], i * 16)
+      }
+      this.gl.uniformMatrix4fv(this.uniforms.lightSpaceMatrices, false, flatMatrices)
+    }
 
     if (scene.directionalLight) {
       this.gl.uniform1i(this.uniforms.dirLightEnabled, 1)

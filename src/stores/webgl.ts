@@ -20,6 +20,12 @@ import Primitives from '@/helpers/primitives'
 import type { Mesh } from '@/models/mesh'
 import type { Transform } from '@/models/transform'
 import type { Material } from '@/models/material'
+import {
+  getLightSpaceMatrix,
+  getCascadeSplits,
+  CASCADE_COUNT,
+  SHADOW_MAP_SIZE
+} from '@/helpers/shadows'
 
 export const pipelineKeys = {
   skybox: 'skybox',
@@ -58,7 +64,12 @@ export const useWebGLStore = defineStore('webgl', () => {
   let aspect = 16 / 9
   const zNear = 0.5
   const zFar = 100
-  const depthTextureSize = 1024
+
+  const shadowMapSize = SHADOW_MAP_SIZE
+  const cascadeCount = CASCADE_COUNT
+  const cascadeSplits: Ref<number[]> = ref([])
+  const lightSpaceMatrices: Ref<mat4[]> = ref([])
+
   let depthTexture: Texture = null
   let depthFrameBuffer: FrameBuffer = null
 
@@ -84,6 +95,8 @@ export const useWebGLStore = defineStore('webgl', () => {
     aspect = 16 / 9
     depthTexture = null
     depthFrameBuffer = null
+    cascadeSplits.value = []
+    lightSpaceMatrices.value = []
   }
 
   function clearCanvas(color: vec4 = [0, 0, 0, 1]) {
@@ -135,17 +148,19 @@ export const useWebGLStore = defineStore('webgl', () => {
 
   function initializeShadowMap() {
     depthTexture = gl.value.createTexture()
-    gl.value.bindTexture(gl.value.TEXTURE_2D, depthTexture)
+    gl.value.bindTexture(gl.value.TEXTURE_2D_ARRAY, depthTexture)
 
-    gl.value.texStorage2D(gl.value.TEXTURE_2D, 1, gl.value.DEPTH_COMPONENT32F, depthTextureSize, depthTextureSize)
-    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MAG_FILTER, gl.value.NEAREST)
-    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MIN_FILTER, gl.value.NEAREST)
-    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_WRAP_S, gl.value.CLAMP_TO_EDGE)
-    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_WRAP_T, gl.value.CLAMP_TO_EDGE)
+    gl.value.texStorage3D(gl.value.TEXTURE_2D_ARRAY, 1, gl.value.DEPTH_COMPONENT32F, shadowMapSize, shadowMapSize, cascadeCount)
+    gl.value.texParameteri(gl.value.TEXTURE_2D_ARRAY, gl.value.TEXTURE_MAG_FILTER, gl.value.NEAREST)
+    gl.value.texParameteri(gl.value.TEXTURE_2D_ARRAY, gl.value.TEXTURE_MIN_FILTER, gl.value.NEAREST)
+    gl.value.texParameteri(gl.value.TEXTURE_2D_ARRAY, gl.value.TEXTURE_WRAP_S, gl.value.CLAMP_TO_EDGE)
+    gl.value.texParameteri(gl.value.TEXTURE_2D_ARRAY, gl.value.TEXTURE_WRAP_T, gl.value.CLAMP_TO_EDGE)
 
     depthFrameBuffer = gl.value.createFramebuffer()
     gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, depthFrameBuffer)
-    gl.value.framebufferTexture2D(gl.value.FRAMEBUFFER, gl.value.DEPTH_ATTACHMENT, gl.value.TEXTURE_2D, depthTexture, 0)
+
+    // Attach layer 0 to make framebuffer complete (check only)
+    gl.value.framebufferTextureLayer(gl.value.FRAMEBUFFER, gl.value.DEPTH_ATTACHMENT, depthTexture, 0, 0)
 
     if (gl.value.checkFramebufferStatus(gl.value.FRAMEBUFFER) !== gl.value.FRAMEBUFFER_COMPLETE) {
       console.error('Error setting up framebuffer')
@@ -153,37 +168,48 @@ export const useWebGLStore = defineStore('webgl', () => {
 
     // Unbind the framebuffer and the texture.
     gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, null)
-    gl.value.bindTexture(gl.value.TEXTURE_2D, null)
+    gl.value.bindTexture(gl.value.TEXTURE_2D_ARRAY, null)
   }
 
   function renderShadowMapTexture(scene: Scene) {
-    const pipeline = pipelines.value.quad
-    const mesh = Primitives.createXYQuad()
-    mesh.vaoMap.quad = pipeline.createMeshVAO(mesh, 2)
-    const entity = new Entity(mesh.name, mesh)
-
-    gl.value.bindVertexArray(mesh.vaoMap.quad)
-    pipeline.setGlobalUniforms(scene)
-    pipeline.render(scene, entity.mesh, entity.transform)
-    lastUsedPipeline = 'quad'
+      // NOTE: Render shadow map texture for debug might fail with TextureArray if quad shader expects Texture2D
+      // We skip fixing this for now or implement debug view later
   }
 
-  function setRenderShadowMap(scene: Scene) {
+  function prepareShadowCascade(scene: Scene, cascadeIndex: number) {
     if (!scene.directionalLight) return
 
-    const lightTransform = scene.directionalLight.transform
-    mat4.lookAt(
-      lightViewMatrix,
-      lightTransform.position,
-      vec3.add(vec3.create(), lightTransform.position, lightTransform.getFrontVector()),
-      lightTransform.getUpVector()
+    // Calculate splits once per frame (heuristic: index 0)
+    if (cascadeIndex === 0) {
+        cascadeSplits.value = getCascadeSplits(zNear, zFar, cascadeCount, 0.5)
+        if (lightSpaceMatrices.value.length !== cascadeCount) {
+             lightSpaceMatrices.value = new Array(cascadeCount).fill(null).map(() => mat4.create())
+        }
+    }
+
+    const near = cascadeSplits.value[cascadeIndex]
+    const far = cascadeSplits.value[cascadeIndex + 1]
+
+    const lightDir = scene.directionalLight.transform.getForwardVector()
+
+    const lightSpaceMatrix = getLightSpaceMatrix(
+        viewMatrix,
+        fieldOfViewRadians,
+        aspect,
+        near,
+        far,
+        lightDir
     )
-    mat4.ortho(lightProjectionMatrix, -10, 10, -10, 10, 0, 100)
-    mat4.multiply(lightViewProjectionMatrix, lightProjectionMatrix, lightViewMatrix)
+
+    mat4.copy(lightSpaceMatrices.value[cascadeIndex], lightSpaceMatrix)
+    mat4.copy(lightViewProjectionMatrix, lightSpaceMatrix)
+
     gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, depthFrameBuffer)
-    gl.value.viewport(0, 0, depthTextureSize, depthTextureSize)
+    gl.value.framebufferTextureLayer(gl.value.FRAMEBUFFER, gl.value.DEPTH_ATTACHMENT, depthTexture, 0, cascadeIndex)
+
+    gl.value.viewport(0, 0, shadowMapSize, shadowMapSize)
     gl.value.cullFace(gl.value.FRONT)
-    gl.value.clear(gl.value.COLOR_BUFFER_BIT | gl.value.DEPTH_BUFFER_BIT)
+    gl.value.clear(gl.value.DEPTH_BUFFER_BIT)
 
     pipelines.value.shadow.setGlobalUniforms(scene)
   }
@@ -297,6 +323,18 @@ export const useWebGLStore = defineStore('webgl', () => {
     return depthFrameBuffer
   }
 
+  function getCascadeSplitsArray() {
+      return cascadeSplits.value
+  }
+
+  function getLightSpaceMatrices() {
+      return lightSpaceMatrices.value
+  }
+
+  function getCascadeCount() {
+      return cascadeCount
+  }
+
   return {
     gl,
     canvas,
@@ -306,7 +344,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     resize,
     setFieldOfView,
     renderShadowMapTexture,
-    setRenderShadowMap,
+    prepareShadowCascade,
     setRenderColor,
     renderMesh,
     getCameraMatrix,
@@ -321,6 +359,9 @@ export const useWebGLStore = defineStore('webgl', () => {
     getViewDirectionProjectionInverseMatrix,
     getShadowMap,
     getDepthFrameBuffer,
+    getCascadeSplitsArray,
+    getLightSpaceMatrices,
+    getCascadeCount,
     reset
   }
 })
