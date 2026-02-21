@@ -12,12 +12,7 @@ export function getFrustumCornersWorldSpace(proj: mat4, view: mat4): vec4[] {
   for (let x = 0; x < 2; ++x) {
     for (let y = 0; y < 2; ++y) {
       for (let z = 0; z < 2; ++z) {
-        const pt = vec4.fromValues(
-          2.0 * x - 1.0,
-          2.0 * y - 1.0,
-          2.0 * z - 1.0,
-          1.0
-        )
+        const pt = vec4.fromValues(2.0 * x - 1.0, 2.0 * y - 1.0, 2.0 * z - 1.0, 1.0)
         vec4.transformMat4(pt, pt, inv)
         vec4.scale(pt, pt, 1.0 / pt[3])
         frustumCorners.push(pt)
@@ -28,14 +23,7 @@ export function getFrustumCornersWorldSpace(proj: mat4, view: mat4): vec4[] {
   return frustumCorners
 }
 
-export function getLightSpaceMatrix(
-  cameraView: mat4,
-  fov: number,
-  aspect: number,
-  near: number,
-  far: number,
-  lightDir: vec3
-): mat4 {
+export function getLightSpaceMatrix(cameraView: mat4, fov: number, aspect: number, near: number, far: number, lightDir: vec3): mat4 {
   const proj = mat4.create()
   mat4.perspective(proj, fov, aspect, near, far)
   const corners = getFrustumCornersWorldSpace(proj, cameraView)
@@ -52,15 +40,10 @@ export function getLightSpaceMatrix(
 
   let up = vec3.fromValues(0, 1, 0)
   if (Math.abs(vec3.dot(lightDir, up)) > 0.99) {
-      up = vec3.fromValues(0, 0, 1)
+    up = vec3.fromValues(0, 0, 1)
   }
 
-  mat4.lookAt(
-    lightView,
-    center,
-    target,
-    up
-  )
+  mat4.lookAt(lightView, center, target, up)
 
   let minX = Number.MAX_VALUE
   let maxX = -Number.MAX_VALUE
