@@ -7,6 +7,7 @@ import { Transform } from '@/models/transform'
 export class Collider extends Component {
   public transform: Transform
   public mesh: Mesh
+  private _worldPosition: vec3 = vec3.create()
 
   constructor() {
     super()
@@ -20,9 +21,9 @@ export class Collider extends Component {
   }
 
   public get worldPosition() {
-    const worldPos = vec3.create()
-    vec3.add(worldPos, this.transform.worldPosition, this.transform.position)
-    return worldPos
+    mat4.getTranslation(this._worldPosition, this.transform.worldMatrix)
+    vec3.add(this._worldPosition, this._worldPosition, this.transform.position)
+    return this._worldPosition
   }
 
   public updateTransformMatrix(matrix?: mat4) {
