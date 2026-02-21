@@ -269,12 +269,16 @@ export default class Primitives {
     const positions = [
       xOffset + -1 * size,
       yOffset + -1 * size,
+      0,
       xOffset + 1 * size,
       yOffset + -1 * size,
+      0,
       xOffset + -1 * size,
       yOffset + 1 * size,
+      0,
       xOffset + 1 * size,
-      yOffset + 1 * size
+      yOffset + 1 * size,
+      0
     ]
     const normals = [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1]
     const textureCoords = [0, 0, 1, 0, 0, 1, 1, 1]

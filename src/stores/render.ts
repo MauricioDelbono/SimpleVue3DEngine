@@ -5,6 +5,9 @@ import { Scene } from '@/models/scene'
 import { pipelineKeys, useWebGLStore } from './webgl'
 import { Time } from '@/models/time'
 import { Collider } from '@/physics/collisions/collider'
+import Primitives from '@/helpers/primitives'
+import { Mesh } from '@/models/mesh'
+import { Transform } from '@/models/transform'
 
 interface Render {
   update: (time: Time) => void
@@ -21,6 +24,9 @@ export const useRenderStore = defineStore('render', () => {
   const scene: Ref<Scene> = ref(new Scene())
   const store = useWebGLStore()
 
+  let quadMesh: Mesh = null
+  const quadTransform = new Transform()
+
   function reset() {
     store.reset()
     subscribers.value = []
@@ -33,6 +39,7 @@ export const useRenderStore = defineStore('render', () => {
   function initialize() {
     store.initialize('canvas')
     store.setFieldOfView(60)
+    quadMesh = Primitives.createXYQuad()
   }
 
   function subscribeToRender(subscriber: Render) {
@@ -97,7 +104,7 @@ export const useRenderStore = defineStore('render', () => {
   function renderScene() {
     scene.value.updateTransformMatrices()
 
-    store.clearCanvas(scene.value.fog.color)
+    // 1. Shadow Pass
     if (!scene.value.wireframe) {
       if (scene.value.directionalLight) {
         const cascadeCount = store.getCascadeCount()
@@ -106,7 +113,7 @@ export const useRenderStore = defineStore('render', () => {
 
           scene.value.entities.forEach((entity) => {
             traverseTree(entity, (entity: Entity) => {
-              if (entity.pipeline !== pipelineKeys.light) {
+              if (entity.pipeline !== pipelineKeys.light && entity.pipeline !== pipelineKeys.skybox) {
                 store.renderObject(scene.value, pipelineKeys.shadow, entity.mesh, entity.transform, entity.material)
               }
             })
@@ -116,12 +123,51 @@ export const useRenderStore = defineStore('render', () => {
     }
 
     store.resize()
+
+    // 2. G-Buffer Pass
+    // Clear handled by setGlobalUniforms
+    if (!scene.value.wireframe) {
+        store.pipelines[pipelineKeys.gbuffer].setGlobalUniforms(scene.value)
+        scene.value.entities.forEach((entity) => {
+          traverseTree(entity, (entity: Entity) => {
+            if (entity.pipeline === pipelineKeys.light) return
+            if (entity.pipeline === pipelineKeys.skybox) return
+
+            store.renderObject(scene.value, pipelineKeys.gbuffer, entity.mesh, entity.transform, entity.material)
+          })
+        })
+    }
+
+    // 3. Deferred Lighting Pass
+    if (!scene.value.wireframe) {
+        // Bind default framebuffer (implicitly done by setGlobalUniforms if it unbinds G-Buffer)
+        store.pipelines[pipelineKeys.deferred].setGlobalUniforms(scene.value)
+        store.renderObject(scene.value, pipelineKeys.deferred, quadMesh, quadTransform)
+    } else {
+        store.clearCanvas(scene.value.fog.color)
+    }
+
+    // 4. Forward Pass (Skybox, Debug, Wireframes)
+    // Restore depth buffer from G-Buffer so forward pass respects geometry
+    if (!scene.value.wireframe) {
+        store.copyDepthBuffer()
+    }
+
+    // Set up forward rendering state (Skybox is rendered here)
     store.setRenderColor(scene.value)
 
+    // Render wireframes / debug / lights
     scene.value.entities.forEach((entity) => {
       traverseTree(entity, (entity: Entity) => {
-        const pipeline = scene.value.wireframe ? pipelineKeys.wireframe : entity.pipeline ?? scene.value.defaultPipeline
-        store.renderObject(scene.value, pipeline, entity.mesh, entity.transform, entity.material)
+        // If wireframe mode globally enabled, render everything as wireframe
+        if (scene.value.wireframe) {
+           store.renderObject(scene.value, pipelineKeys.wireframe, entity.mesh, entity.transform, entity.material)
+        } else {
+           // Otherwise, only render things that weren't in G-Buffer (Lights) or debug stuff
+           if (entity.pipeline === pipelineKeys.light) {
+               store.renderObject(scene.value, pipelineKeys.light, entity.mesh, entity.transform, entity.material)
+           }
+        }
 
         if (scene.value.debugColliders) {
           const colliders = entity.getComponents(Collider)
