@@ -131,8 +131,6 @@ export const useRenderStore = defineStore('render', () => {
         }
       })
     })
-
-    // store.renderShadowMapTexture(scene.value)
   }
 
   function startRender() {
