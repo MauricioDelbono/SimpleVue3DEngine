@@ -10,12 +10,16 @@ import quadVertexShaderSource from '../shaders/quad.vs'
 import quadFragmentShaderSource from '../shaders/quad.fs'
 import wireframeVertexShaderSource from '../shaders/wireframe.vs'
 import wireframeFragmentShaderSource from '../shaders/wireframe.fs'
+import particleVertexShaderSource from '../shaders/particle.vs'
+import particleFragmentShaderSource from '../shaders/particle.fs'
 import webgl from '@/helpers/webgl'
 import type { Scene } from './scene'
 import { useWebGLStore } from '@/stores/webgl'
 import type { Mesh } from './mesh'
 import type { Transform } from './transform'
 import type { Material } from './material'
+import type { Entity } from './entity'
+import { ParticleSystem } from './particleSystem'
 
 export interface Pipeline {
   program: WebGLProgram
@@ -25,7 +29,7 @@ export interface Pipeline {
 
   createMeshVAO(mesh: Mesh, numberOfComponents: number): WebGLVertexArrayObject | null
   setGlobalUniforms(scene: Scene): void
-  render(scene: Scene, mesh?: Mesh, transform?: Transform, material?: Material): void
+  render(scene: Scene, mesh?: Mesh, transform?: Transform, material?: Material, entity?: Entity): void
 }
 
 export class SkyboxPipeline implements Pipeline {
@@ -85,7 +89,7 @@ export class SkyboxPipeline implements Pipeline {
     }
   }
 
-  public render(scene: Scene, mesh?: Mesh, transform?: Transform, material?: Material): void {
+  public render(scene: Scene, mesh?: Mesh, transform?: Transform, material?: Material, entity?: Entity): void {
     if (scene.skybox) {
       this.gl.activeTexture(this.gl.TEXTURE0)
       this.gl.bindTexture(this.gl.TEXTURE_CUBE_MAP, scene.skybox.texture)
@@ -152,7 +156,7 @@ export class LightPipeline implements Pipeline {
     this.gl.uniformMatrix4fv(this.uniforms.projection, false, this.store.getProjectionMatrix())
   }
 
-  public render(scene: Scene, mesh: Mesh, transform: Transform, material?: Material): void {
+  public render(scene: Scene, mesh: Mesh, transform: Transform, material?: Material, entity?: Entity): void {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
     this.gl.uniformMatrix4fv(this.uniforms.model, false, transform.worldMatrix)
@@ -219,7 +223,7 @@ export class WireframePipeline implements Pipeline {
     this.gl.uniformMatrix4fv(this.uniforms.projection, false, this.store.getProjectionMatrix())
   }
 
-  public render(scene: Scene, mesh: Mesh, transform: Transform, material?: Material): void {
+  public render(scene: Scene, mesh: Mesh, transform: Transform, material?: Material, entity?: Entity): void {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
     this.gl.uniformMatrix4fv(this.uniforms.model, false, transform.worldMatrix)
@@ -285,7 +289,7 @@ export class ShadowPipeline implements Pipeline {
     this.gl.uniformMatrix4fv(this.uniforms.viewProjection, false, this.store.getLightViewProjectionMatrix())
   }
 
-  public render(scene: Scene, mesh: Mesh, transform: Transform, material?: Material): void {
+  public render(scene: Scene, mesh: Mesh, transform: Transform, material?: Material, entity?: Entity): void {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
     this.gl.uniformMatrix4fv(this.uniforms.model, false, transform.worldMatrix)
@@ -361,7 +365,7 @@ export class QuadPipeline implements Pipeline {
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.store.getShadowMap())
   }
 
-  public render(scene: Scene, mesh: Mesh, transform?: Transform, material?: Material): void {
+  public render(scene: Scene, mesh: Mesh, transform?: Transform, material?: Material, entity?: Entity): void {
     this.gl.drawElements(this.gl.TRIANGLES, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
   }
 }
@@ -533,7 +537,7 @@ export class DefaultPipeline implements Pipeline {
     // this.gl.bindTexture(this.gl.TEXTURE_2D, this.store.getShadowMap())
   }
 
-  public render(scene: Scene, mesh: Mesh, transform: Transform, material: Material): void {
+  public render(scene: Scene, mesh: Mesh, transform: Transform, material: Material, entity?: Entity): void {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
     this.gl.uniform3fv(this.uniforms.color, material.color)
@@ -553,5 +557,156 @@ export class DefaultPipeline implements Pipeline {
     this.gl.bindTexture(this.gl.TEXTURE_2D, material.emission)
 
     this.gl.drawElements(this.gl.TRIANGLES, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
+  }
+}
+
+export class ParticlePipeline implements Pipeline {
+  gl: WebGL2RenderingContext
+  program: WebGLProgram
+  attributes: Record<string, number>
+  uniforms: Record<string, WebGLUniformLocation | null>
+  store = useWebGLStore()
+
+  constructor(gl: WebGL2RenderingContext) {
+    this.gl = gl
+    this.program = webgl.createProgram(gl, particleVertexShaderSource, particleFragmentShaderSource)
+    this.attributes = this.createAttributes()
+    this.uniforms = this.createUniforms()
+  }
+
+  private createAttributes() {
+    return {
+      aPosition: this.gl.getAttribLocation(this.program, 'aPosition'),
+      aTexCoords: this.gl.getAttribLocation(this.program, 'aTexCoords'),
+      aOffset: this.gl.getAttribLocation(this.program, 'aOffset'),
+      aColor: this.gl.getAttribLocation(this.program, 'aColor'),
+      aSize: this.gl.getAttribLocation(this.program, 'aSize')
+    }
+  }
+
+  private createUniforms() {
+    return {
+      model: this.gl.getUniformLocation(this.program, 'model'),
+      view: this.gl.getUniformLocation(this.program, 'view'),
+      projection: this.gl.getUniformLocation(this.program, 'projection'),
+      sprite: this.gl.getUniformLocation(this.program, 'sprite'),
+      hasTexture: this.gl.getUniformLocation(this.program, 'hasTexture')
+    }
+  }
+
+  public createMeshVAO(mesh: Mesh, numberOfComponents: number = 3) {
+    // This is not used for particles since VAO creation happens in render or is handled per-system
+    // But we need to implement it. We can return a basic VAO or null.
+    return null;
+  }
+
+  private createParticleVAO(mesh: Mesh, ps: ParticleSystem): WebGLVertexArrayObject {
+    this.gl.useProgram(this.program)
+    const vao = this.gl.createVertexArray()
+    this.gl.bindVertexArray(vao)
+
+    // 1. Mesh Buffers (Shared)
+    const positionBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer)
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(mesh.positions), this.gl.STATIC_DRAW)
+    this.gl.vertexAttribPointer(this.attributes.aPosition, 2, this.gl.FLOAT, false, 0, 0)
+    this.gl.enableVertexAttribArray(this.attributes.aPosition)
+
+    const uvBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, uvBuffer)
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(mesh.textureCoords), this.gl.STATIC_DRAW)
+    this.gl.vertexAttribPointer(this.attributes.aTexCoords, 2, this.gl.FLOAT, false, 0, 0)
+    this.gl.enableVertexAttribArray(this.attributes.aTexCoords)
+
+    const indicesBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+    this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(mesh.indices), this.gl.STATIC_DRAW)
+
+    // 2. Instance Buffers
+    // Position (Offset)
+    const offsetBuffer = this.gl.createBuffer()
+    ps.buffers.position = offsetBuffer
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, offsetBuffer)
+    // Allocate buffer size
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, ps.positions.byteLength, this.gl.DYNAMIC_DRAW)
+    this.gl.vertexAttribPointer(this.attributes.aOffset, 3, this.gl.FLOAT, false, 0, 0)
+    this.gl.enableVertexAttribArray(this.attributes.aOffset)
+    this.gl.vertexAttribDivisor(this.attributes.aOffset, 1)
+
+    // Color
+    const colorBuffer = this.gl.createBuffer()
+    ps.buffers.color = colorBuffer
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, colorBuffer)
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, ps.colors.byteLength, this.gl.DYNAMIC_DRAW)
+    this.gl.vertexAttribPointer(this.attributes.aColor, 4, this.gl.FLOAT, false, 0, 0)
+    this.gl.enableVertexAttribArray(this.attributes.aColor)
+    this.gl.vertexAttribDivisor(this.attributes.aColor, 1)
+
+    // Size
+    const sizeBuffer = this.gl.createBuffer()
+    ps.buffers.size = sizeBuffer
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, sizeBuffer)
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, ps.sizes.byteLength, this.gl.DYNAMIC_DRAW)
+    this.gl.vertexAttribPointer(this.attributes.aSize, 1, this.gl.FLOAT, false, 0, 0)
+    this.gl.enableVertexAttribArray(this.attributes.aSize)
+    this.gl.vertexAttribDivisor(this.attributes.aSize, 1)
+
+    this.gl.bindVertexArray(null)
+    return vao
+  }
+
+  public setGlobalUniforms(scene: Scene): void {
+    this.gl.depthFunc(this.gl.LESS)
+    this.gl.enable(this.gl.BLEND)
+    this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA) // Standard blending
+    // Additive: this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE);
+
+    this.gl.useProgram(this.program)
+    this.gl.uniformMatrix4fv(this.uniforms.view, false, this.store.getViewMatrix())
+    this.gl.uniformMatrix4fv(this.uniforms.projection, false, this.store.getProjectionMatrix())
+  }
+
+  public render(scene: Scene, mesh: Mesh, transform: Transform, material?: Material, entity?: Entity): void {
+    if (!entity) return
+    const ps = entity.getComponent(ParticleSystem)
+    if (!ps) return
+    if (ps.count === 0) return
+
+    if (!ps.vao) {
+      ps.vao = this.createParticleVAO(mesh, ps)
+    }
+
+    this.gl.useProgram(this.program)
+    this.gl.bindVertexArray(ps.vao)
+
+    // Update Buffers
+    // We only update the active portion? Or all?
+    // Using bufferSubData with a view
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, ps.buffers.position!)
+    this.gl.bufferSubData(this.gl.ARRAY_BUFFER, 0, ps.positions.subarray(0, ps.count * 3))
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, ps.buffers.color!)
+    this.gl.bufferSubData(this.gl.ARRAY_BUFFER, 0, ps.colors.subarray(0, ps.count * 4))
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, ps.buffers.size!)
+    this.gl.bufferSubData(this.gl.ARRAY_BUFFER, 0, ps.sizes.subarray(0, ps.count))
+
+    // Uniforms
+    this.gl.uniformMatrix4fv(this.uniforms.model, false, transform.worldMatrix)
+
+    if (material && material.diffuse) {
+       this.gl.uniform1i(this.uniforms.hasTexture, 1)
+       this.gl.uniform1i(this.uniforms.sprite, 0)
+       this.gl.activeTexture(this.gl.TEXTURE0)
+       this.gl.bindTexture(this.gl.TEXTURE_2D, material.diffuse)
+    } else {
+       this.gl.uniform1i(this.uniforms.hasTexture, 0)
+    }
+
+    this.gl.drawElementsInstanced(this.gl.TRIANGLES, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0, ps.count)
+
+    // Disable blend to avoid affecting other pipelines?
+    // Pipelines usually set their state. DefaultPipeline sets depthFunc.
+    this.gl.disable(this.gl.BLEND)
   }
 }

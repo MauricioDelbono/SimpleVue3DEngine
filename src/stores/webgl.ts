@@ -12,7 +12,8 @@ import {
   LightPipeline,
   ShadowPipeline,
   QuadPipeline,
-  WireframePipeline
+  WireframePipeline,
+  ParticlePipeline
 } from '@/models/pipeline'
 import type { FrameBuffer, Texture } from '@/models/types'
 import Primitives from '@/helpers/primitives'
@@ -32,7 +33,8 @@ export const pipelineKeys = {
   shadow: 'shadow',
   quad: 'quad',
   default: 'default',
-  wireframe: 'wireframe'
+  wireframe: 'wireframe',
+  particle: 'particle'
 }
 
 export const useWebGLStore = defineStore('webgl', () => {
@@ -120,6 +122,7 @@ export const useWebGLStore = defineStore('webgl', () => {
       pipelines.value[pipelineKeys.quad] = new QuadPipeline(gl.value)
       pipelines.value[pipelineKeys.default] = new DefaultPipeline(gl.value)
       pipelines.value[pipelineKeys.wireframe] = new WireframePipeline(gl.value)
+      pipelines.value[pipelineKeys.particle] = new ParticlePipeline(gl.value)
       initializeShadowMap()
     }
 
@@ -242,9 +245,14 @@ export const useWebGLStore = defineStore('webgl', () => {
     pipelines.value.light.setGlobalUniforms(scene)
     pipelines.value.wireframe.setGlobalUniforms(scene)
     pipelines.value.default.setGlobalUniforms(scene)
+    // Particle pipeline usually sets its own globals when needed?
+    // But RenderEngine iterates entities. If entity uses particle pipeline, renderObject will call it.
+    // However, setRenderColor sets global uniforms for pipelines.
+    // I should add pipelines.value.particle.setGlobalUniforms(scene) if I want global uniforms set once.
+    pipelines.value.particle.setGlobalUniforms(scene)
   }
 
-  function renderObject(scene: Scene, pipelineKey: string, mesh: Mesh, transform: Transform, material?: Material) {
+  function renderObject(scene: Scene, pipelineKey: string, mesh: Mesh, transform: Transform, material?: Material, entity?: Entity) {
     // get pipeline
     pipelineKey = pipelineKey ?? scene.defaultPipeline
     const pipeline = pipelines.value[pipelineKey]
@@ -263,7 +271,7 @@ export const useWebGLStore = defineStore('webgl', () => {
 
     // render entity
     gl.value.bindVertexArray(vao)
-    pipeline.render(scene, mesh, transform, material)
+    pipeline.render(scene, mesh, transform, material, entity)
   }
 
   function getViewDirectionProjectionInverseMatrix() {
