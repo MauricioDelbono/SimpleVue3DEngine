@@ -373,6 +373,8 @@ export class DefaultPipeline implements Pipeline {
   uniforms: Record<string, WebGLUniformLocation | null>
   store = useWebGLStore()
   private maxPointLights = 4
+  private cascadeSplitsBuffer: Float32Array | null = null
+  private lightSpaceMatricesBuffer: Float32Array | null = null
 
   constructor(gl: WebGL2RenderingContext) {
     this.gl = gl
@@ -485,15 +487,23 @@ export class DefaultPipeline implements Pipeline {
     this.gl.uniform1i(this.uniforms.cascadeCount, cascadeCount)
 
     if (splits.length > 1) {
-      this.gl.uniform1fv(this.uniforms.cascadePlaneDistances, new Float32Array(splits.slice(1)))
+      if (!this.cascadeSplitsBuffer || this.cascadeSplitsBuffer.length !== splits.length - 1) {
+        this.cascadeSplitsBuffer = new Float32Array(splits.length - 1)
+      }
+      for (let i = 1; i < splits.length; i++) {
+        this.cascadeSplitsBuffer[i - 1] = splits[i]
+      }
+      this.gl.uniform1fv(this.uniforms.cascadePlaneDistances, this.cascadeSplitsBuffer)
     }
 
     if (lightMatrices.length > 0) {
-      const flatMatrices = new Float32Array(lightMatrices.length * 16)
-      for (let i = 0; i < lightMatrices.length; i++) {
-        flatMatrices.set(lightMatrices[i], i * 16)
+      if (!this.lightSpaceMatricesBuffer || this.lightSpaceMatricesBuffer.length !== lightMatrices.length * 16) {
+        this.lightSpaceMatricesBuffer = new Float32Array(lightMatrices.length * 16)
       }
-      this.gl.uniformMatrix4fv(this.uniforms.lightSpaceMatrices, false, flatMatrices)
+      for (let i = 0; i < lightMatrices.length; i++) {
+        this.lightSpaceMatricesBuffer.set(lightMatrices[i], i * 16)
+      }
+      this.gl.uniformMatrix4fv(this.uniforms.lightSpaceMatrices, false, this.lightSpaceMatricesBuffer)
     }
 
     if (scene.directionalLight) {
