@@ -165,11 +165,6 @@ export const useWebGLStore = defineStore('webgl', () => {
     gl.value.bindTexture(gl.value.TEXTURE_2D_ARRAY, null)
   }
 
-  function renderShadowMapTexture(scene: Scene) {
-    // NOTE: Render shadow map texture for debug might fail with TextureArray if quad shader expects Texture2D
-    // We skip fixing this for now or implement debug view later
-  }
-
   function prepareShadowCascade(scene: Scene, cascadeIndex: number) {
     if (!scene.directionalLight) return
 
@@ -330,7 +325,6 @@ export const useWebGLStore = defineStore('webgl', () => {
     initialize,
     resize,
     setFieldOfView,
-    renderShadowMapTexture,
     prepareShadowCascade,
     setRenderColor,
     renderObject,

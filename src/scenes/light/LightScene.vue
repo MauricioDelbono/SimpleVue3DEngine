@@ -11,6 +11,9 @@ import { useAssetsStore } from '@/stores/assets'
 import { Material } from '@/models/material'
 import { storeToRefs } from 'pinia'
 import SceneControls from '@/components/SceneControls.vue'
+import containerDiffuseTexture from '@/assets/images/containerDiffuse.png'
+import containerSpecularTexture from '@/assets/images/containerSpecular.png'
+import containerEmissionTexture from '@/assets/images/containerEmission.jpg'
 
 const renderStore = useRenderStore()
 const { scene } = storeToRefs(renderStore)
@@ -20,9 +23,9 @@ const inputStore = useInputStore()
 const camera = useCamera()
 
 async function loadAssets() {
-  assetsStore.addTexture('containerDiffuse', await Textures.createTextureFromImage('./src/assets/images/containerDiffuse.png'))
-  assetsStore.addTexture('containerSpecular', await Textures.createTextureFromImage('./src/assets/images/containerSpecular.png', false))
-  assetsStore.addTexture('containerEmission', await Textures.createTextureFromImage('./src/assets/images/containerEmission.jpg'))
+  assetsStore.addTexture('containerDiffuse', await Textures.createTextureFromImage(containerDiffuseTexture))
+  assetsStore.addTexture('containerSpecular', await Textures.createTextureFromImage(containerSpecularTexture, false))
+  assetsStore.addTexture('containerEmission', await Textures.createTextureFromImage(containerEmissionTexture))
 
   assetsStore.addMaterial('container', new Material(textures.value.containerDiffuse, textures.value.containerSpecular))
   assetsStore.addMaterial(

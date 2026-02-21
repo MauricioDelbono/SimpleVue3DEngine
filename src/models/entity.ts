@@ -96,19 +96,4 @@ export class Entity {
     })
   }
 
-  // public render() {
-  //   const { mesh, material } = this
-  //   material.use()
-  //   mesh.render()
-  // }
-
-  // public renderDepth() {
-  //   const { mesh } = this
-  //   mesh.render()
-  // }
-
-  // public renderShadow() {
-  //   const { mesh } = this
-  //   mesh.render()
-  // }
 }
