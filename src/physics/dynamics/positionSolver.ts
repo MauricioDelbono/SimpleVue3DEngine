@@ -30,32 +30,12 @@ export class PositionSolver extends Solver {
         // Apply position corrections to rigid bodies
         if (collision.bodyA.isDynamic) {
           const bodyACorrection = vec3.scale(vec3.create(), correction, -bodyACorrectionFactor)
-          const beforePos = vec3.clone(collision.bodyA.position)
-          console.log(
-            `POSITION_CORRECTION_A: before=[${beforePos[0].toFixed(2)},${beforePos[1].toFixed(2)},${beforePos[2].toFixed(
-              2
-            )}] correction=[${bodyACorrection[0].toFixed(3)},${bodyACorrection[1].toFixed(3)},${bodyACorrection[2].toFixed(
-              3
-            )}] depth=${point.depth.toFixed(3)}`
-          )
           vec3.add(collision.bodyA.position, collision.bodyA.position, bodyACorrection)
-
-          // Apply angular position correction to reduce rotational drift
-          const rA = vec3.subtract(vec3.create(), point.a, collision.bodyA.position)
-          const angularCorrection = vec3.cross(vec3.create(), rA, bodyACorrection)
-          vec3.scale(angularCorrection, angularCorrection, 0.1) // Small angular correction factor
-          vec3.add(collision.bodyA.rotation, collision.bodyA.rotation, angularCorrection)
         }
 
         if (collision.bodyB.isDynamic) {
           const bodyBCorrection = vec3.scale(vec3.create(), correction, bodyBCorrectionFactor)
           vec3.add(collision.bodyB.position, collision.bodyB.position, bodyBCorrection)
-
-          // Apply angular position correction to reduce rotational drift
-          const rB = vec3.subtract(vec3.create(), point.b, collision.bodyB.position)
-          const angularCorrection = vec3.cross(vec3.create(), rB, bodyBCorrection)
-          vec3.scale(angularCorrection, angularCorrection, 0.1) // Small angular correction factor
-          vec3.add(collision.bodyB.rotation, collision.bodyB.rotation, angularCorrection)
         }
       })
     })

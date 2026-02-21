@@ -76,14 +76,14 @@ export const usePhysicsStore = defineStore('physics', () => {
   function updateObjects(time: Time) {
     objects.forEach((object) => {
       if (object.isStatic) return
-      object.update(time)
+      object.step(time)
     })
   }
 
   function broadPhaseCollisions() {
     const colliderPairs: CollisionPair[] = []
     // First iterate over all rigidbodies
-    objects.reverse().forEach((object, i) => {
+    objects.slice().reverse().forEach((object, i) => {
       if (object.isStatic || object.isSleeping) return // Skip static and sleeping objects
       const objectColliders = object.colliders
 

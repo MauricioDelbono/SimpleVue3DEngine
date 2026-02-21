@@ -100,11 +100,10 @@ export class Rigidbody extends Component {
 
   public applyImpulse(impulse: vec3) {
     if (vec3.length(impulse) > 0.01) {
-      this.wakeUp() // Wake up when significant impulse applied
+      this.wakeUp()
     }
-    // p = mv
-    vec3.scale(impulse, impulse, this.inverseMass)
-    vec3.add(this.velocity, this.velocity, impulse)
+    const scaledImpulse = vec3.scale(vec3.create(), impulse, this.inverseMass)
+    vec3.add(this.velocity, this.velocity, scaledImpulse)
   }
 
   public applyAngularImpulse(impulse: vec3) {
@@ -173,7 +172,7 @@ export class Rigidbody extends Component {
     vec3.set(this.torque, 0, 0, 0)
   }
 
-  public update(time: Time) {
+  public step(time: Time) {
     this.move(time)
     this.rotate(time)
   }
