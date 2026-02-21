@@ -92,23 +92,7 @@ export class Entity {
 
     const colliders = this.getComponents(Collider)
     colliders.forEach((collider) => {
-      collider.updateTransformMatrix(this.transform.worldMatrix)
+      collider.updateTransformMatrix()
     })
   }
-
-  // public render() {
-  //   const { mesh, material } = this
-  //   material.use()
-  //   mesh.render()
-  // }
-
-  // public renderDepth() {
-  //   const { mesh } = this
-  //   mesh.render()
-  // }
-
-  // public renderShadow() {
-  //   const { mesh } = this
-  //   mesh.render()
-  // }
 }

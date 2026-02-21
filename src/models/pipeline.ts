@@ -16,6 +16,11 @@ import { useWebGLStore } from '@/stores/webgl'
 import type { Mesh } from './mesh'
 import type { Transform } from './transform'
 import type { Material } from './material'
+import type { vec3 } from 'gl-matrix'
+
+export interface RenderOptions {
+  color?: vec3
+}
 
 export interface Pipeline {
   program: WebGLProgram
@@ -25,7 +30,7 @@ export interface Pipeline {
 
   createMeshVAO(mesh: Mesh, numberOfComponents: number): WebGLVertexArrayObject | null
   setGlobalUniforms(scene: Scene): void
-  render(scene: Scene, mesh?: Mesh, transform?: Transform, material?: Material): void
+  render(scene: Scene, mesh?: Mesh, transform?: Transform, material?: Material, options?: RenderOptions): void
 }
 
 export class SkyboxPipeline implements Pipeline {
@@ -85,7 +90,7 @@ export class SkyboxPipeline implements Pipeline {
     }
   }
 
-  public render(scene: Scene, mesh?: Mesh, transform?: Transform, material?: Material): void {
+  public render(scene: Scene): void {
     if (scene.skybox) {
       this.gl.activeTexture(this.gl.TEXTURE0)
       this.gl.bindTexture(this.gl.TEXTURE_CUBE_MAP, scene.skybox.texture)
@@ -145,14 +150,14 @@ export class LightPipeline implements Pipeline {
     return vao
   }
 
-  public setGlobalUniforms(scene: Scene): void {
+  public setGlobalUniforms(): void {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
     this.gl.uniformMatrix4fv(this.uniforms.view, false, this.store.getViewMatrix())
     this.gl.uniformMatrix4fv(this.uniforms.projection, false, this.store.getProjectionMatrix())
   }
 
-  public render(scene: Scene, mesh: Mesh, transform: Transform, material?: Material): void {
+  public render(scene: Scene, mesh: Mesh, transform: Transform): void {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
     this.gl.uniformMatrix4fv(this.uniforms.model, false, transform.worldMatrix)
@@ -185,7 +190,8 @@ export class WireframePipeline implements Pipeline {
     return {
       model: this.gl.getUniformLocation(this.program, 'model'),
       view: this.gl.getUniformLocation(this.program, 'view'),
-      projection: this.gl.getUniformLocation(this.program, 'projection')
+      projection: this.gl.getUniformLocation(this.program, 'projection'),
+      color: this.gl.getUniformLocation(this.program, 'color')
     }
   }
 
@@ -212,17 +218,18 @@ export class WireframePipeline implements Pipeline {
     return vao
   }
 
-  public setGlobalUniforms(scene: Scene): void {
+  public setGlobalUniforms(): void {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
     this.gl.uniformMatrix4fv(this.uniforms.view, false, this.store.getViewMatrix())
     this.gl.uniformMatrix4fv(this.uniforms.projection, false, this.store.getProjectionMatrix())
   }
 
-  public render(scene: Scene, mesh: Mesh, transform: Transform, material?: Material): void {
+  public render(scene: Scene, mesh: Mesh, transform: Transform, material?: Material, options?: RenderOptions): void {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
     this.gl.uniformMatrix4fv(this.uniforms.model, false, transform.worldMatrix)
+    this.gl.uniform3fv(this.uniforms.color, options?.color ?? [0, 1, 0])
 
     this.gl.drawElements(this.gl.LINE_LOOP, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
   }
@@ -278,14 +285,14 @@ export class ShadowPipeline implements Pipeline {
     return vao
   }
 
-  public setGlobalUniforms(scene: Scene): void {
+  public setGlobalUniforms(): void {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
     this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.store.getDepthFrameBuffer())
     this.gl.uniformMatrix4fv(this.uniforms.viewProjection, false, this.store.getLightViewProjectionMatrix())
   }
 
-  public render(scene: Scene, mesh: Mesh, transform: Transform, material?: Material): void {
+  public render(scene: Scene, mesh: Mesh, transform: Transform): void {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
     this.gl.uniformMatrix4fv(this.uniforms.model, false, transform.worldMatrix)
@@ -351,7 +358,7 @@ export class QuadPipeline implements Pipeline {
     return vao
   }
 
-  public setGlobalUniforms(scene: Scene): void {
+  public setGlobalUniforms(): void {
     this.gl.depthFunc(this.gl.ALWAYS)
     this.gl.useProgram(this.program)
     this.gl.uniform1f(this.uniforms.nearPlane, 0)
@@ -361,7 +368,7 @@ export class QuadPipeline implements Pipeline {
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.store.getShadowMap())
   }
 
-  public render(scene: Scene, mesh: Mesh, transform?: Transform, material?: Material): void {
+  public render(scene: Scene, mesh: Mesh): void {
     this.gl.drawElements(this.gl.TRIANGLES, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
   }
 }
@@ -373,6 +380,8 @@ export class DefaultPipeline implements Pipeline {
   uniforms: Record<string, WebGLUniformLocation | null>
   store = useWebGLStore()
   private maxPointLights = 4
+  private cascadeSplitsBuffer: Float32Array | null = null
+  private lightSpaceMatricesBuffer: Float32Array | null = null
 
   constructor(gl: WebGL2RenderingContext) {
     this.gl = gl
@@ -485,15 +494,23 @@ export class DefaultPipeline implements Pipeline {
     this.gl.uniform1i(this.uniforms.cascadeCount, cascadeCount)
 
     if (splits.length > 1) {
-      this.gl.uniform1fv(this.uniforms.cascadePlaneDistances, new Float32Array(splits.slice(1)))
+      if (!this.cascadeSplitsBuffer || this.cascadeSplitsBuffer.length !== splits.length - 1) {
+        this.cascadeSplitsBuffer = new Float32Array(splits.length - 1)
+      }
+      for (let i = 1; i < splits.length; i++) {
+        this.cascadeSplitsBuffer[i - 1] = splits[i]
+      }
+      this.gl.uniform1fv(this.uniforms.cascadePlaneDistances, this.cascadeSplitsBuffer)
     }
 
     if (lightMatrices.length > 0) {
-      const flatMatrices = new Float32Array(lightMatrices.length * 16)
-      for (let i = 0; i < lightMatrices.length; i++) {
-        flatMatrices.set(lightMatrices[i], i * 16)
+      if (!this.lightSpaceMatricesBuffer || this.lightSpaceMatricesBuffer.length !== lightMatrices.length * 16) {
+        this.lightSpaceMatricesBuffer = new Float32Array(lightMatrices.length * 16)
       }
-      this.gl.uniformMatrix4fv(this.uniforms.lightSpaceMatrices, false, flatMatrices)
+      for (let i = 0; i < lightMatrices.length; i++) {
+        this.lightSpaceMatricesBuffer.set(lightMatrices[i], i * 16)
+      }
+      this.gl.uniformMatrix4fv(this.uniforms.lightSpaceMatrices, false, this.lightSpaceMatricesBuffer)
     }
 
     if (scene.directionalLight) {

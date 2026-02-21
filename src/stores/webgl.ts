@@ -12,7 +12,8 @@ import {
   LightPipeline,
   ShadowPipeline,
   QuadPipeline,
-  WireframePipeline
+  WireframePipeline,
+  type RenderOptions
 } from '@/models/pipeline'
 import type { FrameBuffer, Texture } from '@/models/types'
 import Primitives from '@/helpers/primitives'
@@ -165,11 +166,6 @@ export const useWebGLStore = defineStore('webgl', () => {
     gl.value.bindTexture(gl.value.TEXTURE_2D_ARRAY, null)
   }
 
-  function renderShadowMapTexture(scene: Scene) {
-    // NOTE: Render shadow map texture for debug might fail with TextureArray if quad shader expects Texture2D
-    // We skip fixing this for now or implement debug view later
-  }
-
   function prepareShadowCascade(scene: Scene, cascadeIndex: number) {
     if (!scene.directionalLight) return
 
@@ -232,7 +228,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     pipelines.value.default.setGlobalUniforms(scene)
   }
 
-  function renderObject(scene: Scene, pipelineKey: string, mesh: Mesh, transform: Transform, material?: Material) {
+  function renderMesh(scene: Scene, pipelineKey: string, mesh: Mesh, transform: Transform, material?: Material, options?: RenderOptions) {
     // get pipeline
     pipelineKey = pipelineKey ?? scene.defaultPipeline
     const pipeline = pipelines.value[pipelineKey]
@@ -251,7 +247,7 @@ export const useWebGLStore = defineStore('webgl', () => {
 
     // render entity
     gl.value.bindVertexArray(vao)
-    pipeline.render(scene, mesh, transform, material)
+    pipeline.render(scene, mesh, transform, material, options)
   }
 
   function getViewDirectionProjectionInverseMatrix() {
@@ -330,10 +326,9 @@ export const useWebGLStore = defineStore('webgl', () => {
     initialize,
     resize,
     setFieldOfView,
-    renderShadowMapTexture,
     prepareShadowCascade,
     setRenderColor,
-    renderObject,
+    renderMesh,
     getCameraMatrix,
     getViewMatrix,
     getProjectionMatrix,

@@ -3,11 +3,13 @@ precision mediump float;
 
 in vec3 FragPos;
 
+uniform vec3 color;
+
 out vec4 FragColor;
 
 void main()
 {
-    FragColor = vec4(0, 1.0, 0, 1.0); // Green
+    FragColor = vec4(color, 1.0);
 }
 `
 
