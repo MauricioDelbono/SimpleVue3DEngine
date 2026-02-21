@@ -12,7 +12,8 @@ import {
   LightPipeline,
   ShadowPipeline,
   QuadPipeline,
-  WireframePipeline
+  WireframePipeline,
+  type RenderOptions
 } from '@/models/pipeline'
 import type { FrameBuffer, Texture } from '@/models/types'
 import Primitives from '@/helpers/primitives'
@@ -227,7 +228,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     pipelines.value.default.setGlobalUniforms(scene)
   }
 
-  function renderObject(scene: Scene, pipelineKey: string, mesh: Mesh, transform: Transform, material?: Material) {
+  function renderMesh(scene: Scene, pipelineKey: string, mesh: Mesh, transform: Transform, material?: Material, options?: RenderOptions) {
     // get pipeline
     pipelineKey = pipelineKey ?? scene.defaultPipeline
     const pipeline = pipelines.value[pipelineKey]
@@ -246,7 +247,7 @@ export const useWebGLStore = defineStore('webgl', () => {
 
     // render entity
     gl.value.bindVertexArray(vao)
-    pipeline.render(scene, mesh, transform, material)
+    pipeline.render(scene, mesh, transform, material, options)
   }
 
   function getViewDirectionProjectionInverseMatrix() {
@@ -327,7 +328,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     setFieldOfView,
     prepareShadowCascade,
     setRenderColor,
-    renderObject,
+    renderMesh,
     getCameraMatrix,
     getViewMatrix,
     getProjectionMatrix,

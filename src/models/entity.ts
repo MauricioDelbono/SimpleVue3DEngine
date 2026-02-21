@@ -92,8 +92,7 @@ export class Entity {
 
     const colliders = this.getComponents(Collider)
     colliders.forEach((collider) => {
-      collider.updateTransformMatrix(this.transform.worldMatrix)
+      collider.updateTransformMatrix()
     })
   }
-
 }
