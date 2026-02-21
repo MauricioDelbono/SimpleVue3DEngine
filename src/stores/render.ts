@@ -16,7 +16,6 @@ export const useRenderStore = defineStore('render', () => {
   const hasStarted = ref(false)
   const isRendering = ref(false)
   const stepForward = ref(0)
-  const stepSize = ref(10)
   const lastRenderTime: Ref<Time> = ref(new Time(0))
   const scene: Ref<Scene> = ref(new Scene())
   const store = useWebGLStore()
@@ -131,8 +130,6 @@ export const useRenderStore = defineStore('render', () => {
         }
       })
     })
-
-    // store.renderShadowMapTexture(scene.value)
   }
 
   function startRender() {

@@ -10,6 +10,7 @@ import { storeToRefs } from 'pinia'
 import { Material } from '@/models/material'
 import Textures from '@/helpers/texture'
 import { PlaneCollider } from '@/physics/collisions/planeCollider'
+import chessBoardTexture from '@/assets/images/chessBoard.png'
 
 const renderStore = useRenderStore()
 const { scene } = storeToRefs(renderStore)
@@ -17,7 +18,7 @@ const assetsStore = useAssetsStore()
 const { textures, materials, meshes } = storeToRefs(assetsStore)
 
 async function loadAssets() {
-  assetsStore.addTexture('chessBoard', await Textures.createTextureFromImage('./src/assets/images/chessBoard.png'))
+  assetsStore.addTexture('chessBoard', await Textures.createTextureFromImage(chessBoardTexture))
   assetsStore.addMaterial('chessBoard', new Material(textures.value.chessBoard))
 
   assetsStore.addMesh('bigSphereMesh', Primitives.createSphere(1, 100, 100))
