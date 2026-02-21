@@ -129,8 +129,7 @@ function containsOrigin3D(simplex: Array<vec3>) {
   const sign3 = Math.sign(signedVolume(a, b, o, d))
   const sign4 = Math.sign(signedVolume(a, b, c, o))
 
-  return (sign1 >= 0 && sign2 >= 0 && sign3 >= 0 && sign4 >= 0) ||
-         (sign1 <= 0 && sign2 <= 0 && sign3 <= 0 && sign4 <= 0)
+  return (sign1 >= 0 && sign2 >= 0 && sign3 >= 0 && sign4 >= 0) || (sign1 <= 0 && sign2 <= 0 && sign3 <= 0 && sign4 <= 0)
 }
 
 function tripleProduct(a: vec3, b: vec3, c: vec3): vec3 {

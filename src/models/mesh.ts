@@ -23,28 +23,4 @@ export class Mesh {
 
     this.vaoMap = {}
   }
-
-  // public render() {
-  //   if (this.vao) {
-  //     gl.bindVertexArray(this.vao)
-  //     gl.drawElements(gl.TRIANGLES, this.indices.length, gl.UNSIGNED_SHORT, 0)
-  //     gl.bindVertexArray(null)
-  //   }
-  // }
-
-  // public renderDepth() {
-  //   if (this.vao) {
-  //     gl.bindVertexArray(this.vao)
-  //     gl.drawElements(gl.TRIANGLES, this.indices.length, gl.UNSIGNED_SHORT, 0)
-  //     gl.bindVertexArray(null)
-  //   }
-  // }
-
-  // public renderShadow() {
-  //   if (this.vao) {
-  //     gl.bindVertexArray(this.vao)
-  //     gl.drawElements(gl.TRIANGLES, this.indices.length, gl.UNSIGNED_SHORT, 0)
-  //     gl.bindVertexArray(null)
-  //   }
-  // }
 }

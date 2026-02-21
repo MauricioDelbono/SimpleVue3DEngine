@@ -384,7 +384,7 @@ export const createTetrahedron = (w0: SupportPoint, w1: SupportPoint, w2: Suppor
 
   const queue = new PriorityQueue<Face>((a: Face, b: Face) => a.distance - b.distance)
 
-  for (let face of [face0, face1, face2, face3]) {
+  for (const face of [face0, face1, face2, face3]) {
     projectToTriangle(face.closestBary, face.vertices[0].diff, face.vertices[1].diff, face.vertices[2].diff, origin)
     fromBarycentric(face.closest, face.closestBary, face.vertices[0].diff, face.vertices[1].diff, face.vertices[2].diff)
     face.distance = vec3.dot(face.closest, face.closest)
@@ -501,7 +501,7 @@ export const createHexahedronFromTriangle = (w0: SupportPoint, w1: SupportPoint,
 
   const queue = new PriorityQueue<Face>((a: Face, b: Face) => a.distance - b.distance)
 
-  for (let face of [face0, face1, face2, face3, face4, face5]) {
+  for (const face of [face0, face1, face2, face3, face4, face5]) {
     projectToTriangle(face.closestBary, face.vertices[0].diff, face.vertices[1].diff, face.vertices[2].diff, origin)
     fromBarycentric(face.closest, face.closestBary, face.vertices[0].diff, face.vertices[1].diff, face.vertices[2].diff)
     face.distance = vec3.dot(face.closest, face.closest)
@@ -517,7 +517,7 @@ export const createHexahedronFromLineSegment = (w3: SupportPoint, w4: SupportPoi
 
   // find convenient axis
   let min = Math.abs(w3w4[0])
-  let axis = vec3.fromValues(1.0, 0.0, 0.0)
+  const axis = vec3.fromValues(1.0, 0.0, 0.0)
   if (Math.abs(w3w4[1]) < min) {
     min = Math.abs(w3w4[1])
     vec3.set(axis, 0.0, 1.0, 0.0)
@@ -641,7 +641,7 @@ export const createHexahedronFromLineSegment = (w3: SupportPoint, w4: SupportPoi
 
   const queue = new PriorityQueue<Face>((a: Face, b: Face) => a.distance - b.distance)
 
-  for (let face of [face0, face1, face2, face3, face4, face5]) {
+  for (const face of [face0, face1, face2, face3, face4, face5]) {
     projectToTriangle(face.closestBary, face.vertices[0].diff, face.vertices[1].diff, face.vertices[2].diff, origin)
     fromBarycentric(face.closest, face.closestBary, face.vertices[0].diff, face.vertices[1].diff, face.vertices[2].diff)
     face.distance = vec3.dot(face.closest, face.closest)
@@ -652,7 +652,7 @@ export const createHexahedronFromLineSegment = (w3: SupportPoint, w4: SupportPoi
 }
 
 export const checkAdjacency = <T>(polytop: Polytop<T>) => {
-  for (let face of Array.from(polytop)) {
+  for (const face of Array.from(polytop)) {
     for (let i = 0; i < 3; i++) {
       const that = face.siblings[i].siblings[face.adjacent[i]]
       if (that !== face) {

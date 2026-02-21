@@ -20,12 +20,7 @@ import Primitives from '@/helpers/primitives'
 import type { Mesh } from '@/models/mesh'
 import type { Transform } from '@/models/transform'
 import type { Material } from '@/models/material'
-import {
-  getLightSpaceMatrix,
-  getCascadeSplits,
-  CASCADE_COUNT,
-  SHADOW_MAP_SIZE
-} from '@/helpers/shadows'
+import { getLightSpaceMatrix, getCascadeSplits, CASCADE_COUNT, SHADOW_MAP_SIZE } from '@/helpers/shadows'
 
 export const pipelineKeys = {
   skybox: 'skybox',
@@ -171,20 +166,15 @@ export const useWebGLStore = defineStore('webgl', () => {
     gl.value.bindTexture(gl.value.TEXTURE_2D_ARRAY, null)
   }
 
-  function renderShadowMapTexture(scene: Scene) {
-      // NOTE: Render shadow map texture for debug might fail with TextureArray if quad shader expects Texture2D
-      // We skip fixing this for now or implement debug view later
-  }
-
   function prepareShadowCascade(scene: Scene, cascadeIndex: number) {
     if (!scene.directionalLight) return
 
     // Calculate splits once per frame (heuristic: index 0)
     if (cascadeIndex === 0) {
-        cascadeSplits.value = getCascadeSplits(zNear, zFar, cascadeCount, 0.5)
-        if (lightSpaceMatrices.value.length !== cascadeCount) {
-             lightSpaceMatrices.value = new Array(cascadeCount).fill(null).map(() => mat4.create())
-        }
+      cascadeSplits.value = getCascadeSplits(zNear, zFar, cascadeCount, 0.5)
+      if (lightSpaceMatrices.value.length !== cascadeCount) {
+        lightSpaceMatrices.value = new Array(cascadeCount).fill(null).map(() => mat4.create())
+      }
     }
 
     const near = cascadeSplits.value[cascadeIndex]
@@ -192,14 +182,7 @@ export const useWebGLStore = defineStore('webgl', () => {
 
     const lightDir = scene.directionalLight.transform.getForwardVector()
 
-    const lightSpaceMatrix = getLightSpaceMatrix(
-        viewMatrix,
-        fieldOfViewRadians,
-        aspect,
-        near,
-        far,
-        lightDir
-    )
+    const lightSpaceMatrix = getLightSpaceMatrix(viewMatrix, fieldOfViewRadians, aspect, near, far, lightDir)
 
     mat4.copy(lightSpaceMatrices.value[cascadeIndex], lightSpaceMatrix)
     mat4.copy(lightViewProjectionMatrix, lightSpaceMatrix)
@@ -324,15 +307,15 @@ export const useWebGLStore = defineStore('webgl', () => {
   }
 
   function getCascadeSplitsArray() {
-      return cascadeSplits.value
+    return cascadeSplits.value
   }
 
   function getLightSpaceMatrices() {
-      return lightSpaceMatrices.value
+    return lightSpaceMatrices.value
   }
 
   function getCascadeCount() {
-      return cascadeCount
+    return cascadeCount
   }
 
   return {
@@ -343,7 +326,6 @@ export const useWebGLStore = defineStore('webgl', () => {
     initialize,
     resize,
     setFieldOfView,
-    renderShadowMapTexture,
     prepareShadowCascade,
     setRenderColor,
     renderMesh,

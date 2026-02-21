@@ -62,7 +62,6 @@ export const usePhysicsStore = defineStore('physics', () => {
     const collisionPairs = broadPhaseCollisions()
     const collisions = narrowPhaseCollisions(collisionPairs)
     resolveCollisions(time, collisions)
-
   }
 
   function applyForces() {
@@ -82,32 +81,35 @@ export const usePhysicsStore = defineStore('physics', () => {
   function broadPhaseCollisions() {
     const colliderPairs: CollisionPair[] = []
     // First iterate over all rigidbodies
-    objects.slice().reverse().forEach((object, i) => {
-      if (object.isStatic || object.isSleeping) return // Skip static and sleeping objects
-      const objectColliders = object.colliders
+    objects
+      .slice()
+      .reverse()
+      .forEach((object, i) => {
+        if (object.isStatic || object.isSleeping) return // Skip static and sleeping objects
+        const objectColliders = object.colliders
 
-      objects.forEach((otherObject, j) => {
-        // skip self and already checked pairs
-        if (object === otherObject || j >= objects.length - i) return
-        // Skip if both objects are sleeping (no need to check sleeping vs sleeping)
-        if (object.isSleeping && otherObject.isSleeping) return
+        objects.forEach((otherObject, j) => {
+          // skip self and already checked pairs
+          if (object === otherObject || j >= objects.length - i) return
+          // Skip if both objects are sleeping (no need to check sleeping vs sleeping)
+          if (object.isSleeping && otherObject.isSleeping) return
 
-        const otherObjectColliders = otherObject.colliders
-        if (!objectColliders.length || !otherObjectColliders.length) return
+          const otherObjectColliders = otherObject.colliders
+          if (!objectColliders.length || !otherObjectColliders.length) return
 
-        // Then iterate over all colliders of each of the rigidbodies
-        objectColliders.forEach((collider) => {
-          otherObjectColliders.forEach((otherCollider) => {
-            // Check for potential tunneling with fast-moving objects
-            const isFastMoving = vec3.length(object.velocity) > 10 || vec3.length(otherObject.velocity) > 10
+          // Then iterate over all colliders of each of the rigidbodies
+          objectColliders.forEach((collider) => {
+            otherObjectColliders.forEach((otherCollider) => {
+              // Check for potential tunneling with fast-moving objects
+              const isFastMoving = vec3.length(object.velocity) > 10 || vec3.length(otherObject.velocity) > 10
 
-            if (collider.intersects(otherCollider) || (isFastMoving && sweptIntersection(object, otherObject, collider, otherCollider))) {
-              colliderPairs.push(new CollisionPair(object, otherObject, collider, otherCollider))
-            }
+              if (collider.intersects(otherCollider) || (isFastMoving && sweptIntersection(object, otherObject, collider, otherCollider))) {
+                colliderPairs.push(new CollisionPair(object, otherObject, collider, otherCollider))
+              }
+            })
           })
         })
       })
-    })
 
     return colliderPairs
   }

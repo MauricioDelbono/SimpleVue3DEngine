@@ -9,9 +9,9 @@ import { useAssetsStore } from '@/stores/assets'
 import { storeToRefs } from 'pinia'
 import { Material } from '@/models/material'
 import Textures from '@/helpers/texture'
-import { PlaneCollider } from '@/physics/collisions/planeCollider'
 import VButton from '@/components/shared/VButton/VButton.vue'
 import { BoxCollider } from '@/physics/collisions/boxCollider'
+import chessBoardTexture from '@/assets/images/chessBoard.png'
 
 const renderStore = useRenderStore()
 const { scene } = storeToRefs(renderStore)
@@ -19,7 +19,7 @@ const assetsStore = useAssetsStore()
 const { textures, materials, meshes } = storeToRefs(assetsStore)
 
 async function loadAssets() {
-  assetsStore.addTexture('chessBoard', await Textures.createTextureFromImage('./src/assets/images/chessBoard.png'))
+  assetsStore.addTexture('chessBoard', await Textures.createTextureFromImage(chessBoardTexture))
   assetsStore.addMaterial('chessBoard', new Material(textures.value.chessBoard))
 
   assetsStore.addMesh('bigSphereMesh', Primitives.createSphere(1, 100, 100))
@@ -34,24 +34,6 @@ async function initialize(done: () => {}) {
   scene.value.camera.transform.position = vec3.fromValues(0, -10, -25)
 
   await loadAssets()
-
-  // Static sphere
-  // const entity = scene.value.createEntity([0, -20, 0], meshes.value.bigSphereMesh)
-  // entity.transform.scaleBy(vec3.fromValues(10, 10, 10))
-  // const rigidbody = new Rigidbody()
-  // rigidbody.isDynamic = false
-  // const collider = new SphereCollider()
-  // entity.addComponent(rigidbody)
-  // entity.addComponent(collider)
-
-  // Static Plane
-  // const plane = scene.value.createEntity([0, -20, 0], meshes.value.planeMesh)
-  // plane.transform.rotate([10, 0, 0])
-  // const planeRigidbody = new Rigidbody()
-  // planeRigidbody.isDynamic = false
-  // const planeCollider = new PlaneCollider(100, 100)
-  // plane.addComponent(planeRigidbody)
-  // plane.addComponent(planeCollider)
 
   // Box as floor
   const entity = scene.value.createEntity([0, -20, 0], meshes.value.boxMesh)

@@ -53,7 +53,7 @@ export class BoxCollider extends Collider {
     const wx = this.size[0] * Math.abs(scale[0])
     const wy = this.size[1] * Math.abs(scale[1])
     const wz = this.size[2] * Math.abs(scale[2])
-    return mass * (wx * wx + wy * wy + wz * wz) / 18
+    return (mass * (wx * wx + wy * wy + wz * wz)) / 18
   }
 
   public testCollision<T extends Collider>(collider: T): CollisionPoints {
