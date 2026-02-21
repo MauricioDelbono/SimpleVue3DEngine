@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { useCamera } from '@/composables/camera'
 import Primitives from '@/helpers/primitives'
-import { useInputStore } from '@/stores/input'
 import { useRenderStore } from '@/stores/render'
 import RenderEngine from '@/components/RenderEngine.vue'
 import Textures from '@/helpers/texture'
@@ -17,8 +15,6 @@ const renderStore = useRenderStore()
 const { scene } = storeToRefs(renderStore)
 const assetsStore = useAssetsStore()
 const { textures, materials, meshes } = storeToRefs(assetsStore)
-const inputStore = useInputStore()
-const camera = useCamera()
 
 async function loadAssets() {
   assetsStore.addTexture('containerDiffuse', await Textures.createTextureFromImage(containerDiffuseTexture))
@@ -36,8 +32,7 @@ async function loadAssets() {
   assetsStore.addMesh('plane', Primitives.createPlane())
 }
 
-async function initialize() {
-  inputStore.initialize()
+async function initialize(done: () => void) {
   scene.value.fog.color = [0.0, 0.0, 0.0, 1]
 
   await loadAssets()
@@ -75,7 +70,7 @@ async function initialize() {
   const cube2 = scene.value.createEntity([10, 5, 2], meshes.value.cube, materials.value.container)
   cube2.material.shininess = 64.0
 
-  renderStore.startRender()
+  done()
 }
 </script>
 
