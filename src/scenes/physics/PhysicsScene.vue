@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import RenderEngine from '@/components/RenderEngine.vue'
-import FPSInfo from '@/components/FPSInfo.vue'
 import Primitives from '@/helpers/primitives'
 import { SphereCollider } from '@/physics/collisions/sphereCollider'
 import { Rigidbody } from '@/physics/dynamics/rigidBody'
@@ -8,8 +7,6 @@ import { useRenderStore } from '@/stores/render'
 import { vec3 } from 'gl-matrix'
 import { useAssetsStore } from '@/stores/assets'
 import { storeToRefs } from 'pinia'
-import SceneInspector from '@/components/sceneInspector/SceneInspector.vue'
-import SceneControls from '@/components/SceneControls.vue'
 import { Material } from '@/models/material'
 import Textures from '@/helpers/texture'
 import { PlaneCollider } from '@/physics/collisions/planeCollider'
@@ -76,16 +73,7 @@ async function initialize(done: () => {}) {
 </script>
 
 <template>
-  <RenderEngine autoPlay @ready="initialize">
-    <template #default>
-      <FPSInfo />
-      <SceneControls />
-    </template>
-
-    <template #right>
-      <SceneInspector />
-    </template>
-  </RenderEngine>
+  <RenderEngine autoPlay @ready="initialize" />
 </template>
 
 <style scoped lang="scss"></style>
