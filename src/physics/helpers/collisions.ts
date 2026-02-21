@@ -56,9 +56,6 @@ export default class CollisionsHelper {
     // but fall back to SAT for performance if shapes are axis-aligned
     const useGJK = this.shouldUseGJK(shapeA, shapeB)
 
-    const centerA = shapeA.getCenter()
-    const centerB = shapeB.getCenter()
-
     if (useGJK) {
       return this.getBoxBoxCollisionGJK(shapeA, shapeB)
     } else {
@@ -70,18 +67,6 @@ export default class CollisionsHelper {
     // Use GJK for rotated boxes, SAT for axis-aligned boxes
     const axesA = boxA.getAxes()
     const axesB = boxB.getAxes()
-
-    console.log(
-      `AXES: A[[${axesA[0][0].toFixed(1)},${axesA[0][1].toFixed(1)},${axesA[0][2].toFixed(1)}][${axesA[1][0].toFixed(
-        1
-      )},${axesA[1][1].toFixed(1)},${axesA[1][2].toFixed(1)}][${axesA[2][0].toFixed(1)},${axesA[2][1].toFixed(1)},${axesA[2][2].toFixed(
-        1
-      )}]] B[[${axesB[0][0].toFixed(1)},${axesB[0][1].toFixed(1)},${axesB[0][2].toFixed(1)}][${axesB[1][0].toFixed(
-        1
-      )},${axesB[1][1].toFixed(1)},${axesB[1][2].toFixed(1)}][${axesB[2][0].toFixed(1)},${axesB[2][1].toFixed(1)},${axesB[2][2].toFixed(
-        1
-      )}]]`
-    )
 
     // Check if either box is significantly rotated
     const worldX = vec3.fromValues(1, 0, 0)
@@ -114,23 +99,34 @@ export default class CollisionsHelper {
       return manifold // No collision
     }
 
-    // Run EPA to get contact information
+    // Run EPA to get penetration depth and normal (accurate)
     const contactPoints = epa(shapeA, shapeB, gjkResult.simplex)
 
-    // Debug logging
-    console.log(
-      `GJK_COLLISION: depth=${contactPoints.depth.toFixed(3)} normal=[${contactPoints.normal[0].toFixed(
-        2
-      )},${contactPoints.normal[1].toFixed(2)},${contactPoints.normal[2].toFixed(2)}] A=[${contactPoints.a[0].toFixed(
-        2
-      )},${contactPoints.a[1].toFixed(2)},${contactPoints.a[2].toFixed(2)}] B=[${contactPoints.b[0].toFixed(
-        2
-      )},${contactPoints.b[1].toFixed(2)},${contactPoints.b[2].toFixed(2)}]`
-    )
+    // Ensure normal points from A to B
+    const centerA = shapeA.getCenter()
+    const centerB = shapeB.getCenter()
+    const centerToCenter = vec3.subtract(vec3.create(), centerB, centerA)
+    const normal = vec3.copy(vec3.create(), contactPoints.normal)
+    if (vec3.dot(normal, centerToCenter) < 0) {
+      vec3.negate(normal, normal)
+    }
 
-    // Set up manifold
-    vec3.copy(manifold.sharedNormal, contactPoints.normal)
-    manifold.addPoint(contactPoints.a, contactPoints.b, contactPoints.depth)
+    vec3.copy(manifold.sharedNormal, normal)
+
+    // Generate geometrically accurate contact points using face-clipping
+    // (EPA contact points are inaccurate for torque computation)
+    const boxA = {
+      center: centerA,
+      extents: shapeA.getExtents(),
+      axes: shapeA.getAxes()
+    }
+    const boxB = {
+      center: centerB,
+      extents: shapeB.getExtents(),
+      axes: shapeB.getAxes()
+    }
+
+    this.generateFaceContacts(boxA, boxB, normal, contactPoints.depth, manifold)
 
     return manifold
   }
@@ -282,26 +278,37 @@ export default class CollisionsHelper {
   }
 
   private static generateFaceContacts(boxA: any, boxB: any, normal: vec3, penetration: number, manifold: Manifold) {
-    // Find the face on each box that's most perpendicular to the collision normal
     const faceA = this.getMostPerpendicularFace(boxA, normal)
     const faceB = this.getMostPerpendicularFace(boxB, vec3.negate(vec3.create(), normal))
 
-    // Generate contact points by clipping incident face against reference face
-    const contactPoints = this.clipFaceToFace(faceA, faceB, normal, penetration)
+    const dotA = Math.abs(vec3.dot(faceA.normal, normal))
+    const dotB = Math.abs(vec3.dot(faceB.normal, normal))
 
-    // Add up to 4 contact points to the manifold
+    let referenceFace: { vertices: vec3[]; normal: vec3 }
+    let incidentFace: { vertices: vec3[]; normal: vec3 }
+    let referenceIsA: boolean
+
+    if (dotA >= dotB) {
+      referenceFace = faceA
+      incidentFace = faceB
+      referenceIsA = true
+    } else {
+      referenceFace = faceB
+      incidentFace = faceA
+      referenceIsA = false
+    }
+
+    const contactPoints = this.clipIncidentToReference(referenceFace, incidentFace, referenceIsA)
+
     contactPoints.slice(0, 4).forEach((point) => {
       manifold.addPoint(point.pointA, point.pointB, point.depth)
     })
 
-    // Fallback: if no contact points generated, create one at center
     if (contactPoints.length === 0) {
       const contactPoint = vec3.create()
       vec3.lerp(contactPoint, boxA.center, boxB.center, 0.5)
-
       const contactA = vec3.scaleAndAdd(vec3.create(), contactPoint, normal, -penetration * 0.5)
       const contactB = vec3.scaleAndAdd(vec3.create(), contactPoint, normal, penetration * 0.5)
-
       manifold.addPoint(contactA, contactB, penetration)
     }
   }
@@ -353,29 +360,28 @@ export default class CollisionsHelper {
     return vertices
   }
 
-  private static clipFaceToFace(
-    faceA: any,
-    faceB: any,
-    normal: vec3,
-    penetration: number
+  private static clipIncidentToReference(
+    referenceFace: { vertices: vec3[]; normal: vec3 },
+    incidentFace: { vertices: vec3[]; normal: vec3 },
+    referenceIsA: boolean
   ): Array<{ pointA: vec3; pointB: vec3; depth: number }> {
-    // Simple implementation: check which vertices of faceB are below faceA
     const contactPoints: Array<{ pointA: vec3; pointB: vec3; depth: number }> = []
+    const refNormal = referenceFace.normal
 
-    // For each vertex of the incident face, check if it's penetrating the reference face
-    faceB.vertices.forEach((vertex: vec3) => {
-      // Project vertex onto the collision normal from reference face
-      const projectionDistance = vec3.dot(vec3.subtract(vec3.create(), vertex, faceA.vertices[0]), normal)
+    incidentFace.vertices.forEach((vertex: vec3) => {
+      const toVertex = vec3.subtract(vec3.create(), vertex, referenceFace.vertices[0])
+      const dist = vec3.dot(toVertex, refNormal)
 
-      if (projectionDistance < 0) {
-        // This vertex is penetrating (on wrong side of reference face)
-        // vertex is from faceB (incident face), so contactB is the penetrating vertex
-        // contactA is the corresponding point on faceA (reference face)
-        const contactB = vec3.copy(vec3.create(), vertex)
-        const contactA = vec3.scaleAndAdd(vec3.create(), vertex, normal, -projectionDistance)
-        const depth = Math.abs(projectionDistance)
+      if (dist < 0) {
+        const incidentPoint = vec3.copy(vec3.create(), vertex)
+        const referencePoint = vec3.scaleAndAdd(vec3.create(), vertex, refNormal, -dist)
+        const depth = Math.abs(dist)
 
-        contactPoints.push({ pointA: contactA, pointB: contactB, depth })
+        if (referenceIsA) {
+          contactPoints.push({ pointA: referencePoint, pointB: incidentPoint, depth })
+        } else {
+          contactPoints.push({ pointA: incidentPoint, pointB: referencePoint, depth })
+        }
       }
     })
 
@@ -432,7 +438,7 @@ export default class CollisionsHelper {
       }
     })
     const penetration = -minDepth // positive if penetrating
-    if (penetration <= 0) return new CollisionPoints(vec3.create(), vec3.create(), vec3.create(), 0)
+    if (penetration <= 0) return new CollisionPoints(vec3.create(), vec3.create(), vec3.create(), -1)
     const contactA = vec3.subtract(vec3.create(), deepestPoint, vec3.scale(vec3.create(), normal, penetration))
     return new CollisionPoints(deepestPoint, contactA, vec3.negate(normal, normal), penetration)
   }

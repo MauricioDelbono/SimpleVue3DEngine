@@ -48,6 +48,14 @@ export class BoxCollider extends Collider {
     })
   }
 
+  public getInertiaTensor(mass: number): number {
+    const scale = this.entity?.transform.scale ?? this.transform.scale
+    const wx = this.size[0] * Math.abs(scale[0])
+    const wy = this.size[1] * Math.abs(scale[1])
+    const wz = this.size[2] * Math.abs(scale[2])
+    return mass * (wx * wx + wy * wy + wz * wz) / 18
+  }
+
   public testCollision<T extends Collider>(collider: T): CollisionPoints {
     switch (collider.constructor) {
       case BoxCollider:
@@ -63,31 +71,11 @@ export class BoxCollider extends Collider {
   }
 
   public testBoxCollision(collider: BoxCollider): CollisionPoints {
-    console.log(
-      `BOX_TEST: A=[${this.transform.position[0].toFixed(2)},${this.transform.position[1].toFixed(2)},${this.transform.position[2].toFixed(
-        2
-      )}] size=[${this.size[0].toFixed(2)},${this.size[1].toFixed(2)},${this.size[2].toFixed(
-        2
-      )}] | B=[${collider.transform.position[0].toFixed(2)},${collider.transform.position[1].toFixed(
-        2
-      )},${collider.transform.position[2].toFixed(2)}] size=[${collider.size[0].toFixed(2)},${collider.size[1].toFixed(
-        2
-      )},${collider.size[2].toFixed(2)}]`
-    )
-
     const manifold = CollisionsHelper.getBoxBoxCollision(this, collider)
 
-    console.log(
-      `MANIFOLD: ${manifold.hasCollision ? 'COLLISION' : 'NO_COLLISION'} normal=[${manifold.sharedNormal[0].toFixed(
-        2
-      )},${manifold.sharedNormal[1].toFixed(2)},${manifold.sharedNormal[2].toFixed(2)}] points=${manifold.points.length}`
-    )
+    if (!manifold.hasCollision) return new CollisionPoints(vec3.create(), vec3.create(), vec3.create(), -1)
 
-    if (!manifold.hasCollision) return new CollisionPoints(vec3.create(), vec3.create(), vec3.create(), 0)
-
-    // Convert manifold to CollisionPoints for backward compatibility
     if (manifold.points.length > 0) {
-      // Use the first contact point for now, or average multiple points
       const avgA = vec3.create(),
         avgB = vec3.create()
       let avgDepth = 0
@@ -100,18 +88,17 @@ export class BoxCollider extends Collider {
       vec3.scale(avgB, avgB, 1 / manifold.points.length)
       avgDepth /= manifold.points.length
 
-      const result = new CollisionPoints(avgA, avgB, manifold.sharedNormal, avgDepth)
-      console.log(
-        `COLLISION_RESULT: normal=[${result.normal[0].toFixed(2)},${result.normal[1].toFixed(2)},${result.normal[2].toFixed(
-          2
-        )}] A=[${result.a[0].toFixed(2)},${result.a[1].toFixed(2)},${result.a[2].toFixed(2)}] B=[${result.b[0].toFixed(
-          2
-        )},${result.b[1].toFixed(2)},${result.b[2].toFixed(2)}] depth=${result.depth.toFixed(3)}`
-      )
-      return result
+      return new CollisionPoints(avgA, avgB, manifold.sharedNormal, avgDepth)
     }
 
-    return new CollisionPoints(vec3.create(), vec3.create(), vec3.create(), 0)
+    return new CollisionPoints(vec3.create(), vec3.create(), vec3.create(), -1)
+  }
+
+  public override testCollisionManifold<T extends Collider>(collider: T): Manifold {
+    if (collider instanceof BoxCollider) {
+      return CollisionsHelper.getBoxBoxCollision(this, collider)
+    }
+    return super.testCollisionManifold(collider)
   }
 
   public testGenericCollision(collider: Collider): CollisionPoints {

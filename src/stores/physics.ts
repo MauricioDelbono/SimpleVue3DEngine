@@ -8,8 +8,6 @@ import { PositionSolver } from '@/physics/dynamics/positionSolver'
 import { ImpulseSolver } from '@/physics/dynamics/impulseSolver'
 import { CollisionPair } from '@/physics/collisions/collisionPair'
 import type { Time } from '@/models/time'
-import { Manifold } from '@/physics/collisions/manifold'
-import { CollisionPoints } from '@/physics/collisions/collisionPoints'
 import type { Collider } from '@/physics/collisions/collider'
 
 export const usePhysicsStore = defineStore('physics', () => {
@@ -64,6 +62,7 @@ export const usePhysicsStore = defineStore('physics', () => {
     const collisionPairs = broadPhaseCollisions()
     const collisions = narrowPhaseCollisions(collisionPairs)
     resolveCollisions(time, collisions)
+
   }
 
   function applyForces() {
@@ -174,15 +173,7 @@ export const usePhysicsStore = defineStore('physics', () => {
       const objB = collisionPair.bodyB
       // const contactKey = objA < objB ? `${objA}:${objB}` : `${objB}:${objA}` // Disabled caching
 
-      // Always generate new contact for now to avoid cached corrupted data
-      // TODO: Implement proper cache invalidation when transforms change
-      const collisionPoints = collisionPair.colliderA.testCollision(collisionPair.colliderB)
-      const manifold: Manifold = pointsToManifold(collisionPoints)
-
-      // Don't cache for now until we fix the cache invalidation
-      // if (manifold.hasCollision) {
-      //   contactCache.set(contactKey, { manifold, age: 0 })
-      // }
+      const manifold = collisionPair.colliderA.testCollisionManifold(collisionPair.colliderB)
 
       if (manifold.hasCollision) {
         collisions.push(new Collision(collisionPair.bodyA, collisionPair.bodyB, collisionPair.colliderA, collisionPair.colliderB, manifold))
@@ -197,15 +188,6 @@ export const usePhysicsStore = defineStore('physics', () => {
       if (collisions.length === 0) return
       solver.solve(collisions, time)
     })
-  }
-
-  function pointsToManifold(points: CollisionPoints): Manifold {
-    const manifold = new Manifold(points.normal)
-    if (points.hasCollision) {
-      manifold.addPoint(points.a, points.b, points.depth)
-    }
-
-    return manifold
   }
 
   return { addObject, removeObject, addSolver, removeSolver, reset, initialize }

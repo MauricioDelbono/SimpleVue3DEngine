@@ -103,7 +103,7 @@ function createBox() {
     materials.value.chessBoard
   )
   box.name = 'Box (Instance)'
-  box.transform.rotate([45, 0, 0])
+  box.transform.rotate([30, 0, 20])
   const boxRigidbody = new Rigidbody(1)
   const boxCollider = new BoxCollider()
   boxCollider.size = vec3.fromValues(2, 2, 2) // Local box size (mesh is 2x2x2)

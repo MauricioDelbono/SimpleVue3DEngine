@@ -27,17 +27,6 @@ export class ImpulseSolver extends Solver {
     if (collision.bodyA.isSleeping) collision.bodyA.wakeUp()
     if (collision.bodyB.isSleeping) collision.bodyB.wakeUp()
 
-    // Debug logging
-    console.log(
-      `SOLVE_COLLISION: A=[${collision.bodyA.position[0].toFixed(2)},${collision.bodyA.position[1].toFixed(
-        2
-      )},${collision.bodyA.position[2].toFixed(2)}] B=[${collision.bodyB.position[0].toFixed(2)},${collision.bodyB.position[1].toFixed(
-        2
-      )},${collision.bodyB.position[2].toFixed(2)}] points=${manifold.points.length} normal=[${manifold.sharedNormal[0].toFixed(
-        2
-      )},${manifold.sharedNormal[1].toFixed(2)},${manifold.sharedNormal[2].toFixed(2)}]`
-    )
-
     const totalImpulseA = vec3.create()
     const totalTorqueA = vec3.create()
     const totalImpulseB = vec3.create()
@@ -104,7 +93,6 @@ export class ImpulseSolver extends Solver {
     })
 
     // Apply accumulated impulses
-
     if (collision.bodyA.isDynamic) {
       collision.bodyA.applyImpulse(totalImpulseA)
       collision.bodyA.applyAngularImpulse(totalTorqueA)

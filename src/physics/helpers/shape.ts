@@ -1,4 +1,4 @@
-import { mat3, mat4, vec3 } from 'gl-matrix'
+import { mat3, mat4, vec3, vec4 } from 'gl-matrix'
 import type { Transform } from '@/models/transform'
 import type { BoxCollider } from '@/physics/collisions/boxCollider'
 import type { SphereCollider } from '@/physics/collisions/sphereCollider'
@@ -77,26 +77,26 @@ export class BoxShape implements Shape {
   }
 
   public support(direction: vec3): vec3 {
-    // Always get fresh transform data before using it
     this.updateTransform()
 
-    // Transform direction to local space using full inverse transform
-    const localDir = vec3.create()
+    // Transform direction to local space as a DIRECTION (w=0), not a point.
+    // Using mat3 (upper-left 3x3 of the inverse) strips translation,
+    // which would otherwise corrupt the direction for objects far from the origin.
     const invTransform = mat4.invert(mat4.create(), this._transformMatrix)
-    vec3.transformMat4(localDir, direction, invTransform)
-    vec3.normalize(localDir, localDir) // Normalize after transform
+    const invRotScale = mat3.fromMat4(mat3.create(), invTransform)
+    const localDir = vec3.transformMat3(vec3.create(), direction, invRotScale)
+    vec3.normalize(localDir, localDir)
 
-    // Find support point in local space (box vertices) relative to center
+    // Select the vertex that is furthest in localDir.
+    // Avoid Math.sign(0)=0 which would produce a face-center instead of a vertex.
     const localSupport = vec3.fromValues(
-      Math.sign(localDir[0]) * this.extents[0],
-      Math.sign(localDir[1]) * this.extents[1],
-      Math.sign(localDir[2]) * this.extents[2]
+      (localDir[0] >= 0 ? 1 : -1) * this.extents[0],
+      (localDir[1] >= 0 ? 1 : -1) * this.extents[1],
+      (localDir[2] >= 0 ? 1 : -1) * this.extents[2]
     )
 
-    // Add center offset to local support point
     vec3.add(localSupport, localSupport, this.center)
 
-    // Transform back to world space
     const worldSupport = vec3.create()
     vec3.transformMat4(worldSupport, localSupport, this._transformMatrix)
     return worldSupport
@@ -127,7 +127,12 @@ export class BoxShape implements Shape {
   }
 
   public getExtents(): vec3 {
-    return vec3.copy(vec3.create(), this.extents)
+    const worldScale = this.transform.worldScale
+    return vec3.fromValues(
+      this.extents[0] * Math.abs(worldScale[0]),
+      this.extents[1] * Math.abs(worldScale[1]),
+      this.extents[2] * Math.abs(worldScale[2])
+    )
   }
 }
 

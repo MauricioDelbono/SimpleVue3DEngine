@@ -3,6 +3,7 @@ import type { CollisionPoints } from './collisionPoints'
 import { mat3, mat4, vec3 } from 'gl-matrix'
 import { Mesh } from '@/models/mesh'
 import { Transform } from '@/models/transform'
+import { Manifold } from './manifold'
 
 export class Collider extends Component {
   public transform: Transform
@@ -33,6 +34,15 @@ export class Collider extends Component {
 
   public testCollision<T extends Collider>(collider: T): CollisionPoints {
     throw new Error('Not implemented in base class')
+  }
+
+  public testCollisionManifold<T extends Collider>(collider: T): Manifold {
+    const points = this.testCollision(collider)
+    const manifold = new Manifold(points.normal)
+    if (points.hasCollision) {
+      manifold.addPoint(points.a, points.b, points.depth)
+    }
+    return manifold
   }
 
   public intersects(collider: Collider): boolean {

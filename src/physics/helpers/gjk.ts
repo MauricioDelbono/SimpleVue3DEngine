@@ -122,13 +122,15 @@ function containsOrigin3D(simplex: Array<vec3>) {
   const [a, b, c, d] = simplex
   const o = vec3.create()
 
-  // Check if origin is on the same side of each face as the opposite vertex
-  const sign1 = Math.sign(signedVolume(b, c, d, o))
-  const sign2 = Math.sign(signedVolume(a, c, d, o))
-  const sign3 = Math.sign(signedVolume(a, b, d, o))
+  // Barycentric sub-volume check: origin replaces each vertex in turn;
+  // all four sub-volumes must share the same sign when origin is inside.
+  const sign1 = Math.sign(signedVolume(o, b, c, d))
+  const sign2 = Math.sign(signedVolume(a, o, c, d))
+  const sign3 = Math.sign(signedVolume(a, b, o, d))
   const sign4 = Math.sign(signedVolume(a, b, c, o))
 
-  return sign1 === sign2 && sign2 === sign3 && sign3 === sign4
+  return (sign1 >= 0 && sign2 >= 0 && sign3 >= 0 && sign4 >= 0) ||
+         (sign1 <= 0 && sign2 <= 0 && sign3 <= 0 && sign4 <= 0)
 }
 
 function tripleProduct(a: vec3, b: vec3, c: vec3): vec3 {
