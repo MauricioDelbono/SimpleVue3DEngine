@@ -3,6 +3,13 @@ import type { Collision } from '../collisions/collision'
 import { Solver } from './solver'
 import type { Time } from '@/models/time'
 
+const tmpVec1 = vec3.create()
+const tmpVec2 = vec3.create()
+const tmpVec3 = vec3.create()
+const tmpVec4 = vec3.create()
+const tmpVec5 = vec3.create()
+const tmpVec6 = vec3.create()
+
 export class ImpulseSolver extends Solver {
   public solve(collisions: Collision[], time: Time) {
     collisions.forEach((collision) => {
@@ -13,12 +20,12 @@ export class ImpulseSolver extends Solver {
   public solveCollision(collision: Collision, time: Time) {
     const rA = collision.points.a
     const rB = collision.points.b
-    const vrA = vec3.add(vec3.create(), collision.bodyA.velocity, vec3.cross(vec3.create(), collision.bodyA.angularVelocity, rA))
-    const vrB = vec3.add(vec3.create(), collision.bodyB.velocity, vec3.cross(vec3.create(), collision.bodyB.angularVelocity, rB))
-    const vr = vec3.subtract(vec3.create(), vrB, vrA)
+    const vrA = vec3.add(tmpVec2, collision.bodyA.velocity, vec3.cross(tmpVec1, collision.bodyA.angularVelocity, rA))
+    const vrB = vec3.add(tmpVec3, collision.bodyB.velocity, vec3.cross(tmpVec1, collision.bodyB.angularVelocity, rB))
+    const vr = vec3.subtract(tmpVec1, vrB, vrA)
     const normalVelocity = vec3.dot(vr, collision.points.normal)
-    const tangent = vec3.subtract(vec3.create(), vr, vec3.scale(vec3.create(), collision.points.normal, normalVelocity))
-    const tangentNormalized = vec3.normalize(vec3.create(), tangent)
+    const tangent = vec3.subtract(tmpVec3, vr, vec3.scale(tmpVec2, collision.points.normal, normalVelocity))
+    const tangentNormalized = vec3.normalize(tmpVec4, tangent)
     const vt = vec3.dot(vr, tangentNormalized)
 
     // Calculate impulse only if bodies are moving toward each other
@@ -33,19 +40,19 @@ export class ImpulseSolver extends Solver {
     const iA = collision.bodyA.inverseInertiaTensor
     const iB = collision.bodyB.inverseInertiaTensor
 
-    const rnA = vec3.cross(vec3.create(), rA, collision.points.normal)
-    const rnB = vec3.cross(vec3.create(), rB, collision.points.normal)
+    const rnA = vec3.cross(tmpVec2, rA, collision.points.normal)
+    const rnB = vec3.cross(tmpVec3, rB, collision.points.normal)
     const kNormal = mA + mB + iA * vec3.dot(rnA, rnA) + iB * vec3.dot(rnB, rnB)
     const normalMass = kNormal > 0 ? 1 / kNormal : 0
 
-    const rtA = vec3.cross(vec3.create(), rA, tangentNormalized)
-    const rtB = vec3.cross(vec3.create(), rB, tangentNormalized)
+    const rtA = vec3.cross(tmpVec5, rA, tangentNormalized)
+    const rtB = vec3.cross(tmpVec6, rB, tangentNormalized)
     const kTangent = mA + mB + iA * vec3.dot(rtA, rtA) + iB * vec3.dot(rtB, rtB)
     const tangentMass = kTangent > 0 ? 1 / kTangent : 0
 
     // Compute impulse
     const impulseScalar = -(1 + restitution) * normalVelocity * normalMass
-    const impulse = vec3.scale(vec3.create(), collision.points.normal, impulseScalar)
+    const impulse = vec3.scale(tmpVec1, collision.points.normal, impulseScalar)
 
     // Compute tangent impulse
     const maxStaticFrictionImpulse = Math.sqrt(collision.bodyA.staticFriction * collision.bodyB.staticFriction) * impulseScalar
@@ -55,15 +62,15 @@ export class ImpulseSolver extends Solver {
       tangentImpulseScalar = Math.sign(tangentImpulseScalar) * maxDynamicFrictionImpulse
     }
 
-    const tangentImpulse = vec3.scale(vec3.create(), tangentNormalized, tangentImpulseScalar)
+    const tangentImpulse = vec3.scale(tmpVec5, tangentNormalized, tangentImpulseScalar)
 
     // Apply impulse
     if (collision.bodyA.isDynamic) {
-      const impulseA = vec3.scale(vec3.create(), impulse, -1)
-      vec3.add(impulseA, impulseA, vec3.scale(vec3.create(), tangentImpulse, -1))
+      const impulseA = vec3.scale(tmpVec2, impulse, -1)
+      vec3.add(impulseA, impulseA, vec3.scale(tmpVec3, tangentImpulse, -1))
       collision.bodyA.applyImpulse(impulseA)
 
-      const angularImpulse = vec3.cross(vec3.create(), rA, impulseA)
+      const angularImpulse = vec3.cross(tmpVec3, rA, impulseA)
       collision.bodyA.applyAngularImpulse(angularImpulse)
     }
 
@@ -72,7 +79,7 @@ export class ImpulseSolver extends Solver {
       vec3.add(impulseB, impulseB, tangentImpulse)
       collision.bodyB.applyImpulse(impulseB)
 
-      const angularImpulse = vec3.cross(vec3.create(), rB, impulseB)
+      const angularImpulse = vec3.cross(tmpVec2, rB, impulseB)
       collision.bodyB.applyAngularImpulse(angularImpulse)
     }
   }
