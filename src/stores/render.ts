@@ -119,7 +119,7 @@ export const useRenderStore = defineStore('render', () => {
 
     scene.value.entities.forEach((entity) => {
       traverseTree(entity, (entity: Entity) => {
-        const pipeline = scene.value.wireframe ? pipelineKeys.wireframe : entity.pipeline ?? scene.value.defaultPipeline
+        const pipeline = scene.value.wireframe ? pipelineKeys.wireframe : (entity.pipeline ?? scene.value.defaultPipeline)
         store.renderObject(scene.value, pipeline, entity.mesh, entity.transform, entity.material)
 
         if (scene.value.debugColliders) {
