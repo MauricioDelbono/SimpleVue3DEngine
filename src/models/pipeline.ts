@@ -240,6 +240,8 @@ export class GBufferPipeline implements Pipeline {
 
   public setGlobalUniforms(scene: Scene): void {
     this.gl.depthFunc(this.gl.LESS)
+    this.gl.enable(this.gl.CULL_FACE)
+    this.gl.cullFace(this.gl.BACK)
     this.store.bindGBuffer()
     this.gl.clearColor(0.0, 0.0, 0.0, 0.0)
     this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT)

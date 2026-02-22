@@ -213,7 +213,7 @@ float ShadowCalculation(vec3 fragPosWorld, vec3 normal, vec3 lightDir)
     if (currentDepth > 1.0)
         return 0.0;
 
-    float bias = max(0.005 * (1.0 - dot(normal, lightDir)), 0.0005);
+    float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
     if (layer == cascadeCount)
     {
         bias *= 1.0 / (50.0 * 0.5);
