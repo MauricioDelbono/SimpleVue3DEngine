@@ -33,6 +33,13 @@ export class Fog {
   }
 }
 
+export class DepthOfField {
+  public enabled: boolean = false
+  public focusDistance: number = 10.0
+  public focusRange: number = 5.0
+  public bokehRadius: number = 5.0
+}
+
 export interface IScene {
   fog: Fog
   skybox?: Skybox
@@ -44,6 +51,7 @@ export interface IScene {
   directionalLight: DirectionalLight | null
   wireframe: boolean
   debugColliders: boolean
+  depthOfField: DepthOfField
 
   addEntity(entity: Entity): void
   removeEntity(entity: Entity): void
@@ -63,6 +71,7 @@ export class Scene {
   public directionalLight: DirectionalLight | null
   public wireframe: boolean = false
   public debugColliders: boolean = false
+  public depthOfField: DepthOfField
 
   public assets = useAssetsStore()
 
@@ -73,6 +82,7 @@ export class Scene {
     this.pointLights = []
     this.spotLight = null
     this.directionalLight = null
+    this.depthOfField = new DepthOfField()
     this.addCamera(this.camera)
   }
 

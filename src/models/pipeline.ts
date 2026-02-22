@@ -10,6 +10,8 @@ import quadVertexShaderSource from '../shaders/quad.vs'
 import quadFragmentShaderSource from '../shaders/quad.fs'
 import wireframeVertexShaderSource from '../shaders/wireframe.vs'
 import wireframeFragmentShaderSource from '../shaders/wireframe.fs'
+import dofVertexShaderSource from '../shaders/dof.vs'
+import dofFragmentShaderSource from '../shaders/dof.fs'
 import webgl from '@/helpers/webgl'
 import type { Scene } from './scene'
 import { useWebGLStore } from '@/stores/webgl'
@@ -569,6 +571,91 @@ export class DefaultPipeline implements Pipeline {
     this.gl.activeTexture(this.gl.TEXTURE3)
     this.gl.bindTexture(this.gl.TEXTURE_2D, material.emission)
 
+    this.gl.drawElements(this.gl.TRIANGLES, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
+  }
+}
+
+export class PostProcessPipeline implements Pipeline {
+  gl: WebGL2RenderingContext
+  program: WebGLProgram
+  attributes: Record<string, number>
+  uniforms: Record<string, WebGLUniformLocation | null>
+  store = useWebGLStore()
+
+  constructor(gl: WebGL2RenderingContext) {
+    this.gl = gl
+    this.program = webgl.createProgram(gl, dofVertexShaderSource, dofFragmentShaderSource)
+    this.attributes = this.createAttributes()
+    this.uniforms = this.createUniforms()
+  }
+
+  private createAttributes() {
+    return {
+      position: this.gl.getAttribLocation(this.program, 'aPosition'),
+      textureCoords: this.gl.getAttribLocation(this.program, 'aTextureCoords')
+    }
+  }
+
+  private createUniforms() {
+    return {
+      colorTexture: this.gl.getUniformLocation(this.program, 'colorTexture'),
+      depthTexture: this.gl.getUniformLocation(this.program, 'depthTexture'),
+      focusDistance: this.gl.getUniformLocation(this.program, 'focusDistance'),
+      focusRange: this.gl.getUniformLocation(this.program, 'focusRange'),
+      bokehRadius: this.gl.getUniformLocation(this.program, 'bokehRadius'),
+      nearPlane: this.gl.getUniformLocation(this.program, 'nearPlane'),
+      farPlane: this.gl.getUniformLocation(this.program, 'farPlane')
+    }
+  }
+
+  public createMeshVAO(mesh: Mesh, numberOfComponents: number = 2) {
+    this.gl.useProgram(this.program)
+    const vao = this.gl.createVertexArray()
+    this.gl.bindVertexArray(vao)
+
+    const positionBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer)
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(mesh.positions), this.gl.STATIC_DRAW)
+    const textureCoordsBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, textureCoordsBuffer)
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(mesh.textureCoords), this.gl.STATIC_DRAW)
+    const indicesBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+    this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(mesh.indices), this.gl.STATIC_DRAW)
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer)
+    this.gl.vertexAttribPointer(this.attributes.position, 2, this.gl.FLOAT, false, 0, 0)
+    this.gl.enableVertexAttribArray(this.attributes.position)
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, textureCoordsBuffer)
+    this.gl.vertexAttribPointer(this.attributes.textureCoords, 2, this.gl.FLOAT, false, 0, 0)
+    this.gl.enableVertexAttribArray(this.attributes.textureCoords)
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+
+    this.gl.bindVertexArray(null)
+
+    return vao
+  }
+
+  public setGlobalUniforms(scene: Scene): void {
+    this.gl.depthFunc(this.gl.ALWAYS)
+    this.gl.useProgram(this.program)
+
+    this.gl.uniform1f(this.uniforms.nearPlane, this.store.getNearPlane())
+    this.gl.uniform1f(this.uniforms.farPlane, this.store.getFarPlane())
+    this.gl.uniform1f(this.uniforms.focusDistance, scene.depthOfField.focusDistance)
+    this.gl.uniform1f(this.uniforms.focusRange, scene.depthOfField.focusRange)
+    this.gl.uniform1f(this.uniforms.bokehRadius, scene.depthOfField.bokehRadius)
+
+    this.gl.uniform1i(this.uniforms.colorTexture, 0)
+    this.gl.activeTexture(this.gl.TEXTURE0)
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.store.getMainColorTexture())
+
+    this.gl.uniform1i(this.uniforms.depthTexture, 1)
+    this.gl.activeTexture(this.gl.TEXTURE1)
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.store.getMainDepthTexture())
+  }
+
+  public render(scene: Scene, mesh: Mesh): void {
     this.gl.drawElements(this.gl.TRIANGLES, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
   }
 }

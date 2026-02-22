@@ -5,6 +5,8 @@ import { Scene } from '@/models/scene'
 import { pipelineKeys, useWebGLStore } from './webgl'
 import { Time } from '@/models/time'
 import { Collider } from '@/physics/collisions/collider'
+import Primitives from '@/helpers/primitives'
+import { Transform } from '@/models/transform'
 
 interface Render {
   update: (time: Time) => void
@@ -19,6 +21,8 @@ export const useRenderStore = defineStore('render', () => {
   const lastRenderTime: Ref<Time> = ref(new Time(0))
   const scene: Ref<Scene> = ref(new Scene())
   const store = useWebGLStore()
+  const postProcessMesh = Primitives.createXYQuad()
+  const postProcessTransform = new Transform()
 
   function reset() {
     store.reset()
@@ -102,7 +106,9 @@ export const useRenderStore = defineStore('render', () => {
   }
 
   function renderScene() {
-    store.clearCanvas(scene.value.fog.color)
+    const dofEnabled = scene.value.depthOfField.enabled && !scene.value.wireframe
+
+    // 1. Shadow Pass
     if (!scene.value.wireframe) {
       if (scene.value.directionalLight) {
         const cascadeCount = store.getCascadeCount()
@@ -120,7 +126,20 @@ export const useRenderStore = defineStore('render', () => {
       }
     }
 
+    // 2. Resize
     store.resize()
+
+    // 3. Bind Main Framebuffer or Screen
+    if (dofEnabled) {
+      store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, store.getMainFrameBuffer())
+    } else {
+      store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, null)
+    }
+
+    // 4. Clear
+    store.clearCanvas(scene.value.fog.color)
+
+    // 5. Render Scene
     store.setRenderColor(scene.value)
 
     scene.value.entities.forEach((entity) => {
@@ -136,6 +155,13 @@ export const useRenderStore = defineStore('render', () => {
         }
       })
     })
+
+    // 6. Post Process (if enabled)
+    if (dofEnabled) {
+      store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, null)
+      store.gl.clear(store.gl.COLOR_BUFFER_BIT | store.gl.DEPTH_BUFFER_BIT)
+      store.renderMesh(scene.value, pipelineKeys.postProcess, postProcessMesh, postProcessTransform, undefined)
+    }
   }
 
   function startRender() {
