@@ -121,7 +121,7 @@ export const useWebGLStore = defineStore('webgl', () => {
 
   function initialize(canvasId: string) {
     canvas.value = document.getElementById(canvasId) as HTMLCanvasElement
-    const glContext = canvas.value?.getContext('webgl2')
+    const glContext = canvas.value?.getContext('webgl2', { antialias: false })
 
     if (!glContext) {
       throw 'Unable to initialize WebGL. Your browser or machine may not support it.'
@@ -182,13 +182,13 @@ export const useWebGLStore = defineStore('webgl', () => {
     gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MAG_FILTER, gl.value.NEAREST)
     gl.value.framebufferTexture2D(gl.value.FRAMEBUFFER, gl.value.COLOR_ATTACHMENT2, gl.value.TEXTURE_2D, gAlbedoSpec, 0)
 
-    // - Depth buffer
+    // - Depth+Stencil buffer (must match default framebuffer format for blitFramebuffer)
     gDepth = gl.value.createTexture()
     gl.value.bindTexture(gl.value.TEXTURE_2D, gDepth)
-    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.DEPTH_COMPONENT24, width, height, 0, gl.value.DEPTH_COMPONENT, gl.value.UNSIGNED_INT, null)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.DEPTH24_STENCIL8, width, height, 0, gl.value.DEPTH_STENCIL, gl.value.UNSIGNED_INT_24_8, null)
     gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MIN_FILTER, gl.value.NEAREST)
     gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MAG_FILTER, gl.value.NEAREST)
-    gl.value.framebufferTexture2D(gl.value.FRAMEBUFFER, gl.value.DEPTH_ATTACHMENT, gl.value.TEXTURE_2D, gDepth, 0)
+    gl.value.framebufferTexture2D(gl.value.FRAMEBUFFER, gl.value.DEPTH_STENCIL_ATTACHMENT, gl.value.TEXTURE_2D, gDepth, 0)
 
     // Tell WebGL which color attachments we'll use (of this framebuffer) for rendering
     gl.value.drawBuffers([gl.value.COLOR_ATTACHMENT0, gl.value.COLOR_ATTACHMENT1, gl.value.COLOR_ATTACHMENT2])
@@ -216,7 +216,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RGBA, width, height, 0, gl.value.RGBA, gl.value.UNSIGNED_BYTE, null)
 
     gl.value.bindTexture(gl.value.TEXTURE_2D, gDepth)
-    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.DEPTH_COMPONENT24, width, height, 0, gl.value.DEPTH_COMPONENT, gl.value.UNSIGNED_INT, null)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.DEPTH24_STENCIL8, width, height, 0, gl.value.DEPTH_STENCIL, gl.value.UNSIGNED_INT_24_8, null)
   }
 
   function setFieldOfView(fieldOfViewDegrees: number) {
@@ -448,7 +448,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     gl.value.blitFramebuffer(
       0, 0, canvas.value.width, canvas.value.height,
       0, 0, canvas.value.width, canvas.value.height,
-      gl.value.DEPTH_BUFFER_BIT, gl.value.NEAREST
+      gl.value.DEPTH_BUFFER_BIT | gl.value.STENCIL_BUFFER_BIT, gl.value.NEAREST
     )
     gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, null)
   }
