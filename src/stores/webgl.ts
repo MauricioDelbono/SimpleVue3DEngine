@@ -101,8 +101,13 @@ export const useWebGLStore = defineStore('webgl', () => {
     gl.value.clear(gl.value.COLOR_BUFFER_BIT | gl.value.DEPTH_BUFFER_BIT)
   }
 
-  function initialize(canvasId: string) {
-    canvas.value = document.getElementById(canvasId) as HTMLCanvasElement
+  function initialize(canvasEl: string | HTMLCanvasElement) {
+    if (typeof canvasEl === 'string') {
+      canvas.value = document.getElementById(canvasEl) as HTMLCanvasElement
+    } else {
+      canvas.value = canvasEl
+    }
+
     const glContext = canvas.value?.getContext('webgl2')
 
     if (!glContext) {

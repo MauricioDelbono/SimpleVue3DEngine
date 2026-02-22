@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRenderStore } from '@/stores/render'
 import { usePhysicsStore } from '@/stores/physics'
@@ -30,9 +30,12 @@ const inputStore = useInputStore()
 const camera = useCamera()
 const { hasStarted } = storeToRefs(renderStore)
 let renderHandle: number = 0
+const canvasRef = ref<HTMLCanvasElement | null>(null)
 
 function initialize() {
-  renderStore.initialize()
+  if (canvasRef.value) {
+    renderStore.initialize(canvasRef.value)
+  }
   physicsStore.initialize()
   inputStore.initialize()
   camera.initialize()
@@ -70,7 +73,14 @@ watch(hasStarted, () => {
 })
 
 onMounted(() => {
+  renderStore.reset()
+  physicsStore.reset()
+  assetsStore.reset()
   initialize()
+})
+
+onUnmounted(() => {
+  cancelAnimationFrame(renderHandle)
 })
 </script>
 
@@ -78,7 +88,7 @@ onMounted(() => {
   <div class="render-engine">
     <FPSInfo />
     <SceneControls />
-    <canvas id="canvas" tabindex="0"></canvas>
+    <canvas ref="canvasRef" class="render-canvas" tabindex="0"></canvas>
     <SceneInspector />
   </div>
 </template>
@@ -91,7 +101,7 @@ onMounted(() => {
   height: inherit;
   overflow: hidden;
 
-  #canvas {
+  .render-canvas {
     width: 100%;
     height: 100%;
 
