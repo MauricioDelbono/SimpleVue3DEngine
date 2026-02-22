@@ -3,12 +3,11 @@
 // import ShadowScene from './scenes/shadow/ShadowScene.vue'
 import PhysicsScene from './scenes/physics/PhysicsScene.vue'
 import PhysicsSimpleScene from './scenes/physics/PhysicsSimpleScene.vue'
-import ParticleScene from './scenes/particle/ParticleScene.vue'
 </script>
 
 <template>
-  <!-- <PhysicsSimpleScene /> -->
-  <ParticleScene />
+  <PhysicsSimpleScene />
+  <!-- <PhysicsScene /> -->
 </template>
 
 <style lang="scss">

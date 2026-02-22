@@ -29,20 +29,12 @@ export class SphereCollider extends Collider {
     this.transform.scale = vec3.fromValues(value, value, value)
   }
 
-  public get min(): vec3 {
-    const worldCenter = this.transform.toWorldSpace(this.transform.position)
-    const worldMin = vec3.subtract(vec3.create(), worldCenter, vec3.fromValues(this.radius, this.radius, this.radius))
-    return worldMin
-  }
-
-  public get max(): vec3 {
-    const worldCenter = this.transform.toWorldSpace(this.transform.position)
-    const worldMax = vec3.add(vec3.create(), worldCenter, vec3.fromValues(this.radius, this.radius, this.radius))
-    return worldMax
-  }
-
   public updateTransformMatrix(matrix?: mat4) {
     this.transform.updateWorldMatrix(matrix)
+
+    const worldCenter = this.transform.toWorldSpace(this.transform.position)
+    this.min = vec3.subtract(vec3.create(), worldCenter, vec3.fromValues(this.radius, this.radius, this.radius))
+    this.max = vec3.add(vec3.create(), worldCenter, vec3.fromValues(this.radius, this.radius, this.radius))
   }
 
   public testCollision<T extends Collider>(collider: T): CollisionPoints {
