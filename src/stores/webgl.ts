@@ -13,19 +13,14 @@ import {
   ShadowPipeline,
   QuadPipeline,
   WireframePipeline,
-  ParticlePipeline
+  type RenderOptions
 } from '@/models/pipeline'
 import type { FrameBuffer, Texture } from '@/models/types'
 import Primitives from '@/helpers/primitives'
 import type { Mesh } from '@/models/mesh'
 import type { Transform } from '@/models/transform'
 import type { Material } from '@/models/material'
-import {
-  getLightSpaceMatrix,
-  getCascadeSplits,
-  CASCADE_COUNT,
-  SHADOW_MAP_SIZE
-} from '@/helpers/shadows'
+import { getLightSpaceMatrix, getCascadeSplits, CASCADE_COUNT, SHADOW_MAP_SIZE } from '@/helpers/shadows'
 
 export const pipelineKeys = {
   skybox: 'skybox',
@@ -33,8 +28,7 @@ export const pipelineKeys = {
   shadow: 'shadow',
   quad: 'quad',
   default: 'default',
-  wireframe: 'wireframe',
-  particle: 'particle'
+  wireframe: 'wireframe'
 }
 
 export const useWebGLStore = defineStore('webgl', () => {
@@ -122,7 +116,6 @@ export const useWebGLStore = defineStore('webgl', () => {
       pipelines.value[pipelineKeys.quad] = new QuadPipeline(gl.value)
       pipelines.value[pipelineKeys.default] = new DefaultPipeline(gl.value)
       pipelines.value[pipelineKeys.wireframe] = new WireframePipeline(gl.value)
-      pipelines.value[pipelineKeys.particle] = new ParticlePipeline(gl.value)
       initializeShadowMap()
     }
 
@@ -173,20 +166,15 @@ export const useWebGLStore = defineStore('webgl', () => {
     gl.value.bindTexture(gl.value.TEXTURE_2D_ARRAY, null)
   }
 
-  function renderShadowMapTexture(scene: Scene) {
-      // NOTE: Render shadow map texture for debug might fail with TextureArray if quad shader expects Texture2D
-      // We skip fixing this for now or implement debug view later
-  }
-
   function prepareShadowCascade(scene: Scene, cascadeIndex: number) {
     if (!scene.directionalLight) return
 
     // Calculate splits once per frame (heuristic: index 0)
     if (cascadeIndex === 0) {
-        cascadeSplits.value = getCascadeSplits(zNear, zFar, cascadeCount, 0.5)
-        if (lightSpaceMatrices.value.length !== cascadeCount) {
-             lightSpaceMatrices.value = new Array(cascadeCount).fill(null).map(() => mat4.create())
-        }
+      cascadeSplits.value = getCascadeSplits(zNear, zFar, cascadeCount, 0.5)
+      if (lightSpaceMatrices.value.length !== cascadeCount) {
+        lightSpaceMatrices.value = new Array(cascadeCount).fill(null).map(() => mat4.create())
+      }
     }
 
     const near = cascadeSplits.value[cascadeIndex]
@@ -194,14 +182,7 @@ export const useWebGLStore = defineStore('webgl', () => {
 
     const lightDir = scene.directionalLight.transform.getForwardVector()
 
-    const lightSpaceMatrix = getLightSpaceMatrix(
-        viewMatrix,
-        fieldOfViewRadians,
-        aspect,
-        near,
-        far,
-        lightDir
-    )
+    const lightSpaceMatrix = getLightSpaceMatrix(viewMatrix, fieldOfViewRadians, aspect, near, far, lightDir)
 
     mat4.copy(lightSpaceMatrices.value[cascadeIndex], lightSpaceMatrix)
     mat4.copy(lightViewProjectionMatrix, lightSpaceMatrix)
@@ -245,14 +226,9 @@ export const useWebGLStore = defineStore('webgl', () => {
     pipelines.value.light.setGlobalUniforms(scene)
     pipelines.value.wireframe.setGlobalUniforms(scene)
     pipelines.value.default.setGlobalUniforms(scene)
-    // Particle pipeline usually sets its own globals when needed?
-    // But RenderEngine iterates entities. If entity uses particle pipeline, renderObject will call it.
-    // However, setRenderColor sets global uniforms for pipelines.
-    // I should add pipelines.value.particle.setGlobalUniforms(scene) if I want global uniforms set once.
-    pipelines.value.particle.setGlobalUniforms(scene)
   }
 
-  function renderObject(scene: Scene, pipelineKey: string, mesh: Mesh, transform: Transform, material?: Material, entity?: Entity) {
+  function renderMesh(scene: Scene, pipelineKey: string, mesh: Mesh, transform: Transform, material?: Material, options?: RenderOptions) {
     // get pipeline
     pipelineKey = pipelineKey ?? scene.defaultPipeline
     const pipeline = pipelines.value[pipelineKey]
@@ -271,7 +247,7 @@ export const useWebGLStore = defineStore('webgl', () => {
 
     // render entity
     gl.value.bindVertexArray(vao)
-    pipeline.render(scene, mesh, transform, material, entity)
+    pipeline.render(scene, mesh, transform, material, options)
   }
 
   function getViewDirectionProjectionInverseMatrix() {
@@ -331,15 +307,15 @@ export const useWebGLStore = defineStore('webgl', () => {
   }
 
   function getCascadeSplitsArray() {
-      return cascadeSplits.value
+    return cascadeSplits.value
   }
 
   function getLightSpaceMatrices() {
-      return lightSpaceMatrices.value
+    return lightSpaceMatrices.value
   }
 
   function getCascadeCount() {
-      return cascadeCount
+    return cascadeCount
   }
 
   return {
@@ -350,10 +326,9 @@ export const useWebGLStore = defineStore('webgl', () => {
     initialize,
     resize,
     setFieldOfView,
-    renderShadowMapTexture,
     prepareShadowCascade,
     setRenderColor,
-    renderObject,
+    renderMesh,
     getCameraMatrix,
     getViewMatrix,
     getProjectionMatrix,

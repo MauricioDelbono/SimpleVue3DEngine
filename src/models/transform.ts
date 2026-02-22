@@ -1,5 +1,4 @@
 import { mat4, quat, vec3 } from 'gl-matrix'
-import utils from '@/helpers/utils'
 
 export class Transform {
   public position: vec3
@@ -63,7 +62,7 @@ export class Transform {
       Math.atan2(-direction[0], Math.sqrt(direction[1] * direction[1] + direction[2] * direction[2])),
       0
     )
-    vec3.copy(this.rotation, utils.radToDegVec3(rotation))
+    vec3.copy(this.rotation, rotation)
   }
 
   public translate(translation: vec3) {

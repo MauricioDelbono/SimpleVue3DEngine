@@ -2,7 +2,6 @@ import { ref, type Ref } from 'vue'
 import { defineStore } from 'pinia'
 import { Entity } from '@/models/entity'
 import { Scene } from '@/models/scene'
-import { Frustum } from '@/models/frustum'
 import { pipelineKeys, useWebGLStore } from './webgl'
 import { Time } from '@/models/time'
 import { Collider } from '@/physics/collisions/collider'
@@ -20,7 +19,6 @@ export const useRenderStore = defineStore('render', () => {
   const lastRenderTime: Ref<Time> = ref(new Time(0))
   const scene: Ref<Scene> = ref(new Scene())
   const store = useWebGLStore()
-  const frustum = new Frustum()
 
   function reset() {
     store.reset()
@@ -57,14 +55,22 @@ export const useRenderStore = defineStore('render', () => {
   }
 
   function render(time: Time) {
+    // Update transform matrices first (for initial setup)
+    scene.value.updateTransformMatrices()
+
     // Update
     if (isRendering.value) {
+      // First update entities (including rigidbody physics)
       scene.value.entities.forEach((entity) => {
         traverseTree(entity, (entity: Entity) => {
           entity.update(time)
         })
       })
 
+      // Update transform matrices again after physics to ensure colliders have latest positions
+      scene.value.updateTransformMatrices()
+
+      // Then run physics collision detection and response
       subscribers.value.forEach((subscriber) => {
         subscriber.update(time)
       })
@@ -96,22 +102,17 @@ export const useRenderStore = defineStore('render', () => {
   }
 
   function renderScene() {
-    scene.value.updateTransformMatrices()
-
     store.clearCanvas(scene.value.fog.color)
     if (!scene.value.wireframe) {
       if (scene.value.directionalLight) {
         const cascadeCount = store.getCascadeCount()
         for (let i = 0; i < cascadeCount; i++) {
           store.prepareShadowCascade(scene.value, i)
-          frustum.setFromMatrix(store.getLightViewProjectionMatrix())
 
           scene.value.entities.forEach((entity) => {
             traverseTree(entity, (entity: Entity) => {
-              if (entity.pipeline !== pipelineKeys.light && entity.pipeline !== pipelineKeys.particle) {
-                if (frustum.intersectsAABB(entity.worldMin, entity.worldMax)) {
-                  store.renderObject(scene.value, pipelineKeys.shadow, entity.mesh, entity.transform, entity.material, entity)
-                }
+              if (entity.pipeline !== pipelineKeys.light) {
+                store.renderMesh(scene.value, pipelineKeys.shadow, entity.mesh, entity.transform, entity.material)
               }
             })
           })
@@ -121,25 +122,20 @@ export const useRenderStore = defineStore('render', () => {
 
     store.resize()
     store.setRenderColor(scene.value)
-    frustum.setFromMatrix(store.getViewProjectionMatrix())
 
     scene.value.entities.forEach((entity) => {
       traverseTree(entity, (entity: Entity) => {
-        if (frustum.intersectsAABB(entity.worldMin, entity.worldMax)) {
-          const pipeline = scene.value.wireframe ? pipelineKeys.wireframe : entity.pipeline ?? scene.value.defaultPipeline
-          store.renderObject(scene.value, pipeline, entity.mesh, entity.transform, entity.material, entity)
+        const pipeline = scene.value.wireframe ? pipelineKeys.wireframe : (entity.pipeline ?? scene.value.defaultPipeline)
+        store.renderMesh(scene.value, pipeline, entity.mesh, entity.transform, entity.material)
 
-          if (scene.value.debugColliders) {
-            const colliders = entity.getComponents(Collider)
-            colliders.forEach((collider) => {
-              store.renderObject(scene.value, pipelineKeys.wireframe, collider.mesh, collider.transform)
-            })
-          }
+        if (scene.value.debugColliders) {
+          const colliders = entity.getComponents(Collider)
+          colliders.forEach((collider) => {
+            store.renderMesh(scene.value, pipelineKeys.wireframe, collider.mesh, collider.transform, undefined, { color: [1, 0, 0] })
+          })
         }
       })
     })
-
-    // store.renderShadowMapTexture(scene.value)
   }
 
   function startRender() {
