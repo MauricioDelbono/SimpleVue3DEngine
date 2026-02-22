@@ -38,12 +38,12 @@ async function initialize(done: () => {}) {
   const ps = new ParticleSystem(10000)
   ps.emissionRate = 500
   ps.lifetime = 3
-  ps.speed = 5
-  ps.startSize = 0.5
-  ps.endSize = 0.1
+  ps.speed = 7
+  ps.startSize = 0.1
+  ps.endSize = 0.01
   ps.startColor = vec3.fromValues(1, 0.8, 0.2) // Gold/Fire
   ps.endColor = vec3.fromValues(1, 0.1, 0) // Red
-  ps.gravity = vec3.fromValues(0, 5, 0) // Upwards (Fire/Smoke)
+  ps.gravity = vec3.fromValues(0, 9.8, 0) // Upwards (Fire/Smoke)
 
   emitter.addComponent(ps)
 
