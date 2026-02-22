@@ -33,8 +33,8 @@ export const useRenderStore = defineStore('render', () => {
     hasStarted.value = false
   }
 
-  function initialize() {
-    store.initialize('canvas')
+  function initialize(canvas: HTMLCanvasElement | string = 'canvas') {
+    store.initialize(canvas)
     store.setFieldOfView(60)
   }
 

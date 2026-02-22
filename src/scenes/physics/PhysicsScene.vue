@@ -11,11 +11,13 @@ import { Material } from '@/models/material'
 import Textures from '@/helpers/texture'
 import { PlaneCollider } from '@/physics/collisions/planeCollider'
 import chessBoardTexture from '@/assets/images/chessBoard.png'
+import { onUnmounted } from 'vue'
 
 const renderStore = useRenderStore()
 const { scene } = storeToRefs(renderStore)
 const assetsStore = useAssetsStore()
 const { textures, materials, meshes } = storeToRefs(assetsStore)
+let intervalId: number | undefined
 
 async function loadAssets() {
   assetsStore.addTexture('chessBoard', await Textures.createTextureFromImage(chessBoardTexture))
@@ -55,7 +57,7 @@ async function initialize(done: () => {}) {
   dirLight.transform.rotation = [45, 0, 0]
 
   // Create 1 sphere every 500ms, delete old ones
-  setInterval(() => {
+  intervalId = setInterval(() => {
     const sphere = scene.value.createEntity([Math.random(), 5, Math.random()], meshes.value.sphereMesh, materials.value.chessBoard)
     sphere.name = 'Sphere (Instance)'
     const sphereRigidbody = new Rigidbody()
@@ -71,6 +73,10 @@ async function initialize(done: () => {}) {
 
   done()
 }
+
+onUnmounted(() => {
+  clearInterval(intervalId)
+})
 </script>
 
 <template>
