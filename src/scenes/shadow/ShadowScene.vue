@@ -4,9 +4,12 @@ import Primitives from '@/helpers/primitives'
 import { useInputStore } from '@/stores/input'
 import { useRenderStore } from '@/stores/render'
 import RenderEngine from '@/components/RenderEngine.vue'
+import FPSInfo from '@/components/FPSInfo.vue'
 import { vec3 } from 'gl-matrix'
 import { useAssetsStore } from '@/stores/assets'
 import { storeToRefs } from 'pinia'
+import SceneInspector from '@/components/sceneInspector/SceneInspector.vue'
+import SceneControls from '@/components/SceneControls.vue'
 
 const renderStore = useRenderStore()
 const { scene } = storeToRefs(renderStore)
@@ -55,7 +58,16 @@ async function initialize(done: () => {}) {
 </script>
 
 <template>
-  <RenderEngine @ready="initialize" />
+  <RenderEngine @ready="initialize">
+    <template #default>
+      <FPSInfo />
+      <SceneControls />
+    </template>
+
+    <template #right>
+      <SceneInspector />
+    </template>
+  </RenderEngine>
 </template>
 
 <style scoped lang="scss"></style>

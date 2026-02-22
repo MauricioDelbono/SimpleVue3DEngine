@@ -9,8 +9,6 @@ import { mat4, type vec3 } from 'gl-matrix'
 import type { Time } from './time'
 import { Collider } from '@/physics/collisions/collider'
 
-const componentCache = new WeakMap<Entity, Map<any, any[]>>()
-
 export class Entity {
   public transform: Transform
   public mesh: Mesh
@@ -45,13 +43,11 @@ export class Entity {
   public destroy() {
     this.components.forEach((component) => component.destroy())
     this.components = []
-    componentCache.delete(this)
     this.children.forEach((child) => child.destroy())
     this.children = []
   }
 
   public addComponent(component: Component) {
-    componentCache.delete(this)
     this.components.push(component)
     component.entity = this
     component.awake()
@@ -60,26 +56,13 @@ export class Entity {
   public removeComponent(component: Component) {
     const index = this.components.indexOf(component)
     if (index > -1) {
-      componentCache.delete(this)
       this.components.splice(index, 1)
       component.destroy()
     }
   }
 
   public getComponents<T extends Component>(type: Class<T>): T[] {
-    let cache = componentCache.get(this)
-    if (!cache) {
-      cache = new Map()
-      componentCache.set(this, cache)
-    }
-
-    if (cache.has(type)) {
-      return cache.get(type) as T[]
-    }
-
-    const components = this.components.filter((component) => component instanceof type) as T[]
-    cache.set(type, components)
-    return components
+    return this.components.filter((component) => component instanceof type) as T[]
   }
 
   public getComponent<T extends Component>(type: Class<T>): T | null {
@@ -109,7 +92,23 @@ export class Entity {
 
     const colliders = this.getComponents(Collider)
     colliders.forEach((collider) => {
-      collider.updateTransformMatrix()
+      collider.updateTransformMatrix(this.transform.worldMatrix)
     })
   }
+
+  // public render() {
+  //   const { mesh, material } = this
+  //   material.use()
+  //   mesh.render()
+  // }
+
+  // public renderDepth() {
+  //   const { mesh } = this
+  //   mesh.render()
+  // }
+
+  // public renderShadow() {
+  //   const { mesh } = this
+  //   mesh.render()
+  // }
 }

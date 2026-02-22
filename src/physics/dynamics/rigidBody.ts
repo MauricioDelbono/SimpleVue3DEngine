@@ -7,7 +7,7 @@ import utils from '@/helpers/utils'
 
 export class Rigidbody extends Component {
   public mass: number = 1
-  public restitution: number = 0.1 // Reduced from 0.5 to minimize bouncing
+  public restitution: number = 0.5
   public staticFriction: number = 0.5
   public dynamicFriction: number = 0.3
   public velocity: vec3 = vec3.fromValues(0, 0, 0)
@@ -19,12 +19,8 @@ export class Rigidbody extends Component {
   public isTrigger: boolean = false
   public inertiaTensorMatrix: mat3 = mat3.create()
   public inverseInertiaTensorMatrix: mat3 = mat3.create()
-  public angularDamping: number = 0.95 // Increased from 0.05 to help settle angular motion
-  public linearDamping: number = 0.98 // Increased from 0.99 to help settle linear motion
-  public isSleeping: boolean = false
-  public sleepTimer: number = 0
-  public readonly sleepThreshold = 0.05 // Velocity threshold for sleep
-  public readonly sleepTime = 1.0 // Time in seconds before object sleeps
+  public angularDamping: number = 0.05 // Damping factor for angular velocity
+  public linearDamping: number = 0.05 // Damping factor for linear velocity
 
   constructor(mass: number = 1) {
     super()
@@ -85,94 +81,53 @@ export class Rigidbody extends Component {
   }
 
   public applyForce(force: vec3) {
-    if (vec3.length(force) > 0.01) {
-      this.wakeUp() // Wake up when significant force applied
-    }
     vec3.add(this.force, this.force, force)
   }
 
   public applyTorque(torque: vec3) {
-    if (vec3.length(torque) > 0.01) {
-      this.wakeUp() // Wake up when significant torque applied
-    }
     vec3.add(this.torque, this.torque, torque)
   }
 
   public applyImpulse(impulse: vec3) {
-    if (vec3.length(impulse) > 0.01) {
-      this.wakeUp()
-    }
-    const scaledImpulse = vec3.scale(vec3.create(), impulse, this.inverseMass)
-    vec3.add(this.velocity, this.velocity, scaledImpulse)
+    // p = mv
+    vec3.scale(impulse, impulse, this.inverseMass)
+    vec3.add(this.velocity, this.velocity, impulse)
   }
 
   public applyAngularImpulse(impulse: vec3) {
-    if (vec3.length(impulse) > 0.01) {
-      this.wakeUp() // Wake up when significant angular impulse applied
-    }
     const angularImpulse = vec3.scale(vec3.create(), impulse, this.inverseInertiaTensor)
     vec3.add(this.angularVelocity, this.angularVelocity, angularImpulse)
   }
 
   public move(time: Time) {
-    if (this.isSleeping) return // Skip physics for sleeping objects
-
-    // Apply acceleration from forces: F = ma -> a = F/m
-    const acceleration = vec3.scale(vec3.create(), this.force, this.inverseMass)
-
-    // Update velocity: v = v + a*dt
-    vec3.scaleAndAdd(this.velocity, this.velocity, acceleration, time.deltaSeconds)
+    vec3.scale(this.force, this.force, time.deltaSeconds)
+    vec3.scale(this.force, this.force, this.inverseMass)
+    vec3.add(this.velocity, this.velocity, this.force)
+    vec3.scale(this.force, this.velocity, time.deltaSeconds)
+    vec3.add(this.position, this.position, this.force)
 
     // Apply linear damping
-    const dampingFactor = Math.pow(this.linearDamping, time.deltaSeconds)
-    const oldVelocity = vec3.clone(this.velocity)
-    vec3.scale(this.velocity, this.velocity, dampingFactor)
+    // const dampingFactor = Math.pow(this.linearDamping, time.deltaSeconds)
+    // vec3.scale(this.velocity, this.velocity, dampingFactor)
 
-    // Check for sleep conditions
-    this.updateSleepState(time)
-
-    // Snap small velocities to zero to help objects come to rest
-    const velocityThreshold = 0.01
-    if (vec3.length(this.velocity) < velocityThreshold) {
-      vec3.set(this.velocity, 0, 0, 0)
-    }
-
-    // Update position: p = p + v*dt
-    const oldPosition = vec3.clone(this.position)
-    vec3.scaleAndAdd(this.position, this.position, this.velocity, time.deltaSeconds)
-
-    // Clear forces for next frame
     vec3.set(this.force, 0, 0, 0)
   }
 
   public rotate(time: Time) {
-    if (this.isSleeping) return // Skip physics for sleeping objects
-
-    // Apply angular acceleration from torque: τ = Iα -> α = τ/I
-    const angularAcceleration = vec3.scale(vec3.create(), this.torque, this.inverseInertiaTensor)
-
-    // Update angular velocity: ω = ω + α*dt
-    vec3.scaleAndAdd(this.angularVelocity, this.angularVelocity, angularAcceleration, time.deltaSeconds)
+    vec3.scale(this.torque, this.torque, time.deltaSeconds) //angular velocity
+    vec3.scale(this.torque, this.torque, this.inverseInertiaTensor)
+    vec3.add(this.angularVelocity, this.angularVelocity, this.torque) // total angular velocity
+    vec3.scale(this.torque, this.angularVelocity, time.deltaSeconds) // rotation radians
+    vec3.add(this.rotation, this.rotation, utils.radToDegVec3(this.torque)) // rotation
 
     // Apply angular damping
-    const dampingFactor = Math.pow(this.angularDamping, time.deltaSeconds)
-    vec3.scale(this.angularVelocity, this.angularVelocity, dampingFactor)
+    // const dampingFactor = Math.pow(this.angularDamping, time.deltaSeconds)
+    // vec3.scale(this.angularVelocity, this.angularVelocity, dampingFactor)
 
-    // Snap small angular velocities to zero to help objects come to rest
-    const angularVelocityThreshold = 0.01
-    if (vec3.length(this.angularVelocity) < angularVelocityThreshold) {
-      vec3.set(this.angularVelocity, 0, 0, 0)
-    }
-
-    // Update rotation: θ = θ + ω*dt (keep in radians for now)
-    const rotationDelta = vec3.scale(vec3.create(), this.angularVelocity, time.deltaSeconds)
-    vec3.add(this.rotation, this.rotation, utils.radToDegVec3(rotationDelta))
-
-    // Clear torque for next frame
     vec3.set(this.torque, 0, 0, 0)
   }
 
-  public step(time: Time) {
+  public update(time: Time) {
     this.move(time)
     this.rotate(time)
   }
@@ -184,32 +139,5 @@ export class Rigidbody extends Component {
       mat3.add(this.inertiaTensorMatrix, this.inertiaTensorMatrix, colliderInertiaTensor)
     })
     mat3.invert(this.inverseInertiaTensorMatrix, this.inertiaTensorMatrix)
-  }
-
-  private updateSleepState(time: Time) {
-    const linearSpeed = vec3.length(this.velocity)
-    const angularSpeed = vec3.length(this.angularVelocity)
-
-    if (linearSpeed < this.sleepThreshold && angularSpeed < this.sleepThreshold) {
-      this.sleepTimer += time.deltaSeconds
-      if (this.sleepTimer >= this.sleepTime) {
-        this.goToSleep()
-      }
-    } else {
-      this.wakeUp()
-    }
-  }
-
-  public goToSleep() {
-    this.isSleeping = true
-    vec3.set(this.velocity, 0, 0, 0)
-    vec3.set(this.angularVelocity, 0, 0, 0)
-    vec3.set(this.force, 0, 0, 0)
-    vec3.set(this.torque, 0, 0, 0)
-  }
-
-  public wakeUp() {
-    this.isSleeping = false
-    this.sleepTimer = 0
   }
 }
