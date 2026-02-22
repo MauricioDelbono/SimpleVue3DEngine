@@ -117,7 +117,7 @@ export const useRenderStore = defineStore('render', () => {
 
           scene.value.entities.forEach((entity) => {
             traverseTree(entity, (entity: Entity) => {
-              if (entity.pipeline !== pipelineKeys.light) {
+              if (entity.pipeline !== pipelineKeys.light && entity.pipeline !== pipelineKeys.particle) {
                 store.renderMesh(scene.value, pipelineKeys.shadow, entity.mesh, entity.transform, entity.material)
               }
             })
@@ -145,7 +145,7 @@ export const useRenderStore = defineStore('render', () => {
     scene.value.entities.forEach((entity) => {
       traverseTree(entity, (entity: Entity) => {
         const pipeline = scene.value.wireframe ? pipelineKeys.wireframe : (entity.pipeline ?? scene.value.defaultPipeline)
-        store.renderMesh(scene.value, pipeline, entity.mesh, entity.transform, entity.material)
+        store.renderMesh(scene.value, pipeline, entity.mesh, entity.transform, entity.material, undefined, entity)
 
         if (scene.value.debugColliders) {
           const colliders = entity.getComponents(Collider)

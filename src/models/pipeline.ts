@@ -19,6 +19,7 @@ import type { Mesh } from './mesh'
 import type { Transform } from './transform'
 import type { Material } from './material'
 import type { vec3 } from 'gl-matrix'
+import type { Entity } from './entity'
 
 export interface RenderOptions {
   color?: vec3
@@ -32,7 +33,7 @@ export interface Pipeline {
 
   createMeshVAO(mesh: Mesh, numberOfComponents: number): WebGLVertexArrayObject | null
   setGlobalUniforms(scene: Scene): void
-  render(scene: Scene, mesh?: Mesh, transform?: Transform, material?: Material, options?: RenderOptions): void
+  render(scene: Scene, mesh?: Mesh, transform?: Transform, material?: Material, options?: RenderOptions, entity?: Entity): void
 }
 
 export class SkyboxPipeline implements Pipeline {
