@@ -2,6 +2,7 @@ import { ref, type Ref } from 'vue'
 import { defineStore } from 'pinia'
 import { Entity } from '@/models/entity'
 import { Scene } from '@/models/scene'
+import { Frustum } from '@/models/frustum'
 import { pipelineKeys, useWebGLStore } from './webgl'
 import { Time } from '@/models/time'
 import { Collider } from '@/physics/collisions/collider'
@@ -16,10 +17,10 @@ export const useRenderStore = defineStore('render', () => {
   const hasStarted = ref(false)
   const isRendering = ref(false)
   const stepForward = ref(0)
-  const stepSize = ref(10)
   const lastRenderTime: Ref<Time> = ref(new Time(0))
   const scene: Ref<Scene> = ref(new Scene())
   const store = useWebGLStore()
+  const frustum = new Frustum()
 
   function reset() {
     store.reset()
@@ -103,11 +104,14 @@ export const useRenderStore = defineStore('render', () => {
         const cascadeCount = store.getCascadeCount()
         for (let i = 0; i < cascadeCount; i++) {
           store.prepareShadowCascade(scene.value, i)
+          frustum.setFromMatrix(store.getLightViewProjectionMatrix())
 
           scene.value.entities.forEach((entity) => {
             traverseTree(entity, (entity: Entity) => {
               if (entity.pipeline !== pipelineKeys.light && entity.pipeline !== pipelineKeys.particle) {
-                store.renderObject(scene.value, pipelineKeys.shadow, entity.mesh, entity.transform, entity.material, entity)
+                if (frustum.intersectsAABB(entity.worldMin, entity.worldMax)) {
+                  store.renderObject(scene.value, pipelineKeys.shadow, entity.mesh, entity.transform, entity.material, entity)
+                }
               }
             })
           })
@@ -117,17 +121,20 @@ export const useRenderStore = defineStore('render', () => {
 
     store.resize()
     store.setRenderColor(scene.value)
+    frustum.setFromMatrix(store.getViewProjectionMatrix())
 
     scene.value.entities.forEach((entity) => {
       traverseTree(entity, (entity: Entity) => {
-        const pipeline = scene.value.wireframe ? pipelineKeys.wireframe : entity.pipeline ?? scene.value.defaultPipeline
-        store.renderObject(scene.value, pipeline, entity.mesh, entity.transform, entity.material, entity)
+        if (frustum.intersectsAABB(entity.worldMin, entity.worldMax)) {
+          const pipeline = scene.value.wireframe ? pipelineKeys.wireframe : entity.pipeline ?? scene.value.defaultPipeline
+          store.renderObject(scene.value, pipeline, entity.mesh, entity.transform, entity.material, entity)
 
-        if (scene.value.debugColliders) {
-          const colliders = entity.getComponents(Collider)
-          colliders.forEach((collider) => {
-            store.renderObject(scene.value, pipelineKeys.wireframe, collider.mesh, collider.transform)
-          })
+          if (scene.value.debugColliders) {
+            const colliders = entity.getComponents(Collider)
+            colliders.forEach((collider) => {
+              store.renderObject(scene.value, pipelineKeys.wireframe, collider.mesh, collider.transform)
+            })
+          }
         }
       })
     })
