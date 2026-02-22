@@ -78,6 +78,11 @@ vec3 getWorldPosition(vec2 uv) {
 void main()
 {
     // retrieve data from G-buffer
+    float depth = texture(gDepth, TexCoords).r;
+    if (depth >= 1.0) {
+        discard;
+    }
+
     vec3 FragPos = getWorldPosition(TexCoords);
     vec4 normalData = texture(gNormal, TexCoords);
     vec3 Normal = normalize(mat3(inverseView) * normalData.rgb); // Transform View Space Normal to World Space
@@ -221,7 +226,7 @@ float ShadowCalculation(vec3 fragPosWorld, vec3 normal, vec3 lightDir)
     if (currentDepth > 1.0)
         return 0.0;
 
-    float bias = max(0.005 * (1.0 - dot(normal, lightDir)), 0.0005);
+    float bias = max(0.05 * (1.0 - dot(normal, lightDir)), 0.005);
     if (layer == cascadeCount)
     {
         bias *= 1.0 / (50.0 * 0.5);
