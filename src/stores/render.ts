@@ -17,6 +17,7 @@ export const useRenderStore = defineStore('render', () => {
   const hasStarted = ref(false)
   const isRendering = ref(false)
   const stepForward = ref(0)
+  const stepSize = ref(10)
   const lastRenderTime: Ref<Time> = ref(new Time(0))
   const scene: Ref<Scene> = ref(new Scene())
   const store = useWebGLStore()
@@ -57,22 +58,14 @@ export const useRenderStore = defineStore('render', () => {
   }
 
   function render(time: Time) {
-    // Update transform matrices first (for initial setup)
-    scene.value.updateTransformMatrices()
-
     // Update
     if (isRendering.value) {
-      // First update entities (including rigidbody physics)
       scene.value.entities.forEach((entity) => {
         traverseTree(entity, (entity: Entity) => {
           entity.update(time)
         })
       })
 
-      // Update transform matrices again after physics to ensure colliders have latest positions
-      scene.value.updateTransformMatrices()
-
-      // Then run physics collision detection and response
       subscribers.value.forEach((subscriber) => {
         subscriber.update(time)
       })
@@ -104,6 +97,8 @@ export const useRenderStore = defineStore('render', () => {
   }
 
   function renderScene() {
+    scene.value.updateTransformMatrices()
+
     store.clearCanvas(scene.value.fog.color)
     if (!scene.value.wireframe) {
       if (scene.value.directionalLight) {
@@ -114,9 +109,9 @@ export const useRenderStore = defineStore('render', () => {
 
           scene.value.entities.forEach((entity) => {
             traverseTree(entity, (entity: Entity) => {
-              if (entity.pipeline !== pipelineKeys.light) {
+              if (entity.pipeline !== pipelineKeys.light && entity.pipeline !== pipelineKeys.particle) {
                 if (frustum.intersectsAABB(entity.worldMin, entity.worldMax)) {
-                  store.renderMesh(scene.value, pipelineKeys.shadow, entity.mesh, entity.transform, entity.material)
+                  store.renderObject(scene.value, pipelineKeys.shadow, entity.mesh, entity.transform, entity.material, entity)
                 }
               }
             })
@@ -133,17 +128,19 @@ export const useRenderStore = defineStore('render', () => {
       traverseTree(entity, (entity: Entity) => {
         if (frustum.intersectsAABB(entity.worldMin, entity.worldMax)) {
           const pipeline = scene.value.wireframe ? pipelineKeys.wireframe : entity.pipeline ?? scene.value.defaultPipeline
-          store.renderMesh(scene.value, pipeline, entity.mesh, entity.transform, entity.material)
+          store.renderObject(scene.value, pipeline, entity.mesh, entity.transform, entity.material, entity)
 
           if (scene.value.debugColliders) {
             const colliders = entity.getComponents(Collider)
             colliders.forEach((collider) => {
-              store.renderMesh(scene.value, pipelineKeys.wireframe, collider.mesh, collider.transform, undefined, { color: [1, 0, 0] })
+              store.renderObject(scene.value, pipelineKeys.wireframe, collider.mesh, collider.transform)
             })
           }
         }
       })
     })
+
+    // store.renderShadowMapTexture(scene.value)
   }
 
   function startRender() {

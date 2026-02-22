@@ -1,25 +1,28 @@
 <script setup lang="ts">
+import { useCamera } from '@/composables/camera'
 import Primitives from '@/helpers/primitives'
+import { useInputStore } from '@/stores/input'
 import { useRenderStore } from '@/stores/render'
 import RenderEngine from '@/components/RenderEngine.vue'
+import FPSInfo from '@/components/FPSInfo.vue'
 import Textures from '@/helpers/texture'
 import { vec3 } from 'gl-matrix'
 import { useAssetsStore } from '@/stores/assets'
 import { Material } from '@/models/material'
 import { storeToRefs } from 'pinia'
-import containerDiffuseTexture from '@/assets/images/containerDiffuse.png'
-import containerSpecularTexture from '@/assets/images/containerSpecular.png'
-import containerEmissionTexture from '@/assets/images/containerEmission.jpg'
+import SceneControls from '@/components/SceneControls.vue'
 
 const renderStore = useRenderStore()
 const { scene } = storeToRefs(renderStore)
 const assetsStore = useAssetsStore()
 const { textures, materials, meshes } = storeToRefs(assetsStore)
+const inputStore = useInputStore()
+const camera = useCamera()
 
 async function loadAssets() {
-  assetsStore.addTexture('containerDiffuse', await Textures.createTextureFromImage(containerDiffuseTexture))
-  assetsStore.addTexture('containerSpecular', await Textures.createTextureFromImage(containerSpecularTexture, false))
-  assetsStore.addTexture('containerEmission', await Textures.createTextureFromImage(containerEmissionTexture))
+  assetsStore.addTexture('containerDiffuse', await Textures.createTextureFromImage('./src/assets/images/containerDiffuse.png'))
+  assetsStore.addTexture('containerSpecular', await Textures.createTextureFromImage('./src/assets/images/containerSpecular.png', false))
+  assetsStore.addTexture('containerEmission', await Textures.createTextureFromImage('./src/assets/images/containerEmission.jpg'))
 
   assetsStore.addMaterial('container', new Material(textures.value.containerDiffuse, textures.value.containerSpecular))
   assetsStore.addMaterial(
@@ -32,7 +35,8 @@ async function loadAssets() {
   assetsStore.addMesh('plane', Primitives.createPlane())
 }
 
-async function initialize(done: () => void) {
+async function initialize() {
+  inputStore.initialize()
   scene.value.fog.color = [0.0, 0.0, 0.0, 1]
 
   await loadAssets()
@@ -70,12 +74,15 @@ async function initialize(done: () => void) {
   const cube2 = scene.value.createEntity([10, 5, 2], meshes.value.cube, materials.value.container)
   cube2.material.shininess = 64.0
 
-  done()
+  renderStore.startRender()
 }
 </script>
 
 <template>
-  <RenderEngine autoPlay @ready="initialize" />
+  <RenderEngine autoPlay @ready="initialize">
+    <FPSInfo />
+    <SceneControls />
+  </RenderEngine>
 </template>
 
 <style scoped lang="scss"></style>
