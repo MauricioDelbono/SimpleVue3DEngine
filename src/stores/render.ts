@@ -22,6 +22,11 @@ export const useRenderStore = defineStore('render', () => {
   const scene: Ref<Scene> = ref(new Scene())
   const store = useWebGLStore()
 
+  const quadMesh = Primitives.createXYQuad(2.0, 0.0, 0.0)
+  const quadTransform = new Transform()
+  const postProcessMesh = Primitives.createXYQuad()
+  const postProcessTransform = new Transform()
+
   function reset() {
     store.reset()
     subscribers.value = []
@@ -31,8 +36,8 @@ export const useRenderStore = defineStore('render', () => {
     hasStarted.value = false
   }
 
-  function initialize() {
-    store.initialize('canvas')
+  function initialize(canvas: HTMLCanvasElement | string = 'canvas') {
+    store.initialize(canvas)
     store.setFieldOfView(60)
   }
 
@@ -103,11 +108,9 @@ export const useRenderStore = defineStore('render', () => {
     }
   }
 
-  const quadMesh = Primitives.createXYQuad(2.0, 0.0, 0.0)
-  const quadTransform = new Transform()
-
   function renderScene() {
     store.updateCameraMatrices(scene.value)
+    const dofEnabled = scene.value.depthOfField && scene.value.depthOfField.enabled && !scene.value.wireframe
 
     // Shadow Pass
     if (!scene.value.wireframe && scene.value.directionalLight) {
@@ -168,7 +171,13 @@ export const useRenderStore = defineStore('render', () => {
     store.renderMesh(scene.value, pipelineKeys.ssaoBlur, quadMesh, quadTransform)
 
     // Lighting Pass
-    store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, null)
+    // If DoF is enabled, render to MainFrameBuffer, else render to screen
+    if (dofEnabled) {
+      store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, store.getMainFrameBuffer())
+    } else {
+      store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, null)
+    }
+
     store.gl.clearColor(scene.value.fog.color[0], scene.value.fog.color[1], scene.value.fog.color[2], scene.value.fog.color[3])
     store.gl.clear(store.gl.COLOR_BUFFER_BIT | store.gl.DEPTH_BUFFER_BIT)
 
@@ -176,7 +185,12 @@ export const useRenderStore = defineStore('render', () => {
     store.renderMesh(scene.value, pipelineKeys.lighting, quadMesh, quadTransform)
 
     // Copy Depth & Forward Pass
-    store.copyDepthBufferToDefault()
+    if (dofEnabled) {
+      store.copyDepthBufferToMain()
+    } else {
+      store.copyDepthBufferToDefault()
+    }
+
     store.renderSkybox(scene.value)
 
     // Debug / Light Helpers / Forward Entities
@@ -193,6 +207,13 @@ export const useRenderStore = defineStore('render', () => {
         }
       })
     })
+
+    // Post Process (DoF)
+    if (dofEnabled) {
+      store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, null)
+      store.gl.clear(store.gl.COLOR_BUFFER_BIT | store.gl.DEPTH_BUFFER_BIT)
+      store.renderMesh(scene.value, pipelineKeys.postProcess, postProcessMesh, postProcessTransform, undefined)
+    }
   }
 
   function startRender() {

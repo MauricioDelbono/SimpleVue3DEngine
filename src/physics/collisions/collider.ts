@@ -8,7 +8,6 @@ import { Manifold } from './manifold'
 export class Collider extends Component {
   public transform: Transform
   public mesh: Mesh
-  private _worldPosition: vec3 = vec3.create()
   public min: vec3
   public max: vec3
 
@@ -26,9 +25,7 @@ export class Collider extends Component {
   }
 
   public get worldPosition() {
-    mat4.getTranslation(this._worldPosition, this.transform.worldMatrix)
-    vec3.add(this._worldPosition, this._worldPosition, this.transform.position)
-    return this._worldPosition
+    return this.transform.worldPosition
   }
 
   public updateTransformMatrix(matrix?: mat4) {
