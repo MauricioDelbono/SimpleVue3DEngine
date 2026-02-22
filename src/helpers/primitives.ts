@@ -125,96 +125,6 @@ export default class Primitives {
     return sphere
   }
 
-  static createCylinder(radius: number = 1, height: number = 2, radialSubdivisions: number = 20, verticalSubdivisions: number = 1): Mesh {
-    if (radialSubdivisions < 3) {
-      throw new Error('radialSubdivisions must be 3 or greater')
-    }
-
-    if (verticalSubdivisions < 1) {
-      throw new Error('verticalSubdivisions must be 1 or greater')
-    }
-
-    const positions = []
-    const normals = []
-    const textureCoords = []
-    const indices = []
-    const vertsAroundEdge = radialSubdivisions + 1
-
-    // Generate the vertices, normals, and texture coordinates
-    for (let y = 0; y <= verticalSubdivisions; y++) {
-      const v = y / verticalSubdivisions
-      const yPos = height * v - height / 2
-      for (let i = 0; i <= radialSubdivisions; i++) {
-        const u = i / radialSubdivisions
-        const theta = u * Math.PI * 2
-        const sinTheta = Math.sin(theta)
-        const cosTheta = Math.cos(theta)
-        positions.push(radius * cosTheta, yPos, radius * sinTheta)
-        normals.push(cosTheta, 0, sinTheta)
-        textureCoords.push(u, v)
-      }
-    }
-
-    // Generate the indices
-    for (let y = 0; y < verticalSubdivisions; y++) {
-      for (let i = 0; i < radialSubdivisions; i++) {
-        const index = y * vertsAroundEdge + i
-        indices.push(index, index + vertsAroundEdge, index + 1)
-        indices.push(index + 1, index + vertsAroundEdge, index + vertsAroundEdge + 1)
-      }
-    }
-
-    // Generate the top and bottom caps
-    for (let i = 0; i < radialSubdivisions; i++) {
-      const theta = (i / radialSubdivisions) * Math.PI * 2
-      const sinTheta = Math.sin(theta)
-      const cosTheta = Math.cos(theta)
-
-      // Top cap
-      positions.push(0, height / 2, 0)
-      normals.push(0, 1, 0)
-      textureCoords.push(0.5, 0.5)
-      const topCenterIndex = positions.length / 3 - 1
-
-      positions.push(radius * cosTheta, height / 2, radius * sinTheta)
-      normals.push(0, 1, 0)
-      textureCoords.push((cosTheta + 1) / 2, (sinTheta + 1) / 2)
-      const topEdgeIndex = positions.length / 3 - 1
-
-      const nextTheta = ((i + 1) / radialSubdivisions) * Math.PI * 2
-      const nextSinTheta = Math.sin(nextTheta)
-      const nextCosTheta = Math.cos(nextTheta)
-
-      positions.push(radius * nextCosTheta, height / 2, radius * nextSinTheta)
-      normals.push(0, 1, 0)
-      textureCoords.push((nextCosTheta + 1) / 2, (nextSinTheta + 1) / 2)
-      const nextTopEdgeIndex = positions.length / 3 - 1
-
-      indices.push(topCenterIndex, topEdgeIndex, nextTopEdgeIndex)
-
-      // Bottom cap
-      positions.push(0, -height / 2, 0)
-      normals.push(0, -1, 0)
-      textureCoords.push(0.5, 0.5)
-      const bottomCenterIndex = positions.length / 3 - 1
-
-      positions.push(radius * cosTheta, -height / 2, radius * sinTheta)
-      normals.push(0, -1, 0)
-      textureCoords.push((cosTheta + 1) / 2, (sinTheta + 1) / 2)
-      const bottomEdgeIndex = positions.length / 3 - 1
-
-      positions.push(radius * nextCosTheta, -height / 2, radius * nextSinTheta)
-      normals.push(0, -1, 0)
-      textureCoords.push((nextCosTheta + 1) / 2, (nextSinTheta + 1) / 2)
-      const nextBottomEdgeIndex = positions.length / 3 - 1
-
-      indices.push(bottomCenterIndex, nextBottomEdgeIndex, bottomEdgeIndex)
-    }
-
-    const cylinder = new Mesh('Cylinder', positions, normals, textureCoords, indices)
-    return cylinder
-  }
-
   static createTruncatedCone(
     bottomRadius: number = 1,
     topRadius: number = 0,
@@ -359,12 +269,16 @@ export default class Primitives {
     const positions = [
       xOffset + -1 * size,
       yOffset + -1 * size,
+      0,
       xOffset + 1 * size,
       yOffset + -1 * size,
+      0,
       xOffset + -1 * size,
       yOffset + 1 * size,
+      0,
       xOffset + 1 * size,
-      yOffset + 1 * size
+      yOffset + 1 * size,
+      0
     ]
     const normals = [0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1]
     const textureCoords = [0, 0, 1, 0, 0, 1, 1, 1]
