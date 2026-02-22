@@ -69,7 +69,9 @@ export const useWebGLStore = defineStore('webgl', () => {
   let depthFrameBuffer: FrameBuffer = null
 
   function reset() {
-    clearCanvas()
+    if (gl.value && typeof gl.value.clearColor === 'function') {
+      clearCanvas()
+    }
     lastUsedPipeline = null
     pipelines.value = {}
     gl.value = {} as WebGL2RenderingContext
