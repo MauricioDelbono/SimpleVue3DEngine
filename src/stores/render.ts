@@ -19,7 +19,6 @@ export const useRenderStore = defineStore('render', () => {
   const hasStarted = ref(false)
   const isRendering = ref(false)
   const stepForward = ref(0)
-  const stepSize = ref(10)
   const lastRenderTime: Ref<Time> = ref(new Time(0))
   const scene: Ref<Scene> = ref(new Scene())
   const store = useWebGLStore()
@@ -63,14 +62,22 @@ export const useRenderStore = defineStore('render', () => {
   }
 
   function render(time: Time) {
+    // Update transform matrices first (for initial setup)
+    scene.value.updateTransformMatrices()
+
     // Update
     if (isRendering.value) {
+      // First update entities (including rigidbody physics)
       scene.value.entities.forEach((entity) => {
         traverseTree(entity, (entity: Entity) => {
           entity.update(time)
         })
       })
 
+      // Update transform matrices again after physics to ensure colliders have latest positions
+      scene.value.updateTransformMatrices()
+
+      // Then run physics collision detection and response
       subscribers.value.forEach((subscriber) => {
         subscriber.update(time)
       })
@@ -114,7 +121,7 @@ export const useRenderStore = defineStore('render', () => {
           scene.value.entities.forEach((entity) => {
             traverseTree(entity, (entity: Entity) => {
               if (entity.pipeline !== pipelineKeys.light && entity.pipeline !== pipelineKeys.skybox) {
-                store.renderObject(scene.value, pipelineKeys.shadow, entity.mesh, entity.transform, entity.material)
+                store.renderMesh(scene.value, pipelineKeys.shadow, entity.mesh, entity.transform, entity.material)
               }
             })
           })
@@ -133,7 +140,7 @@ export const useRenderStore = defineStore('render', () => {
             if (entity.pipeline === pipelineKeys.light) return
             if (entity.pipeline === pipelineKeys.skybox) return
 
-            store.renderObject(scene.value, pipelineKeys.gbuffer, entity.mesh, entity.transform, entity.material)
+            store.renderMesh(scene.value, pipelineKeys.gbuffer, entity.mesh, entity.transform, entity.material)
           })
         })
     }
@@ -142,7 +149,7 @@ export const useRenderStore = defineStore('render', () => {
     if (!scene.value.wireframe) {
         // Bind default framebuffer (implicitly done by setGlobalUniforms if it unbinds G-Buffer)
         store.pipelines[pipelineKeys.deferred].setGlobalUniforms(scene.value)
-        store.renderObject(scene.value, pipelineKeys.deferred, quadMesh, quadTransform)
+        store.renderMesh(scene.value, pipelineKeys.deferred, quadMesh, quadTransform)
     } else {
         store.clearCanvas(scene.value.fog.color)
     }
@@ -161,24 +168,22 @@ export const useRenderStore = defineStore('render', () => {
       traverseTree(entity, (entity: Entity) => {
         // If wireframe mode globally enabled, render everything as wireframe
         if (scene.value.wireframe) {
-           store.renderObject(scene.value, pipelineKeys.wireframe, entity.mesh, entity.transform, entity.material)
+           store.renderMesh(scene.value, pipelineKeys.wireframe, entity.mesh, entity.transform, entity.material)
         } else {
            // Otherwise, only render things that weren't in G-Buffer (Lights) or debug stuff
            if (entity.pipeline === pipelineKeys.light) {
-               store.renderObject(scene.value, pipelineKeys.light, entity.mesh, entity.transform, entity.material)
+               store.renderMesh(scene.value, pipelineKeys.light, entity.mesh, entity.transform, entity.material)
            }
         }
 
         if (scene.value.debugColliders) {
           const colliders = entity.getComponents(Collider)
           colliders.forEach((collider) => {
-            store.renderObject(scene.value, pipelineKeys.wireframe, collider.mesh, collider.transform)
+            store.renderMesh(scene.value, pipelineKeys.wireframe, collider.mesh, collider.transform, undefined, { color: [1, 0, 0] })
           })
         }
       })
     })
-
-    // store.renderShadowMapTexture(scene.value)
   }
 
   function startRender() {
