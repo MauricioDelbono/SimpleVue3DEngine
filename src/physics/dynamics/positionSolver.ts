@@ -17,7 +17,7 @@ export class PositionSolver extends Solver {
         const correctionAmount = Math.max(point.depth - this.slop, 0) * this.correctionPercentage
         if (correctionAmount <= 0) return
 
-        const correction = vec3.scale(vec3.create(), point.normal, correctionAmount)
+        vec3.scale(tmpCorrection, point.normal, correctionAmount)
 
         // Calculate total inverse mass for correction distribution
         const totalInverseMass = collision.bodyA.inverseMass + collision.bodyB.inverseMass
@@ -29,15 +29,18 @@ export class PositionSolver extends Solver {
 
         // Apply position corrections to rigid bodies
         if (collision.bodyA.isDynamic) {
-          const bodyACorrection = vec3.scale(vec3.create(), correction, -bodyACorrectionFactor)
-          vec3.add(collision.bodyA.position, collision.bodyA.position, bodyACorrection)
+          vec3.scale(tmpBodyCorrection, tmpCorrection, -bodyACorrectionFactor)
+          vec3.add(collision.bodyA.position, collision.bodyA.position, tmpBodyCorrection)
         }
 
         if (collision.bodyB.isDynamic) {
-          const bodyBCorrection = vec3.scale(vec3.create(), correction, bodyBCorrectionFactor)
-          vec3.add(collision.bodyB.position, collision.bodyB.position, bodyBCorrection)
+          vec3.scale(tmpBodyCorrection, tmpCorrection, bodyBCorrectionFactor)
+          vec3.add(collision.bodyB.position, collision.bodyB.position, tmpBodyCorrection)
         }
       })
     })
   }
 }
+
+const tmpCorrection = vec3.create()
+const tmpBodyCorrection = vec3.create()
