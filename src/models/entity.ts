@@ -134,20 +134,4 @@ export class Entity {
     vec3.subtract(this.worldMin, tmpNewCenter, tmpNewExtent)
     vec3.add(this.worldMax, tmpNewCenter, tmpNewExtent)
   }
-
-  // public render() {
-  //   const { mesh, material } = this
-  //   material.use()
-  //   mesh.render()
-  // }
-
-  // public renderDepth() {
-  //   const { mesh } = this
-  //   mesh.render()
-  // }
-
-  // public renderShadow() {
-  //   const { mesh } = this
-  //   mesh.render()
-  // }
 }
