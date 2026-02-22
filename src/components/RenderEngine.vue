@@ -98,7 +98,7 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: 1fr auto;
   width: inherit;
-  height: inherit;
+  height: 100%;
   overflow: hidden;
 
   .render-canvas {

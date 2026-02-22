@@ -16,7 +16,6 @@ import {
   type RenderOptions
 } from '@/models/pipeline'
 import type { FrameBuffer, Texture } from '@/models/types'
-import Primitives from '@/helpers/primitives'
 import type { Mesh } from '@/models/mesh'
 import type { Transform } from '@/models/transform'
 import type { Material } from '@/models/material'
