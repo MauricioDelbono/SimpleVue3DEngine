@@ -27,12 +27,7 @@ watch(selectedSceneId, (newId) => {
       <div class="scene-list">
         <h3>Scenes</h3>
         <ul>
-          <li
-            v-for="scene in scenes"
-            :key="scene.id"
-            @click="selectedSceneId = scene.id"
-            :class="{ active: selectedSceneId === scene.id }"
-          >
+          <li v-for="scene in scenes" :key="scene.id" @click="selectedSceneId = scene.id" :class="{ active: selectedSceneId === scene.id }">
             {{ scene.name }}
           </li>
         </ul>

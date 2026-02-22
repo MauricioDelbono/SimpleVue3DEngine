@@ -21,78 +21,84 @@ describe('GLTFLoader', () => {
   })
 
   it('should load a minimal GLB', async () => {
-      // 1. Create BIN data (Float32Array of positions: 3 vertices * 3 floats * 4 bytes = 36 bytes)
-      const vertices = new Float32Array([
-        0, 0, 0,
-        1, 0, 0,
-        0, 1, 0
-      ])
-      const binData = new Uint8Array(vertices.buffer)
+    // 1. Create BIN data (Float32Array of positions: 3 vertices * 3 floats * 4 bytes = 36 bytes)
+    const vertices = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0])
+    const binData = new Uint8Array(vertices.buffer)
 
-      // 2. Create JSON
-      const json = {
-        asset: { version: "2.0" },
-        scenes: [{ nodes: [0] }],
-        nodes: [{ mesh: 0 }],
-        meshes: [{
-          primitives: [{
-            attributes: { POSITION: 0 }
-          }]
-        }],
-        accessors: [{
+    // 2. Create JSON
+    const json = {
+      asset: { version: '2.0' },
+      scenes: [{ nodes: [0] }],
+      nodes: [{ mesh: 0 }],
+      meshes: [
+        {
+          primitives: [
+            {
+              attributes: { POSITION: 0 }
+            }
+          ]
+        }
+      ],
+      accessors: [
+        {
           bufferView: 0,
           componentType: 5126, // FLOAT
           count: 3,
-          type: "VEC3"
-        }],
-        bufferViews: [{
+          type: 'VEC3'
+        }
+      ],
+      bufferViews: [
+        {
           buffer: 0,
           byteLength: binData.byteLength,
           byteOffset: 0
-        }],
-        buffers: [{
+        }
+      ],
+      buffers: [
+        {
           byteLength: binData.byteLength
-        }]
-      }
-      const jsonStr = JSON.stringify(json)
-      const jsonBytes = new TextEncoder().encode(jsonStr)
-      // Pad JSON to 4 bytes
-      const jsonPadding = (4 - (jsonBytes.byteLength % 4)) % 4
-      const paddedJsonLength = jsonBytes.byteLength + jsonPadding
+        }
+      ]
+    }
+    const jsonStr = JSON.stringify(json)
+    const jsonBytes = new TextEncoder().encode(jsonStr)
+    // Pad JSON to 4 bytes
+    const jsonPadding = (4 - (jsonBytes.byteLength % 4)) % 4
+    const paddedJsonLength = jsonBytes.byteLength + jsonPadding
 
-      // 3. Construct Buffer
-      const totalLength = 12 + 8 + paddedJsonLength + 8 + binData.byteLength
-      const buffer = new ArrayBuffer(totalLength)
-      const view = new DataView(buffer)
+    // 3. Construct Buffer
+    const totalLength = 12 + 8 + paddedJsonLength + 8 + binData.byteLength
+    const buffer = new ArrayBuffer(totalLength)
+    const view = new DataView(buffer)
 
-      // Header
-      view.setUint32(0, 0x46546c67, true) // magic
-      view.setUint32(4, 2, true) // version
-      view.setUint32(8, totalLength, true) // length
+    // Header
+    view.setUint32(0, 0x46546c67, true) // magic
+    view.setUint32(4, 2, true) // version
+    view.setUint32(8, totalLength, true) // length
 
-      // JSON Chunk Header
-      view.setUint32(12, paddedJsonLength, true) // chunkLength
-      view.setUint32(16, 0x4e4f534a, true) // chunkType
+    // JSON Chunk Header
+    view.setUint32(12, paddedJsonLength, true) // chunkLength
+    view.setUint32(16, 0x4e4f534a, true) // chunkType
 
-      // JSON Data
-      const uint8View = new Uint8Array(buffer)
+    // JSON Data
+    const uint8View = new Uint8Array(buffer)
 
-      uint8View.set(jsonBytes, 20)
-      for(let i=0; i<jsonPadding; i++) uint8View[20 + jsonBytes.byteLength + i] = 0x20 // Space padding
+    uint8View.set(jsonBytes, 20)
+    for (let i = 0; i < jsonPadding; i++) uint8View[20 + jsonBytes.byteLength + i] = 0x20 // Space padding
 
-      // BIN Chunk Header
-      const binOffset = 20 + paddedJsonLength
-      view.setUint32(binOffset, binData.byteLength, true)
-      view.setUint32(binOffset + 4, 0x004e4942, true)
+    // BIN Chunk Header
+    const binOffset = 20 + paddedJsonLength
+    view.setUint32(binOffset, binData.byteLength, true)
+    view.setUint32(binOffset + 4, 0x004e4942, true)
 
-      // BIN Data
-      // Copy manual to avoid environment weirdness with .set()
-      for(let i=0; i<binData.length; i++) {
-         uint8View[binOffset + 8 + i] = binData[i];
-      }
+    // BIN Data
+    // Copy manual to avoid environment weirdness with .set()
+    for (let i = 0; i < binData.length; i++) {
+      uint8View[binOffset + 8 + i] = binData[i]
+    }
 
     // Mock fetch response
-    (global.fetch as any).mockResolvedValue({
+    ;(global.fetch as any).mockResolvedValue({
       arrayBuffer: () => Promise.resolve(buffer)
     })
 

@@ -1,7 +1,12 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
 import { DepthOfField, Scene } from '../scene'
 
 describe('DepthOfField', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
   it('should have default values', () => {
     const dof = new DepthOfField()
     expect(dof.enabled).toBe(false)

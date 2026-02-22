@@ -104,7 +104,7 @@ const COMPONENT_TYPE = {
   5122: Int16Array,
   5123: Uint16Array,
   5125: Uint32Array,
-  5126: Float32Array,
+  5126: Float32Array
 }
 
 const COMPONENT_SIZE = {
@@ -113,7 +113,7 @@ const COMPONENT_SIZE = {
   5122: 2,
   5123: 2,
   5125: 4,
-  5126: 4,
+  5126: 4
 }
 
 const TYPE_SIZE = {
@@ -123,7 +123,7 @@ const TYPE_SIZE = {
   VEC4: 4,
   MAT2: 4,
   MAT3: 9,
-  MAT4: 16,
+  MAT4: 16
 }
 
 function quatToEulerDegrees(q: Float32Array | number[]): vec3 {
@@ -139,8 +139,7 @@ function quatToEulerDegrees(q: Float32Array | number[]): vec3 {
   const sinp = 2 * (w * y - z * x)
   if (Math.abs(sinp) >= 1)
     out[1] = Math.sign(sinp) * (Math.PI / 2) // use 90 degrees if out of range
-  else
-    out[1] = Math.asin(sinp)
+  else out[1] = Math.asin(sinp)
 
   // Yaw (z-axis rotation)
   const siny_cosp = 2 * (w * z + x * y)
@@ -192,10 +191,12 @@ export class GLTFLoader {
       const chunkLength = new DataView(data, chunkOffset, 4).getUint32(0, true)
       const chunkType = new DataView(data, chunkOffset + 4, 4).getUint32(0, true)
 
-      if (chunkType === 0x4e4f534a) { // JSON
+      if (chunkType === 0x4e4f534a) {
+        // JSON
         const jsonText = new TextDecoder().decode(new Uint8Array(data, chunkOffset + 8, chunkLength))
         jsonChunk = JSON.parse(jsonText)
-      } else if (chunkType === 0x004e4942) { // BIN
+      } else if (chunkType === 0x004e4942) {
+        // BIN
         // Use slice to create a new ArrayBuffer for safety (alignment)
         binaryChunk = data.slice(chunkOffset + 8, chunkOffset + 8 + chunkLength)
       }
@@ -213,30 +214,29 @@ export class GLTFLoader {
 
     // Load Textures
     if (this.gltf.textures) {
-      this.textures = await Promise.all(this.gltf.textures.map(async (tex) => {
-        if (tex.source !== undefined && this.gltf!.images) {
-          const img = this.gltf!.images[tex.source]
-          if (img.bufferView !== undefined && this.gltf!.bufferViews) {
-            const bufferView = this.gltf!.bufferViews[img.bufferView]
-            const buffer = this.buffers[bufferView.buffer]
-            const blobPart = buffer.slice(
-              (bufferView.byteOffset || 0),
-              (bufferView.byteOffset || 0) + bufferView.byteLength
-            )
-            const blob = new Blob([blobPart], { type: img.mimeType || 'image/png' })
-            const url = URL.createObjectURL(blob)
-            const texture = await Textures.createTextureFromImage(url)
-            URL.revokeObjectURL(url)
-            return texture
+      this.textures = await Promise.all(
+        this.gltf.textures.map(async (tex) => {
+          if (tex.source !== undefined && this.gltf!.images) {
+            const img = this.gltf!.images[tex.source]
+            if (img.bufferView !== undefined && this.gltf!.bufferViews) {
+              const bufferView = this.gltf!.bufferViews[img.bufferView]
+              const buffer = this.buffers[bufferView.buffer]
+              const blobPart = buffer.slice(bufferView.byteOffset || 0, (bufferView.byteOffset || 0) + bufferView.byteLength)
+              const blob = new Blob([blobPart], { type: img.mimeType || 'image/png' })
+              const url = URL.createObjectURL(blob)
+              const texture = await Textures.createTextureFromImage(url)
+              URL.revokeObjectURL(url)
+              return texture
+            }
           }
-        }
-        return null
-      }))
+          return null
+        })
+      )
     }
 
     // Load Materials
     if (this.gltf.materials) {
-      this.materials = this.gltf.materials.map(mat => {
+      this.materials = this.gltf.materials.map((mat) => {
         const material = new Material()
 
         if (mat.pbrMetallicRoughness) {
@@ -249,7 +249,7 @@ export class GLTFLoader {
             material.diffuse = this.textures[pbr.baseColorTexture!.index]
           }
           if (pbr.roughnessFactor !== undefined) {
-             material.shininess = (1.0 - pbr.roughnessFactor) * 128.0
+            material.shininess = (1.0 - pbr.roughnessFactor) * 128.0
           }
         }
 
@@ -282,17 +282,17 @@ export class GLTFLoader {
     const entity = new Entity(node.name || `Node_${nodeIndex}`)
 
     if (node.matrix) {
-       const mat = mat4.clone(node.matrix as any)
-       const pos = vec3.create()
-       const rot = quat.create()
-       const sca = vec3.create()
-       mat4.getTranslation(pos, mat)
-       mat4.getRotation(rot, mat)
-       mat4.getScaling(sca, mat)
+      const mat = mat4.clone(node.matrix as any)
+      const pos = vec3.create()
+      const rot = quat.create()
+      const sca = vec3.create()
+      mat4.getTranslation(pos, mat)
+      mat4.getRotation(rot, mat)
+      mat4.getScaling(sca, mat)
 
-       entity.transform.position = pos
-       entity.transform.rotation = quatToEulerDegrees(rot)
-       entity.transform.scale = sca
+      entity.transform.position = pos
+      entity.transform.rotation = quatToEulerDegrees(rot)
+      entity.transform.scale = sca
     } else {
       if (node.translation) entity.transform.position = vec3.fromValues(node.translation[0], node.translation[1], node.translation[2])
       if (node.scale) entity.transform.scale = vec3.fromValues(node.scale[0], node.scale[1], node.scale[2])
@@ -315,7 +315,7 @@ export class GLTFLoader {
           const mesh = this.createMesh(prim, `${meshDef.name}_${index}`)
           const child = new Entity(mesh.name, mesh)
           if (prim.material !== undefined) {
-             child.setMaterial(this.materials[prim.material])
+            child.setMaterial(this.materials[prim.material])
           }
           entity.addChild(child)
         })

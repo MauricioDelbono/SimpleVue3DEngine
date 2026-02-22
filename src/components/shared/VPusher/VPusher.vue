@@ -70,18 +70,15 @@ function toggle() {
 
 <template>
   <div class="v-pusher">
-    <div
-      class="v-pusher-menu"
-      :style="{ width: isOpen ? width + 'px' : '0px', minWidth: isOpen ? width + 'px' : '0px' }"
-    >
+    <div class="v-pusher-menu" :style="{ width: isOpen ? width + 'px' : '0px', minWidth: isOpen ? width + 'px' : '0px' }">
       <div class="v-pusher-content-wrapper">
-         <slot name="menu"></slot>
+        <slot name="menu"></slot>
       </div>
     </div>
 
     <div class="v-pusher-handle" @mousedown="startDrag">
       <div class="v-pusher-toggle" @click.stop="toggle" :title="isOpen ? 'Close Menu' : 'Open Menu'">
-         <div class="arrow" :class="{ open: isOpen }"></div>
+        <div class="arrow" :class="{ open: isOpen }"></div>
       </div>
     </div>
 
@@ -102,7 +99,9 @@ function toggle() {
 .v-pusher-menu {
   background-color: var(--item-color);
   border-right: 1px solid var(--border-color);
-  transition: width 0.3s ease, min-width 0.3s ease;
+  transition:
+    width 0.3s ease,
+    min-width 0.3s ease;
   overflow: hidden;
   position: relative;
   display: flex;
