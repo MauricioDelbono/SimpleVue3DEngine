@@ -5,6 +5,8 @@ import { Scene } from '@/models/scene'
 import { pipelineKeys, useWebGLStore } from './webgl'
 import { Time } from '@/models/time'
 import { Collider } from '@/physics/collisions/collider'
+import Primitives from '@/helpers/primitives'
+import { Transform } from '@/models/transform'
 
 interface Render {
   update: (time: Time) => void
@@ -101,33 +103,88 @@ export const useRenderStore = defineStore('render', () => {
     }
   }
 
-  function renderScene() {
-    store.clearCanvas(scene.value.fog.color)
-    if (!scene.value.wireframe) {
-      if (scene.value.directionalLight) {
-        const cascadeCount = store.getCascadeCount()
-        for (let i = 0; i < cascadeCount; i++) {
-          store.prepareShadowCascade(scene.value, i)
+  const quadMesh = Primitives.createXYQuad(2.0, 0.0, 0.0)
+  const quadTransform = new Transform()
 
-          scene.value.entities.forEach((entity) => {
-            traverseTree(entity, (entity: Entity) => {
-              if (entity.pipeline !== pipelineKeys.light) {
-                store.renderMesh(scene.value, pipelineKeys.shadow, entity.mesh, entity.transform, entity.material)
-              }
-            })
+  function renderScene() {
+    store.updateCameraMatrices(scene.value)
+
+    // Shadow Pass
+    if (!scene.value.wireframe && scene.value.directionalLight) {
+      const cascadeCount = store.getCascadeCount()
+      for (let i = 0; i < cascadeCount; i++) {
+        store.prepareShadowCascade(scene.value, i)
+        scene.value.entities.forEach((entity) => {
+          traverseTree(entity, (entity: Entity) => {
+            if (entity.pipeline !== pipelineKeys.light && entity.pipeline !== pipelineKeys.skybox) {
+              store.renderMesh(scene.value, pipelineKeys.shadow, entity.mesh, entity.transform, entity.material)
+            }
           })
-        }
+        })
       }
     }
 
     store.resize()
-    store.setRenderColor(scene.value)
+
+    // Geometry Pass
+    store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, store.getGBuffer())
+    store.gl.clearColor(0, 0, 0, 0)
+    store.gl.clear(store.gl.COLOR_BUFFER_BIT | store.gl.DEPTH_BUFFER_BIT)
+
+    // Wireframe Override
+    if (scene.value.wireframe) {
+       store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, null)
+       store.gl.clearColor(scene.value.fog.color[0], scene.value.fog.color[1], scene.value.fog.color[2], scene.value.fog.color[3])
+       store.gl.clear(store.gl.COLOR_BUFFER_BIT | store.gl.DEPTH_BUFFER_BIT)
+
+       scene.value.entities.forEach((entity) => {
+         traverseTree(entity, (entity: Entity) => {
+           store.renderMesh(scene.value, pipelineKeys.wireframe, entity.mesh, entity.transform, entity.material)
+         })
+       })
+       return
+    }
 
     scene.value.entities.forEach((entity) => {
       traverseTree(entity, (entity: Entity) => {
-        const pipeline = scene.value.wireframe ? pipelineKeys.wireframe : entity.pipeline ?? scene.value.defaultPipeline
-        store.renderMesh(scene.value, pipeline, entity.mesh, entity.transform, entity.material)
+        const pipeline = entity.pipeline === pipelineKeys.default ? pipelineKeys.geometry : (entity.pipeline ?? pipelineKeys.geometry)
 
+        if (pipeline === pipelineKeys.light || pipeline === pipelineKeys.skybox || pipeline === pipelineKeys.wireframe) return
+
+        store.renderMesh(scene.value, pipeline, entity.mesh, entity.transform, entity.material)
+      })
+    })
+
+    // SSAO Pass
+    store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, store.getSSAOBuffer())
+    store.gl.clear(store.gl.COLOR_BUFFER_BIT)
+    store.pipelines[pipelineKeys.ssao].setGlobalUniforms(scene.value)
+    store.renderMesh(scene.value, pipelineKeys.ssao, quadMesh, quadTransform)
+
+    // SSAO Blur Pass
+    store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, store.getSSAOBlurBuffer())
+    store.gl.clear(store.gl.COLOR_BUFFER_BIT)
+    store.pipelines[pipelineKeys.ssaoBlur].setGlobalUniforms(scene.value)
+    store.renderMesh(scene.value, pipelineKeys.ssaoBlur, quadMesh, quadTransform)
+
+    // Lighting Pass
+    store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, null)
+    store.gl.clearColor(scene.value.fog.color[0], scene.value.fog.color[1], scene.value.fog.color[2], scene.value.fog.color[3])
+    store.gl.clear(store.gl.COLOR_BUFFER_BIT | store.gl.DEPTH_BUFFER_BIT)
+
+    store.pipelines[pipelineKeys.lighting].setGlobalUniforms(scene.value)
+    store.renderMesh(scene.value, pipelineKeys.lighting, quadMesh, quadTransform)
+
+    // Copy Depth & Forward Pass
+    store.copyDepthBufferToDefault()
+    store.renderSkybox(scene.value)
+
+    // Debug / Light Helpers / Forward Entities
+    scene.value.entities.forEach((entity) => {
+      traverseTree(entity, (entity: Entity) => {
+        if (entity.pipeline === pipelineKeys.light) {
+            store.renderMesh(scene.value, pipelineKeys.light, entity.mesh, entity.transform, entity.material)
+        }
         if (scene.value.debugColliders) {
           const colliders = entity.getComponents(Collider)
           colliders.forEach((collider) => {

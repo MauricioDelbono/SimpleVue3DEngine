@@ -13,6 +13,10 @@ import {
   ShadowPipeline,
   QuadPipeline,
   WireframePipeline,
+  GeometryPipeline,
+  SSAOPipeline,
+  SSAOBlurPipeline,
+  LightingPipeline,
   type RenderOptions
 } from '@/models/pipeline'
 import type { FrameBuffer, Texture } from '@/models/types'
@@ -27,8 +31,12 @@ export const pipelineKeys = {
   light: 'light',
   shadow: 'shadow',
   quad: 'quad',
-  default: 'default',
-  wireframe: 'wireframe'
+  default: 'default', // Mapping 'default' to GeometryPipeline for entities
+  wireframe: 'wireframe',
+  geometry: 'geometry',
+  ssao: 'ssao',
+  ssaoBlur: 'ssaoBlur',
+  lighting: 'lighting'
 }
 
 export const useWebGLStore = defineStore('webgl', () => {
@@ -68,6 +76,20 @@ export const useWebGLStore = defineStore('webgl', () => {
   let depthTexture: Texture = null
   let depthFrameBuffer: FrameBuffer = null
 
+  // G-Buffer
+  let gBuffer: FrameBuffer = null
+  let gNormal: Texture = null
+  let gAlbedoSpec: Texture = null
+  let gDepth: Texture = null
+
+  // SSAO
+  let ssaoFBO: FrameBuffer = null
+  let ssaoColorBuffer: Texture = null
+  let ssaoBlurFBO: FrameBuffer = null
+  let ssaoColorBufferBlur: Texture = null
+  let ssaoNoiseTexture: Texture = null
+  let ssaoKernel: number[] = []
+
   function reset() {
     clearCanvas()
     lastUsedPipeline = null
@@ -92,6 +114,16 @@ export const useWebGLStore = defineStore('webgl', () => {
     depthFrameBuffer = null
     cascadeSplits.value = []
     lightSpaceMatrices.value = []
+    gBuffer = null
+    gNormal = null
+    gAlbedoSpec = null
+    gDepth = null
+    ssaoFBO = null
+    ssaoColorBuffer = null
+    ssaoBlurFBO = null
+    ssaoColorBufferBlur = null
+    ssaoNoiseTexture = null
+    ssaoKernel = []
   }
 
   function clearCanvas(color: vec4 = [0, 0, 0, 1]) {
@@ -114,9 +146,15 @@ export const useWebGLStore = defineStore('webgl', () => {
       pipelines.value[pipelineKeys.light] = new LightPipeline(gl.value)
       pipelines.value[pipelineKeys.shadow] = new ShadowPipeline(gl.value)
       pipelines.value[pipelineKeys.quad] = new QuadPipeline(gl.value)
-      pipelines.value[pipelineKeys.default] = new DefaultPipeline(gl.value)
+      pipelines.value[pipelineKeys.default] = new GeometryPipeline(gl.value) // Use GeometryPipeline as default
       pipelines.value[pipelineKeys.wireframe] = new WireframePipeline(gl.value)
+      pipelines.value[pipelineKeys.geometry] = new GeometryPipeline(gl.value)
+      pipelines.value[pipelineKeys.ssao] = new SSAOPipeline(gl.value)
+      pipelines.value[pipelineKeys.ssaoBlur] = new SSAOBlurPipeline(gl.value)
+      pipelines.value[pipelineKeys.lighting] = new LightingPipeline(gl.value)
       initializeShadowMap()
+      initializeGBuffer()
+      initializeSSAO()
     }
 
     return true
@@ -138,7 +176,139 @@ export const useWebGLStore = defineStore('webgl', () => {
     gl.value.viewport(0, 0, canvas.value.width, canvas.value.height)
     if (result) {
       recalculateViewport()
+      resizeGBuffer()
+      resizeSSAO()
     }
+  }
+
+  function initializeGBuffer() {
+    gBuffer = gl.value.createFramebuffer()
+    gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, gBuffer)
+
+    // - Position color buffer (using Depth reconstruction instead)
+    // - Normal color buffer
+    gNormal = gl.value.createTexture()
+    gl.value.bindTexture(gl.value.TEXTURE_2D, gNormal)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RGBA16F, canvas.value.width, canvas.value.height, 0, gl.value.RGBA, gl.value.FLOAT, null)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MIN_FILTER, gl.value.NEAREST)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MAG_FILTER, gl.value.NEAREST)
+    gl.value.framebufferTexture2D(gl.value.FRAMEBUFFER, gl.value.COLOR_ATTACHMENT0, gl.value.TEXTURE_2D, gNormal, 0)
+
+    // - Color + Specular color buffer
+    gAlbedoSpec = gl.value.createTexture()
+    gl.value.bindTexture(gl.value.TEXTURE_2D, gAlbedoSpec)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RGBA, canvas.value.width, canvas.value.height, 0, gl.value.RGBA, gl.value.UNSIGNED_BYTE, null)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MIN_FILTER, gl.value.NEAREST)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MAG_FILTER, gl.value.NEAREST)
+    gl.value.framebufferTexture2D(gl.value.FRAMEBUFFER, gl.value.COLOR_ATTACHMENT1, gl.value.TEXTURE_2D, gAlbedoSpec, 0)
+
+    // - Depth buffer
+    gDepth = gl.value.createTexture()
+    gl.value.bindTexture(gl.value.TEXTURE_2D, gDepth)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.DEPTH_COMPONENT24, canvas.value.width, canvas.value.height, 0, gl.value.DEPTH_COMPONENT, gl.value.UNSIGNED_INT, null)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MIN_FILTER, gl.value.NEAREST)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MAG_FILTER, gl.value.NEAREST)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_WRAP_S, gl.value.CLAMP_TO_EDGE)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_WRAP_T, gl.value.CLAMP_TO_EDGE)
+    gl.value.framebufferTexture2D(gl.value.FRAMEBUFFER, gl.value.DEPTH_ATTACHMENT, gl.value.TEXTURE_2D, gDepth, 0)
+
+    gl.value.drawBuffers([gl.value.COLOR_ATTACHMENT0, gl.value.COLOR_ATTACHMENT1])
+
+    if (gl.value.checkFramebufferStatus(gl.value.FRAMEBUFFER) !== gl.value.FRAMEBUFFER_COMPLETE)
+      console.error('Framebuffer not complete!')
+
+    gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, null)
+  }
+
+  function resizeGBuffer() {
+    gl.value.bindTexture(gl.value.TEXTURE_2D, gNormal)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RGBA16F, canvas.value.width, canvas.value.height, 0, gl.value.RGBA, gl.value.FLOAT, null)
+
+    gl.value.bindTexture(gl.value.TEXTURE_2D, gAlbedoSpec)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RGBA, canvas.value.width, canvas.value.height, 0, gl.value.RGBA, gl.value.UNSIGNED_BYTE, null)
+
+    gl.value.bindTexture(gl.value.TEXTURE_2D, gDepth)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.DEPTH_COMPONENT24, canvas.value.width, canvas.value.height, 0, gl.value.DEPTH_COMPONENT, gl.value.UNSIGNED_INT, null)
+  }
+
+  function initializeSSAO() {
+    // SSAO Framebuffer
+    ssaoFBO = gl.value.createFramebuffer()
+    gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, ssaoFBO)
+
+    ssaoColorBuffer = gl.value.createTexture()
+    gl.value.bindTexture(gl.value.TEXTURE_2D, ssaoColorBuffer)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RED, canvas.value.width, canvas.value.height, 0, gl.value.RED, gl.value.FLOAT, null)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MIN_FILTER, gl.value.NEAREST)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MAG_FILTER, gl.value.NEAREST)
+    gl.value.framebufferTexture2D(gl.value.FRAMEBUFFER, gl.value.COLOR_ATTACHMENT0, gl.value.TEXTURE_2D, ssaoColorBuffer, 0)
+
+    if (gl.value.checkFramebufferStatus(gl.value.FRAMEBUFFER) !== gl.value.FRAMEBUFFER_COMPLETE)
+      console.error('SSAO Framebuffer not complete!')
+
+    // SSAO Blur Framebuffer
+    ssaoBlurFBO = gl.value.createFramebuffer()
+    gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, ssaoBlurFBO)
+
+    ssaoColorBufferBlur = gl.value.createTexture()
+    gl.value.bindTexture(gl.value.TEXTURE_2D, ssaoColorBufferBlur)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RED, canvas.value.width, canvas.value.height, 0, gl.value.RED, gl.value.FLOAT, null)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MIN_FILTER, gl.value.NEAREST)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MAG_FILTER, gl.value.NEAREST)
+    gl.value.framebufferTexture2D(gl.value.FRAMEBUFFER, gl.value.COLOR_ATTACHMENT0, gl.value.TEXTURE_2D, ssaoColorBufferBlur, 0)
+
+    if (gl.value.checkFramebufferStatus(gl.value.FRAMEBUFFER) !== gl.value.FRAMEBUFFER_COMPLETE)
+      console.error('SSAO Blur Framebuffer not complete!')
+
+    gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, null)
+
+    generateSSAOKernel()
+    generateSSAONoise()
+  }
+
+  function resizeSSAO() {
+    gl.value.bindTexture(gl.value.TEXTURE_2D, ssaoColorBuffer)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RED, canvas.value.width, canvas.value.height, 0, gl.value.RED, gl.value.FLOAT, null)
+
+    gl.value.bindTexture(gl.value.TEXTURE_2D, ssaoColorBufferBlur)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RED, canvas.value.width, canvas.value.height, 0, gl.value.RED, gl.value.FLOAT, null)
+  }
+
+  function generateSSAOKernel() {
+    ssaoKernel = []
+    for (let i = 0; i < 64; i++) {
+      const sample = vec3.fromValues(
+        Math.random() * 2.0 - 1.0,
+        Math.random() * 2.0 - 1.0,
+        Math.random()
+      )
+      vec3.normalize(sample, sample)
+
+      let scale = i / 64.0
+      scale = 0.1 + (scale * scale) * (1.0 - 0.1) // lerp
+      vec3.scale(sample, sample, scale)
+
+      ssaoKernel.push(sample[0], sample[1], sample[2])
+    }
+  }
+
+  function generateSSAONoise() {
+    const ssaoNoise: number[] = []
+    for (let i = 0; i < 16; i++) {
+      ssaoNoise.push(
+        Math.random() * 2.0 - 1.0,
+        Math.random() * 2.0 - 1.0,
+        0.0
+      )
+    }
+
+    ssaoNoiseTexture = gl.value.createTexture()
+    gl.value.bindTexture(gl.value.TEXTURE_2D, ssaoNoiseTexture)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RGB16F, 4, 4, 0, gl.value.RGB, gl.value.FLOAT, new Float32Array(ssaoNoise))
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MIN_FILTER, gl.value.NEAREST)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MAG_FILTER, gl.value.NEAREST)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_WRAP_S, gl.value.REPEAT)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_WRAP_T, gl.value.REPEAT)
   }
 
   function initializeShadowMap() {
@@ -197,7 +367,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     pipelines.value.shadow.setGlobalUniforms(scene)
   }
 
-  function setRenderColor(scene: Scene) {
+  function updateCameraMatrices(scene: Scene) {
     gl.value.cullFace(gl.value.BACK)
 
     const cameraTransform = scene.camera.transform
@@ -209,6 +379,14 @@ export const useWebGLStore = defineStore('webgl', () => {
     )
     mat4.multiply(viewProjectionMatrix, projectionMatrix, viewMatrix)
 
+    // Set global uniforms for pipelines that need them
+    pipelines.value.light.setGlobalUniforms(scene)
+    pipelines.value.wireframe.setGlobalUniforms(scene)
+    pipelines.value.default.setGlobalUniforms(scene) // GeometryPipeline
+    pipelines.value.geometry.setGlobalUniforms(scene)
+  }
+
+  function renderSkybox(scene: Scene) {
     if (scene.skybox) {
       lastUsedPipeline = 'skybox'
       const pipeline = pipelines.value.skybox
@@ -222,10 +400,17 @@ export const useWebGLStore = defineStore('webgl', () => {
       pipeline.setGlobalUniforms(scene)
       pipeline.render(scene)
     }
+  }
 
-    pipelines.value.light.setGlobalUniforms(scene)
-    pipelines.value.wireframe.setGlobalUniforms(scene)
-    pipelines.value.default.setGlobalUniforms(scene)
+  function copyDepthBufferToDefault() {
+    gl.value.bindFramebuffer(gl.value.READ_FRAMEBUFFER, gBuffer)
+    gl.value.bindFramebuffer(gl.value.DRAW_FRAMEBUFFER, null)
+    gl.value.blitFramebuffer(0, 0, canvas.value.width, canvas.value.height, 0, 0, canvas.value.width, canvas.value.height, gl.value.DEPTH_BUFFER_BIT, gl.value.NEAREST)
+  }
+
+  function setRenderColor(scene: Scene) {
+    updateCameraMatrices(scene)
+    renderSkybox(scene)
   }
 
   function renderMesh(scene: Scene, pipelineKey: string, mesh: Mesh, transform: Transform, material?: Material, options?: RenderOptions) {
@@ -318,6 +503,46 @@ export const useWebGLStore = defineStore('webgl', () => {
     return cascadeCount
   }
 
+  function getGBuffer() {
+    return gBuffer
+  }
+
+  function getGNormal() {
+    return gNormal
+  }
+
+  function getGAlbedoSpec() {
+    return gAlbedoSpec
+  }
+
+  function getGDepth() {
+    return gDepth
+  }
+
+  function getSSAOBuffer() {
+    return ssaoFBO
+  }
+
+  function getSSAOColorBuffer() {
+    return ssaoColorBuffer
+  }
+
+  function getSSAOBlurBuffer() {
+    return ssaoBlurFBO
+  }
+
+  function getSSAOColorBufferBlur() {
+    return ssaoColorBufferBlur
+  }
+
+  function getSSAOKernel() {
+    return ssaoKernel
+  }
+
+  function getSSAONoiseTexture() {
+    return ssaoNoiseTexture
+  }
+
   return {
     gl,
     canvas,
@@ -344,6 +569,19 @@ export const useWebGLStore = defineStore('webgl', () => {
     getCascadeSplitsArray,
     getLightSpaceMatrices,
     getCascadeCount,
+    getGBuffer,
+    getGNormal,
+    getGAlbedoSpec,
+    getGDepth,
+    getSSAOBuffer,
+    getSSAOColorBuffer,
+    getSSAOBlurBuffer,
+    getSSAOColorBufferBlur,
+    getSSAOKernel,
+    getSSAONoiseTexture,
+    updateCameraMatrices,
+    renderSkybox,
+    copyDepthBufferToDefault,
     reset
   }
 })
