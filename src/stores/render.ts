@@ -5,9 +5,6 @@ import { Scene } from '@/models/scene'
 import { pipelineKeys, useWebGLStore } from './webgl'
 import { Time } from '@/models/time'
 import { Collider } from '@/physics/collisions/collider'
-import Primitives from '@/helpers/primitives'
-import { Mesh } from '@/models/mesh'
-import { Transform } from '@/models/transform'
 
 interface Render {
   update: (time: Time) => void
@@ -19,12 +16,10 @@ export const useRenderStore = defineStore('render', () => {
   const hasStarted = ref(false)
   const isRendering = ref(false)
   const stepForward = ref(0)
+  const stepSize = ref(10)
   const lastRenderTime: Ref<Time> = ref(new Time(0))
   const scene: Ref<Scene> = ref(new Scene())
   const store = useWebGLStore()
-
-  let quadMesh: Mesh = null
-  const quadTransform = new Transform()
 
   function reset() {
     store.reset()
@@ -38,7 +33,6 @@ export const useRenderStore = defineStore('render', () => {
   function initialize() {
     store.initialize('canvas')
     store.setFieldOfView(60)
-    quadMesh = Primitives.createXYQuad()
   }
 
   function subscribeToRender(subscriber: Render) {
@@ -62,22 +56,14 @@ export const useRenderStore = defineStore('render', () => {
   }
 
   function render(time: Time) {
-    // Update transform matrices first (for initial setup)
-    scene.value.updateTransformMatrices()
-
     // Update
     if (isRendering.value) {
-      // First update entities (including rigidbody physics)
       scene.value.entities.forEach((entity) => {
         traverseTree(entity, (entity: Entity) => {
           entity.update(time)
         })
       })
 
-      // Update transform matrices again after physics to ensure colliders have latest positions
-      scene.value.updateTransformMatrices()
-
-      // Then run physics collision detection and response
       subscribers.value.forEach((subscriber) => {
         subscriber.update(time)
       })
@@ -111,7 +97,7 @@ export const useRenderStore = defineStore('render', () => {
   function renderScene() {
     scene.value.updateTransformMatrices()
 
-    // 1. Shadow Pass
+    store.clearCanvas(scene.value.fog.color)
     if (!scene.value.wireframe) {
       if (scene.value.directionalLight) {
         const cascadeCount = store.getCascadeCount()
@@ -120,8 +106,8 @@ export const useRenderStore = defineStore('render', () => {
 
           scene.value.entities.forEach((entity) => {
             traverseTree(entity, (entity: Entity) => {
-              if (entity.pipeline !== pipelineKeys.light && entity.pipeline !== pipelineKeys.particle && entity.pipeline !== pipelineKeys.skybox) {
-                store.renderMesh(scene.value, pipelineKeys.shadow, entity.mesh, entity.transform, entity.material)
+              if (entity.pipeline !== pipelineKeys.light && entity.pipeline !== pipelineKeys.particle) {
+                store.renderObject(scene.value, pipelineKeys.shadow, entity.mesh, entity.transform, entity.material, entity)
               }
             })
           })
@@ -130,62 +116,23 @@ export const useRenderStore = defineStore('render', () => {
     }
 
     store.resize()
-
-    // 2. G-Buffer Pass
-    // Clear handled by setGlobalUniforms
-    if (!scene.value.wireframe) {
-        store.pipelines[pipelineKeys.gbuffer].setGlobalUniforms(scene.value)
-        scene.value.entities.forEach((entity) => {
-          traverseTree(entity, (entity: Entity) => {
-            if (entity.pipeline === pipelineKeys.light) return
-            if (entity.pipeline === pipelineKeys.skybox) return
-            if (entity.pipeline === pipelineKeys.particle) return
-
-            store.renderMesh(scene.value, pipelineKeys.gbuffer, entity.mesh, entity.transform, entity.material)
-          })
-        })
-    }
-
-    // 3. Deferred Lighting Pass
-    if (!scene.value.wireframe) {
-        // Bind default framebuffer (implicitly done by setGlobalUniforms if it unbinds G-Buffer)
-        store.pipelines[pipelineKeys.deferred].setGlobalUniforms(scene.value)
-        store.renderMesh(scene.value, pipelineKeys.deferred, quadMesh, quadTransform)
-    } else {
-        store.clearCanvas(scene.value.fog.color)
-    }
-
-    // 4. Forward Pass (Skybox, Debug, Wireframes)
-    // Restore depth buffer from G-Buffer so forward pass respects geometry
-    if (!scene.value.wireframe) {
-        store.copyDepthBuffer()
-    }
-
-    // Set up forward rendering state (Skybox is rendered here)
     store.setRenderColor(scene.value)
 
-    // Render wireframes / debug / lights
     scene.value.entities.forEach((entity) => {
       traverseTree(entity, (entity: Entity) => {
-        if (scene.value.wireframe) {
-           store.renderMesh(scene.value, pipelineKeys.wireframe, entity.mesh, entity.transform, entity.material)
-        } else {
-           if (entity.pipeline === pipelineKeys.light) {
-               store.renderMesh(scene.value, pipelineKeys.light, entity.mesh, entity.transform, entity.material)
-           }
-           if (entity.pipeline === pipelineKeys.particle) {
-               store.renderMesh(scene.value, pipelineKeys.particle, entity.mesh, entity.transform, entity.material, { entity })
-           }
-        }
+        const pipeline = scene.value.wireframe ? pipelineKeys.wireframe : entity.pipeline ?? scene.value.defaultPipeline
+        store.renderObject(scene.value, pipeline, entity.mesh, entity.transform, entity.material, entity)
 
         if (scene.value.debugColliders) {
           const colliders = entity.getComponents(Collider)
           colliders.forEach((collider) => {
-            store.renderMesh(scene.value, pipelineKeys.wireframe, collider.mesh, collider.transform, undefined, { color: [1, 0, 0] })
+            store.renderObject(scene.value, pipelineKeys.wireframe, collider.mesh, collider.transform)
           })
         }
       })
     })
+
+    // store.renderShadowMapTexture(scene.value)
   }
 
   function startRender() {
