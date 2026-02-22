@@ -321,11 +321,11 @@ export class DeferredPipeline implements Pipeline {
     }
 
     for (let index = 0; index < this.maxPointLights; index++) {
-      uniformLocations[\`pointLights[\${index}].enabled\`] = this.gl.getUniformLocation(this.program, \`pointLights[\${index}].enabled\`)
-      uniformLocations[\`pointLights[\${index}].position\`] = this.gl.getUniformLocation(this.program, \`pointLights[\${index}].position\`)
-      uniformLocations[\`pointLights[\${index}].ambient\`] = this.gl.getUniformLocation(this.program, \`pointLights[\${index}].ambient\`)
-      uniformLocations[\`pointLights[\${index}].diffuse\`] = this.gl.getUniformLocation(this.program, \`pointLights[\${index}].diffuse\`)
-      uniformLocations[\`pointLights[\${index}].specular\`] = this.gl.getUniformLocation(this.program, \`pointLights[\${index}].specular\`)
+      uniformLocations[`pointLights[${index}].enabled`] = this.gl.getUniformLocation(this.program, `pointLights[${index}].enabled`)
+      uniformLocations[`pointLights[${index}].position`] = this.gl.getUniformLocation(this.program, `pointLights[${index}].position`)
+      uniformLocations[`pointLights[${index}].ambient`] = this.gl.getUniformLocation(this.program, `pointLights[${index}].ambient`)
+      uniformLocations[`pointLights[${index}].diffuse`] = this.gl.getUniformLocation(this.program, `pointLights[${index}].diffuse`)
+      uniformLocations[`pointLights[${index}].specular`] = this.gl.getUniformLocation(this.program, `pointLights[${index}].specular`)
     }
 
     return uniformLocations
@@ -424,15 +424,15 @@ export class DeferredPipeline implements Pipeline {
 
     for (let index = 0; index < this.maxPointLights; index++) {
       // Clear uniform first to avoid ghost lights if array shrinks (not likely here but good practice)
-      this.gl.uniform1i(this.uniforms[\`pointLights[\${index}].enabled\`], 0)
+      this.gl.uniform1i(this.uniforms[`pointLights[${index}].enabled`], 0)
 
       if (scene.pointLights.length > index) {
         const light = scene.pointLights[index]
-        this.gl.uniform1i(this.uniforms[\`pointLights[\${index}].enabled\`], 1)
-        this.gl.uniform3fv(this.uniforms[\`pointLights[\${index}].position\`], light.transform.worldPosition)
-        this.gl.uniform3fv(this.uniforms[\`pointLights[\${index}].ambient\`], light.ambient)
-        this.gl.uniform3fv(this.uniforms[\`pointLights[\${index}].diffuse\`], light.diffuse)
-        this.gl.uniform3fv(this.uniforms[\`pointLights[\${index}].specular\`], light.specular)
+        this.gl.uniform1i(this.uniforms[`pointLights[${index}].enabled`], 1)
+        this.gl.uniform3fv(this.uniforms[`pointLights[${index}].position`], light.transform.worldPosition)
+        this.gl.uniform3fv(this.uniforms[`pointLights[${index}].ambient`], light.ambient)
+        this.gl.uniform3fv(this.uniforms[`pointLights[${index}]Diffuse`], light.diffuse)
+        this.gl.uniform3fv(this.uniforms[`pointLights[${index}]Specular`], light.specular)
       }
     }
   }
