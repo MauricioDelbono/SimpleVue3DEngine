@@ -13,19 +13,17 @@ import {
   ShadowPipeline,
   QuadPipeline,
   WireframePipeline,
-  ParticlePipeline
+  ParticlePipeline,
+  GBufferPipeline,
+  DeferredPipeline,
+  type RenderOptions
 } from '@/models/pipeline'
 import type { FrameBuffer, Texture } from '@/models/types'
 import Primitives from '@/helpers/primitives'
 import type { Mesh } from '@/models/mesh'
 import type { Transform } from '@/models/transform'
 import type { Material } from '@/models/material'
-import {
-  getLightSpaceMatrix,
-  getCascadeSplits,
-  CASCADE_COUNT,
-  SHADOW_MAP_SIZE
-} from '@/helpers/shadows'
+import { getLightSpaceMatrix, getCascadeSplits, CASCADE_COUNT, SHADOW_MAP_SIZE } from '@/helpers/shadows'
 
 export const pipelineKeys = {
   skybox: 'skybox',
@@ -34,7 +32,9 @@ export const pipelineKeys = {
   quad: 'quad',
   default: 'default',
   wireframe: 'wireframe',
-  particle: 'particle'
+  particle: 'particle',
+  gbuffer: 'gbuffer',
+  deferred: 'deferred'
 }
 
 export const useWebGLStore = defineStore('webgl', () => {
@@ -74,6 +74,13 @@ export const useWebGLStore = defineStore('webgl', () => {
   let depthTexture: Texture = null
   let depthFrameBuffer: FrameBuffer = null
 
+  // G-Buffer
+  let gBuffer: FrameBuffer = null
+  let gPosition: Texture = null
+  let gNormal: Texture = null
+  let gAlbedoSpec: Texture = null
+  let gDepth: Texture = null
+
   function reset() {
     clearCanvas()
     lastUsedPipeline = null
@@ -96,6 +103,11 @@ export const useWebGLStore = defineStore('webgl', () => {
     aspect = 16 / 9
     depthTexture = null
     depthFrameBuffer = null
+    gBuffer = null
+    gPosition = null
+    gNormal = null
+    gAlbedoSpec = null
+    gDepth = null
     cascadeSplits.value = []
     lightSpaceMatrices.value = []
   }
@@ -123,10 +135,88 @@ export const useWebGLStore = defineStore('webgl', () => {
       pipelines.value[pipelineKeys.default] = new DefaultPipeline(gl.value)
       pipelines.value[pipelineKeys.wireframe] = new WireframePipeline(gl.value)
       pipelines.value[pipelineKeys.particle] = new ParticlePipeline(gl.value)
+      pipelines.value[pipelineKeys.gbuffer] = new GBufferPipeline(gl.value)
+      pipelines.value[pipelineKeys.deferred] = new DeferredPipeline(gl.value)
       initializeShadowMap()
+      initializeGBuffer()
     }
 
     return true
+  }
+
+  function initializeGBuffer() {
+    // Check for floating point extension
+    const ext = gl.value.getExtension('EXT_color_buffer_float')
+    if (!ext) {
+      console.error('EXT_color_buffer_float not supported')
+      // Fallback or error handling logic here if needed
+    }
+
+    gBuffer = gl.value.createFramebuffer()
+    gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, gBuffer)
+
+    const width = canvas.value.width
+    const height = canvas.value.height
+
+    // - Position buffer (High precision)
+    gPosition = gl.value.createTexture()
+    gl.value.bindTexture(gl.value.TEXTURE_2D, gPosition)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RGBA32F, width, height, 0, gl.value.RGBA, gl.value.FLOAT, null)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MIN_FILTER, gl.value.NEAREST)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MAG_FILTER, gl.value.NEAREST)
+    gl.value.framebufferTexture2D(gl.value.FRAMEBUFFER, gl.value.COLOR_ATTACHMENT0, gl.value.TEXTURE_2D, gPosition, 0)
+
+    // - Normal buffer (High precision to store shininess in alpha)
+    gNormal = gl.value.createTexture()
+    gl.value.bindTexture(gl.value.TEXTURE_2D, gNormal)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RGBA16F, width, height, 0, gl.value.RGBA, gl.value.FLOAT, null)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MIN_FILTER, gl.value.NEAREST)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MAG_FILTER, gl.value.NEAREST)
+    gl.value.framebufferTexture2D(gl.value.FRAMEBUFFER, gl.value.COLOR_ATTACHMENT1, gl.value.TEXTURE_2D, gNormal, 0)
+
+    // - Albedo + Specular buffer (Standard precision)
+    gAlbedoSpec = gl.value.createTexture()
+    gl.value.bindTexture(gl.value.TEXTURE_2D, gAlbedoSpec)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RGBA, width, height, 0, gl.value.RGBA, gl.value.UNSIGNED_BYTE, null)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MIN_FILTER, gl.value.NEAREST)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MAG_FILTER, gl.value.NEAREST)
+    gl.value.framebufferTexture2D(gl.value.FRAMEBUFFER, gl.value.COLOR_ATTACHMENT2, gl.value.TEXTURE_2D, gAlbedoSpec, 0)
+
+    // - Depth buffer
+    gDepth = gl.value.createTexture()
+    gl.value.bindTexture(gl.value.TEXTURE_2D, gDepth)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.DEPTH_COMPONENT24, width, height, 0, gl.value.DEPTH_COMPONENT, gl.value.UNSIGNED_INT, null)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MIN_FILTER, gl.value.NEAREST)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MAG_FILTER, gl.value.NEAREST)
+    gl.value.framebufferTexture2D(gl.value.FRAMEBUFFER, gl.value.DEPTH_ATTACHMENT, gl.value.TEXTURE_2D, gDepth, 0)
+
+    // Tell WebGL which color attachments we'll use (of this framebuffer) for rendering
+    gl.value.drawBuffers([gl.value.COLOR_ATTACHMENT0, gl.value.COLOR_ATTACHMENT1, gl.value.COLOR_ATTACHMENT2])
+
+    if (gl.value.checkFramebufferStatus(gl.value.FRAMEBUFFER) !== gl.value.FRAMEBUFFER_COMPLETE) {
+      console.error('Framebuffer not complete!')
+    }
+
+    gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, null)
+  }
+
+  function resizeGBuffer() {
+    if (!gBuffer) return
+
+    const width = canvas.value.width
+    const height = canvas.value.height
+
+    gl.value.bindTexture(gl.value.TEXTURE_2D, gPosition)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RGBA32F, width, height, 0, gl.value.RGBA, gl.value.FLOAT, null)
+
+    gl.value.bindTexture(gl.value.TEXTURE_2D, gNormal)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RGBA16F, width, height, 0, gl.value.RGBA, gl.value.FLOAT, null)
+
+    gl.value.bindTexture(gl.value.TEXTURE_2D, gAlbedoSpec)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RGBA, width, height, 0, gl.value.RGBA, gl.value.UNSIGNED_BYTE, null)
+
+    gl.value.bindTexture(gl.value.TEXTURE_2D, gDepth)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.DEPTH_COMPONENT24, width, height, 0, gl.value.DEPTH_COMPONENT, gl.value.UNSIGNED_INT, null)
   }
 
   function setFieldOfView(fieldOfViewDegrees: number) {
@@ -145,6 +235,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     gl.value.viewport(0, 0, canvas.value.width, canvas.value.height)
     if (result) {
       recalculateViewport()
+      resizeGBuffer()
     }
   }
 
@@ -173,20 +264,15 @@ export const useWebGLStore = defineStore('webgl', () => {
     gl.value.bindTexture(gl.value.TEXTURE_2D_ARRAY, null)
   }
 
-  function renderShadowMapTexture(scene: Scene) {
-      // NOTE: Render shadow map texture for debug might fail with TextureArray if quad shader expects Texture2D
-      // We skip fixing this for now or implement debug view later
-  }
-
   function prepareShadowCascade(scene: Scene, cascadeIndex: number) {
     if (!scene.directionalLight) return
 
     // Calculate splits once per frame (heuristic: index 0)
     if (cascadeIndex === 0) {
-        cascadeSplits.value = getCascadeSplits(zNear, zFar, cascadeCount, 0.5)
-        if (lightSpaceMatrices.value.length !== cascadeCount) {
-             lightSpaceMatrices.value = new Array(cascadeCount).fill(null).map(() => mat4.create())
-        }
+      cascadeSplits.value = getCascadeSplits(zNear, zFar, cascadeCount, 0.5)
+      if (lightSpaceMatrices.value.length !== cascadeCount) {
+        lightSpaceMatrices.value = new Array(cascadeCount).fill(null).map(() => mat4.create())
+      }
     }
 
     const near = cascadeSplits.value[cascadeIndex]
@@ -194,14 +280,7 @@ export const useWebGLStore = defineStore('webgl', () => {
 
     const lightDir = scene.directionalLight.transform.getForwardVector()
 
-    const lightSpaceMatrix = getLightSpaceMatrix(
-        viewMatrix,
-        fieldOfViewRadians,
-        aspect,
-        near,
-        far,
-        lightDir
-    )
+    const lightSpaceMatrix = getLightSpaceMatrix(viewMatrix, fieldOfViewRadians, aspect, near, far, lightDir)
 
     mat4.copy(lightSpaceMatrices.value[cascadeIndex], lightSpaceMatrix)
     mat4.copy(lightViewProjectionMatrix, lightSpaceMatrix)
@@ -252,7 +331,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     pipelines.value.particle.setGlobalUniforms(scene)
   }
 
-  function renderObject(scene: Scene, pipelineKey: string, mesh: Mesh, transform: Transform, material?: Material, entity?: Entity) {
+  function renderMesh(scene: Scene, pipelineKey: string, mesh: Mesh, transform: Transform, material?: Material, options?: RenderOptions) {
     // get pipeline
     pipelineKey = pipelineKey ?? scene.defaultPipeline
     const pipeline = pipelines.value[pipelineKey]
@@ -271,7 +350,7 @@ export const useWebGLStore = defineStore('webgl', () => {
 
     // render entity
     gl.value.bindVertexArray(vao)
-    pipeline.render(scene, mesh, transform, material, entity)
+    pipeline.render(scene, mesh, transform, material, options)
   }
 
   function getViewDirectionProjectionInverseMatrix() {
@@ -331,15 +410,47 @@ export const useWebGLStore = defineStore('webgl', () => {
   }
 
   function getCascadeSplitsArray() {
-      return cascadeSplits.value
+    return cascadeSplits.value
   }
 
   function getLightSpaceMatrices() {
-      return lightSpaceMatrices.value
+    return lightSpaceMatrices.value
   }
 
   function getCascadeCount() {
-      return cascadeCount
+    return cascadeCount
+  }
+
+  function bindGBuffer() {
+    gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, gBuffer)
+  }
+
+  function unbindGBuffer() {
+    gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, null)
+  }
+
+  function getGBufferTextures() {
+    return {
+      position: gPosition,
+      normal: gNormal,
+      albedoSpec: gAlbedoSpec,
+      depth: gDepth
+    }
+  }
+
+  function getGBuffer() {
+    return gBuffer
+  }
+
+  function copyDepthBuffer() {
+    gl.value.bindFramebuffer(gl.value.READ_FRAMEBUFFER, gBuffer)
+    gl.value.bindFramebuffer(gl.value.DRAW_FRAMEBUFFER, null) // Write to default framebuffer
+    gl.value.blitFramebuffer(
+      0, 0, canvas.value.width, canvas.value.height,
+      0, 0, canvas.value.width, canvas.value.height,
+      gl.value.DEPTH_BUFFER_BIT, gl.value.NEAREST
+    )
+    gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, null)
   }
 
   return {
@@ -350,10 +461,9 @@ export const useWebGLStore = defineStore('webgl', () => {
     initialize,
     resize,
     setFieldOfView,
-    renderShadowMapTexture,
     prepareShadowCascade,
     setRenderColor,
-    renderObject,
+    renderMesh,
     getCameraMatrix,
     getViewMatrix,
     getProjectionMatrix,
@@ -369,6 +479,11 @@ export const useWebGLStore = defineStore('webgl', () => {
     getCascadeSplitsArray,
     getLightSpaceMatrices,
     getCascadeCount,
-    reset
+    reset,
+    bindGBuffer,
+    unbindGBuffer,
+    getGBufferTextures,
+    getGBuffer,
+    copyDepthBuffer
   }
 })
