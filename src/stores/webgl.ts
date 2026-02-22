@@ -150,7 +150,7 @@ export const useWebGLStore = defineStore('webgl', () => {
       canvas.value = canvasEl
     }
 
-    const glContext = canvas.value?.getContext('webgl2')
+    const glContext = canvas.value?.getContext('webgl2', { antialias: false })
 
     if (!glContext) {
       throw 'Unable to initialize WebGL. Your browser or machine may not support it.'
