@@ -1,4 +1,4 @@
-#version 300 es
+export default `#version 300 es
 precision mediump float;
 
 in vec2 TexCoords;
@@ -17,3 +17,4 @@ void main()
         FragColor = ParticleColor;
     }
 }
+`
