@@ -241,11 +241,12 @@ export class GLTFLoader {
 
         if (mat.pbrMetallicRoughness) {
           const pbr = mat.pbrMetallicRoughness
-          if (pbr.baseColorFactor) {
+          const hasTexture = pbr.baseColorTexture && this.textures[pbr.baseColorTexture.index]
+          if (pbr.baseColorFactor && !hasTexture) {
             material.color = vec3.fromValues(pbr.baseColorFactor[0], pbr.baseColorFactor[1], pbr.baseColorFactor[2])
           }
-          if (pbr.baseColorTexture && this.textures[pbr.baseColorTexture.index]) {
-            material.diffuse = this.textures[pbr.baseColorTexture.index]
+          if (hasTexture) {
+            material.diffuse = this.textures[pbr.baseColorTexture!.index]
           }
           if (pbr.roughnessFactor !== undefined) {
              material.shininess = (1.0 - pbr.roughnessFactor) * 128.0

@@ -64,14 +64,22 @@ export function getLightSpaceMatrix(cameraView: mat4, fov: number, aspect: numbe
   }
 
   // Extend Z to include potential occluders between light and frustum
-  // This is a heuristic. A better way is to use scene AABB.
-  // But since we don't have easy access to scene AABB here, we extend backwards.
   const zMult = 2.0
   if (minZ < 0) minZ *= zMult
   else minZ /= zMult
 
   if (maxZ < 0) maxZ /= zMult
   else maxZ *= zMult
+
+  // Snap the projection to texel boundaries to prevent shadow edge flickering.
+  // Use a stable bounding sphere radius so the ortho size doesn't change with camera rotation.
+  const worldUnitsPerTexelX = (maxX - minX) / SHADOW_MAP_SIZE
+  const worldUnitsPerTexelY = (maxY - minY) / SHADOW_MAP_SIZE
+
+  minX = Math.floor(minX / worldUnitsPerTexelX) * worldUnitsPerTexelX
+  maxX = Math.floor(maxX / worldUnitsPerTexelX) * worldUnitsPerTexelX
+  minY = Math.floor(minY / worldUnitsPerTexelY) * worldUnitsPerTexelY
+  maxY = Math.floor(maxY / worldUnitsPerTexelY) * worldUnitsPerTexelY
 
   const lightProjection = mat4.create()
   mat4.ortho(lightProjection, minX, maxX, minY, maxY, minZ, maxZ)

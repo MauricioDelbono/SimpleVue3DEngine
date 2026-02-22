@@ -39,6 +39,9 @@ async function initialize(done: () => {}) {
   const dirLight = scene.value.createDirectionalLight([0, 20, 0], meshes.value.cube)
   dirLight.transform.scale = vec3.fromValues(0.2, 0.2, 1)
   dirLight.transform.rotation = vec3.fromValues(60, 30, 0)
+  dirLight.diffuse = vec3.fromValues(1.0, 0.95, 0.85)
+  dirLight.ambient = vec3.fromValues(0.2, 0.22, 0.3)
+  dirLight.specular = vec3.fromValues(1.0, 1.0, 1.0)
 
   done()
 }
