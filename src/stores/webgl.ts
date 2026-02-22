@@ -156,6 +156,7 @@ export const useWebGLStore = defineStore('webgl', () => {
       throw 'Unable to initialize WebGL. Your browser or machine may not support it.'
     } else {
       gl.value = glContext
+      gl.value.getExtension('EXT_color_buffer_float')
 
       pipelines.value[pipelineKeys.skybox] = new SkyboxPipeline(gl.value)
       pipelines.value[pipelineKeys.light] = new LightPipeline(gl.value)
@@ -256,7 +257,7 @@ export const useWebGLStore = defineStore('webgl', () => {
 
     ssaoColorBuffer = gl.value.createTexture()
     gl.value.bindTexture(gl.value.TEXTURE_2D, ssaoColorBuffer)
-    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RED, canvas.value.width, canvas.value.height, 0, gl.value.RED, gl.value.FLOAT, null)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.R16F, canvas.value.width, canvas.value.height, 0, gl.value.RED, gl.value.FLOAT, null)
     gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MIN_FILTER, gl.value.NEAREST)
     gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MAG_FILTER, gl.value.NEAREST)
     gl.value.framebufferTexture2D(gl.value.FRAMEBUFFER, gl.value.COLOR_ATTACHMENT0, gl.value.TEXTURE_2D, ssaoColorBuffer, 0)
@@ -270,7 +271,7 @@ export const useWebGLStore = defineStore('webgl', () => {
 
     ssaoColorBufferBlur = gl.value.createTexture()
     gl.value.bindTexture(gl.value.TEXTURE_2D, ssaoColorBufferBlur)
-    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RED, canvas.value.width, canvas.value.height, 0, gl.value.RED, gl.value.FLOAT, null)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.R16F, canvas.value.width, canvas.value.height, 0, gl.value.RED, gl.value.FLOAT, null)
     gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MIN_FILTER, gl.value.NEAREST)
     gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MAG_FILTER, gl.value.NEAREST)
     gl.value.framebufferTexture2D(gl.value.FRAMEBUFFER, gl.value.COLOR_ATTACHMENT0, gl.value.TEXTURE_2D, ssaoColorBufferBlur, 0)
@@ -286,10 +287,10 @@ export const useWebGLStore = defineStore('webgl', () => {
 
   function resizeSSAO() {
     gl.value.bindTexture(gl.value.TEXTURE_2D, ssaoColorBuffer)
-    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RED, canvas.value.width, canvas.value.height, 0, gl.value.RED, gl.value.FLOAT, null)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.R16F, canvas.value.width, canvas.value.height, 0, gl.value.RED, gl.value.FLOAT, null)
 
     gl.value.bindTexture(gl.value.TEXTURE_2D, ssaoColorBufferBlur)
-    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RED, canvas.value.width, canvas.value.height, 0, gl.value.RED, gl.value.FLOAT, null)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.R16F, canvas.value.width, canvas.value.height, 0, gl.value.RED, gl.value.FLOAT, null)
   }
 
   function generateSSAOKernel() {
