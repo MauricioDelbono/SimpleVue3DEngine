@@ -3,16 +3,21 @@ import type { CollisionPoints } from './collisionPoints'
 import { mat3, mat4, vec3 } from 'gl-matrix'
 import { Mesh } from '@/models/mesh'
 import { Transform } from '@/models/transform'
+import { Manifold } from './manifold'
 
 export class Collider extends Component {
   public transform: Transform
   public mesh: Mesh
   private _worldPosition: vec3 = vec3.create()
+  public min: vec3
+  public max: vec3
 
   constructor() {
     super()
     this.transform = new Transform()
     this.mesh = new Mesh('Mesh')
+    this.min = vec3.create()
+    this.max = vec3.create()
     this.addEditorProp(new EditorProp('position', EditorPropType.vec3))
   }
 
@@ -34,12 +39,13 @@ export class Collider extends Component {
     throw new Error('Not implemented in base class')
   }
 
-  public get min(): vec3 {
-    throw new Error('Not implemented in base class')
-  }
-
-  public get max(): vec3 {
-    throw new Error('Not implemented in base class')
+  public testCollisionManifold<T extends Collider>(collider: T): Manifold {
+    const points = this.testCollision(collider)
+    const manifold = new Manifold(points.normal)
+    if (points.hasCollision) {
+      manifold.addPoint(points.a, points.b, points.depth)
+    }
+    return manifold
   }
 
   public intersects(collider: Collider): boolean {

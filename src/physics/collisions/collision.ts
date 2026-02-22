@@ -1,19 +1,19 @@
 import type { Rigidbody } from '../dynamics/rigidBody'
 import type { Collider } from './collider'
-import type { CollisionPoints } from './collisionPoints'
+import { Manifold } from './manifold'
 
 export class Collision {
   public bodyA: Rigidbody
   public bodyB: Rigidbody
   public colliderA: Collider
   public colliderB: Collider
-  public points: CollisionPoints
+  public manifold: Manifold
 
-  constructor(bodyA: Rigidbody, bodyB: Rigidbody, colliderA: Collider, colliderB: Collider, points: CollisionPoints) {
+  constructor(bodyA: Rigidbody, bodyB: Rigidbody, colliderA: Collider, colliderB: Collider, manifold: Manifold) {
     this.bodyA = bodyA
     this.bodyB = bodyB
     this.colliderA = colliderA
     this.colliderB = colliderB
-    this.points = points
+    this.manifold = manifold
   }
 }
