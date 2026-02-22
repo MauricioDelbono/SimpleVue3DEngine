@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import RenderEngine from '@/components/RenderEngine.vue'
-import FPSInfo from '@/components/FPSInfo.vue'
 import Primitives from '@/helpers/primitives'
 import { SphereCollider } from '@/physics/collisions/sphereCollider'
 import { Rigidbody } from '@/physics/dynamics/rigidBody'
@@ -8,11 +7,10 @@ import { useRenderStore } from '@/stores/render'
 import { vec3 } from 'gl-matrix'
 import { useAssetsStore } from '@/stores/assets'
 import { storeToRefs } from 'pinia'
-import SceneInspector from '@/components/sceneInspector/SceneInspector.vue'
-import SceneControls from '@/components/SceneControls.vue'
 import { Material } from '@/models/material'
 import Textures from '@/helpers/texture'
 import { PlaneCollider } from '@/physics/collisions/planeCollider'
+import chessBoardTexture from '@/assets/images/chessBoard.png'
 
 const renderStore = useRenderStore()
 const { scene } = storeToRefs(renderStore)
@@ -20,7 +18,7 @@ const assetsStore = useAssetsStore()
 const { textures, materials, meshes } = storeToRefs(assetsStore)
 
 async function loadAssets() {
-  assetsStore.addTexture('chessBoard', await Textures.createTextureFromImage('./src/assets/images/chessBoard.png'))
+  assetsStore.addTexture('chessBoard', await Textures.createTextureFromImage(chessBoardTexture))
   assetsStore.addMaterial('chessBoard', new Material(textures.value.chessBoard))
 
   assetsStore.addMesh('bigSphereMesh', Primitives.createSphere(1, 100, 100))
@@ -76,16 +74,7 @@ async function initialize(done: () => {}) {
 </script>
 
 <template>
-  <RenderEngine autoPlay @ready="initialize">
-    <template #default>
-      <FPSInfo />
-      <SceneControls />
-    </template>
-
-    <template #right>
-      <SceneInspector />
-    </template>
-  </RenderEngine>
+  <RenderEngine autoPlay @ready="initialize" />
 </template>
 
 <style scoped lang="scss"></style>
