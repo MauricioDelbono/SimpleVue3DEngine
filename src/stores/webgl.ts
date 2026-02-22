@@ -13,6 +13,7 @@ import {
   ShadowPipeline,
   QuadPipeline,
   WireframePipeline,
+  PostProcessPipeline,
   type RenderOptions
 } from '@/models/pipeline'
 import type { FrameBuffer, Texture } from '@/models/types'
@@ -28,7 +29,8 @@ export const pipelineKeys = {
   shadow: 'shadow',
   quad: 'quad',
   default: 'default',
-  wireframe: 'wireframe'
+  wireframe: 'wireframe',
+  postProcess: 'postProcess'
 }
 
 export const useWebGLStore = defineStore('webgl', () => {
@@ -68,6 +70,10 @@ export const useWebGLStore = defineStore('webgl', () => {
   let depthTexture: Texture = null
   let depthFrameBuffer: FrameBuffer = null
 
+  let mainFrameBuffer: FrameBuffer = null
+  let mainColorTexture: Texture = null
+  let mainDepthTexture: Texture = null
+
   function reset() {
     clearCanvas()
     lastUsedPipeline = null
@@ -90,6 +96,9 @@ export const useWebGLStore = defineStore('webgl', () => {
     aspect = 16 / 9
     depthTexture = null
     depthFrameBuffer = null
+    mainFrameBuffer = null
+    mainColorTexture = null
+    mainDepthTexture = null
     cascadeSplits.value = []
     lightSpaceMatrices.value = []
   }
@@ -116,7 +125,9 @@ export const useWebGLStore = defineStore('webgl', () => {
       pipelines.value[pipelineKeys.quad] = new QuadPipeline(gl.value)
       pipelines.value[pipelineKeys.default] = new DefaultPipeline(gl.value)
       pipelines.value[pipelineKeys.wireframe] = new WireframePipeline(gl.value)
+      pipelines.value[pipelineKeys.postProcess] = new PostProcessPipeline(gl.value)
       initializeShadowMap()
+      initializeMainFrameBuffer()
     }
 
     return true
@@ -138,6 +149,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     gl.value.viewport(0, 0, canvas.value.width, canvas.value.height)
     if (result) {
       recalculateViewport()
+      resizeMainFrameBuffer()
     }
   }
 
@@ -164,6 +176,52 @@ export const useWebGLStore = defineStore('webgl', () => {
     // Unbind the framebuffer and the texture.
     gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, null)
     gl.value.bindTexture(gl.value.TEXTURE_2D_ARRAY, null)
+  }
+
+  function initializeMainFrameBuffer() {
+      const width = canvas.value.width
+      const height = canvas.value.height
+
+      mainColorTexture = gl.value.createTexture()
+      gl.value.bindTexture(gl.value.TEXTURE_2D, mainColorTexture)
+      gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RGBA, width, height, 0, gl.value.RGBA, gl.value.UNSIGNED_BYTE, null)
+      gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MIN_FILTER, gl.value.LINEAR)
+      gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MAG_FILTER, gl.value.LINEAR)
+      gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_WRAP_S, gl.value.CLAMP_TO_EDGE)
+      gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_WRAP_T, gl.value.CLAMP_TO_EDGE)
+      gl.value.bindTexture(gl.value.TEXTURE_2D, null)
+
+      mainDepthTexture = gl.value.createTexture()
+      gl.value.bindTexture(gl.value.TEXTURE_2D, mainDepthTexture)
+      gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.DEPTH_COMPONENT24, width, height, 0, gl.value.DEPTH_COMPONENT, gl.value.UNSIGNED_INT, null)
+      gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MIN_FILTER, gl.value.NEAREST)
+      gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MAG_FILTER, gl.value.NEAREST)
+      gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_WRAP_S, gl.value.CLAMP_TO_EDGE)
+      gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_WRAP_T, gl.value.CLAMP_TO_EDGE)
+      gl.value.bindTexture(gl.value.TEXTURE_2D, null)
+
+      mainFrameBuffer = gl.value.createFramebuffer()
+      gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, mainFrameBuffer)
+      gl.value.framebufferTexture2D(gl.value.FRAMEBUFFER, gl.value.COLOR_ATTACHMENT0, gl.value.TEXTURE_2D, mainColorTexture, 0)
+      gl.value.framebufferTexture2D(gl.value.FRAMEBUFFER, gl.value.DEPTH_ATTACHMENT, gl.value.TEXTURE_2D, mainDepthTexture, 0)
+
+      if (gl.value.checkFramebufferStatus(gl.value.FRAMEBUFFER) !== gl.value.FRAMEBUFFER_COMPLETE) {
+          console.error('Error setting up main framebuffer')
+      }
+
+      gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, null)
+  }
+
+  function resizeMainFrameBuffer() {
+      if (!mainColorTexture || !mainDepthTexture) return
+      const width = canvas.value.width
+      const height = canvas.value.height
+
+      gl.value.bindTexture(gl.value.TEXTURE_2D, mainColorTexture)
+      gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RGBA, width, height, 0, gl.value.RGBA, gl.value.UNSIGNED_BYTE, null)
+
+      gl.value.bindTexture(gl.value.TEXTURE_2D, mainDepthTexture)
+      gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.DEPTH_COMPONENT24, width, height, 0, gl.value.DEPTH_COMPONENT, gl.value.UNSIGNED_INT, null)
   }
 
   function prepareShadowCascade(scene: Scene, cascadeIndex: number) {
@@ -226,6 +284,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     pipelines.value.light.setGlobalUniforms(scene)
     pipelines.value.wireframe.setGlobalUniforms(scene)
     pipelines.value.default.setGlobalUniforms(scene)
+    pipelines.value.postProcess.setGlobalUniforms(scene)
   }
 
   function renderMesh(scene: Scene, pipelineKey: string, mesh: Mesh, transform: Transform, material?: Material, options?: RenderOptions) {
@@ -306,6 +365,18 @@ export const useWebGLStore = defineStore('webgl', () => {
     return depthFrameBuffer
   }
 
+  function getMainFrameBuffer() {
+    return mainFrameBuffer
+  }
+
+  function getMainColorTexture() {
+    return mainColorTexture
+  }
+
+  function getMainDepthTexture() {
+    return mainDepthTexture
+  }
+
   function getCascadeSplitsArray() {
     return cascadeSplits.value
   }
@@ -316,6 +387,14 @@ export const useWebGLStore = defineStore('webgl', () => {
 
   function getCascadeCount() {
     return cascadeCount
+  }
+
+  function getNearPlane() {
+    return zNear
+  }
+
+  function getFarPlane() {
+    return zFar
   }
 
   return {
@@ -341,9 +420,14 @@ export const useWebGLStore = defineStore('webgl', () => {
     getViewDirectionProjectionInverseMatrix,
     getShadowMap,
     getDepthFrameBuffer,
+    getMainFrameBuffer,
+    getMainColorTexture,
+    getMainDepthTexture,
     getCascadeSplitsArray,
     getLightSpaceMatrices,
     getCascadeCount,
+    getNearPlane,
+    getFarPlane,
     reset
   }
 })
