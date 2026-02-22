@@ -109,7 +109,7 @@ function createBox() {
 <style scoped lang="scss">
 .physics-simple-scene {
   width: inherit;
-  height: inherit;
+  height: 100%;
 }
 
 .custom-buttons {

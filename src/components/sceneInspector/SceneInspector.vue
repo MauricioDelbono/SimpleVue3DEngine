@@ -66,6 +66,9 @@ function onMouseDown(event: MouseEvent) {
   flex-direction: column;
   border-left: 1px solid var(--border-color);
 
+  max-height: 100%;
+  min-height: 0;
+
   .content {
     padding: 16px;
   }

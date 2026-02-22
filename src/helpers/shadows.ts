@@ -66,7 +66,7 @@ export function getLightSpaceMatrix(cameraView: mat4, fov: number, aspect: numbe
   // Extend Z to include potential occluders between light and frustum
   // This is a heuristic. A better way is to use scene AABB.
   // But since we don't have easy access to scene AABB here, we extend backwards.
-  const zMult = 10.0
+  const zMult = 2.0
   if (minZ < 0) minZ *= zMult
   else minZ /= zMult
 

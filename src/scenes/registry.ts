@@ -26,6 +26,11 @@ export const scenes: SceneDefinition[] = [
     name: 'Shadows',
     id: 'shadows',
     component: defineAsyncComponent(() => import('./shadow/ShadowScene.vue'))
+  },
+  {
+    name: 'Model Loader',
+    id: 'model-loader',
+    component: defineAsyncComponent(() => import('./modelLoader/ModelLoaderScene.vue'))
   }
 ]
 

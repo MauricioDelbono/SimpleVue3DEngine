@@ -32,5 +32,6 @@ onMounted(() => {
 .v-tab {
   width: inherit;
   height: inherit;
+  overflow: auto;
 }
 </style>

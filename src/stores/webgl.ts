@@ -256,12 +256,15 @@ export const useWebGLStore = defineStore('webgl', () => {
 
     gl.value.viewport(0, 0, shadowMapSize, shadowMapSize)
     gl.value.cullFace(gl.value.FRONT)
+    gl.value.enable(gl.value.POLYGON_OFFSET_FILL)
+    gl.value.polygonOffset(4.0, 4.0)
     gl.value.clear(gl.value.DEPTH_BUFFER_BIT)
 
     pipelines.value.shadow.setGlobalUniforms(scene)
   }
 
   function setRenderColor(scene: Scene) {
+    gl.value.disable(gl.value.POLYGON_OFFSET_FILL)
     gl.value.cullFace(gl.value.BACK)
 
     const cameraTransform = scene.camera.transform
