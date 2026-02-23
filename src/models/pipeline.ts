@@ -576,6 +576,7 @@ export class DefaultPipeline implements Pipeline {
 }
 
 export class PostProcessPipeline implements Pipeline {
+  // Post-process pipeline for Depth of Field
   gl: WebGL2RenderingContext
   program: WebGLProgram
   attributes: Record<string, number>

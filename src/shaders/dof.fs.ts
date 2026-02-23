@@ -39,6 +39,7 @@ void main()
         return;
     }
 
+    // Apply depth of field blur
     vec3 color = vec3(0.0);
     float total = 0.0;
 

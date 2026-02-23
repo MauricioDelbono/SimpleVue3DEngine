@@ -157,6 +157,7 @@ export const useRenderStore = defineStore('render', () => {
     })
 
     // 6. Post Process (if enabled)
+    // Apply Depth of Field post-processing
     if (dofEnabled) {
       store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, null)
       store.gl.clear(store.gl.COLOR_BUFFER_BIT | store.gl.DEPTH_BUFFER_BIT)

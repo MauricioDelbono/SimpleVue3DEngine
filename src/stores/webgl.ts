@@ -131,6 +131,7 @@ export const useWebGLStore = defineStore('webgl', () => {
       pipelines.value[pipelineKeys.quad] = new QuadPipeline(gl.value)
       pipelines.value[pipelineKeys.default] = new DefaultPipeline(gl.value)
       pipelines.value[pipelineKeys.wireframe] = new WireframePipeline(gl.value)
+      // Initialize post-process pipeline
       pipelines.value[pipelineKeys.postProcess] = new PostProcessPipeline(gl.value)
       initializeShadowMap()
       initializeMainFrameBuffer()

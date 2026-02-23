@@ -71,6 +71,7 @@ export class Scene {
   public directionalLight: DirectionalLight | null
   public wireframe: boolean = false
   public debugColliders: boolean = false
+  // Depth of Field settings
   public depthOfField: DepthOfField
 
   public assets = useAssetsStore()
