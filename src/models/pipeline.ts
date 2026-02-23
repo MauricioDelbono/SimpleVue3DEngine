@@ -12,6 +12,8 @@ import wireframeVertexShaderSource from '../shaders/wireframe.vs'
 import wireframeFragmentShaderSource from '../shaders/wireframe.fs'
 import dofVertexShaderSource from '../shaders/dof.vs'
 import dofFragmentShaderSource from '../shaders/dof.fs'
+import particleVertexShaderSource from '../shaders/particle.vs'
+import particleFragmentShaderSource from '../shaders/particle.fs'
 import webgl from '@/helpers/webgl'
 import type { Scene } from './scene'
 import { useWebGLStore } from '@/stores/webgl'
@@ -19,6 +21,8 @@ import type { Mesh } from './mesh'
 import type { Transform } from './transform'
 import type { Material } from './material'
 import type { vec3 } from 'gl-matrix'
+import { ParticleSystem } from './particleSystem'
+import { Entity } from './entity'
 
 export interface RenderOptions {
   color?: vec3
@@ -32,7 +36,14 @@ export interface Pipeline {
 
   createMeshVAO(mesh: Mesh, numberOfComponents: number): WebGLVertexArrayObject | null
   setGlobalUniforms(scene: Scene): void
-  render(scene: Scene, mesh?: Mesh, transform?: Transform, material?: Material, options?: RenderOptions): void
+  render(
+    scene: Scene,
+    mesh?: Mesh,
+    transform?: Transform,
+    material?: Material,
+    options?: RenderOptions,
+    entity?: Entity
+  ): void
 }
 
 export class SkyboxPipeline implements Pipeline {
@@ -62,7 +73,7 @@ export class SkyboxPipeline implements Pipeline {
     }
   }
 
-  public createMeshVAO(mesh: Mesh, numberOfComponents: number = 2) {
+  public createMeshVAO(mesh: Mesh, _numberOfComponents: number = 2) {
     this.gl.useProgram(this.program)
     const vao = this.gl.createVertexArray()
     this.gl.bindVertexArray(vao)
@@ -165,6 +176,120 @@ export class LightPipeline implements Pipeline {
     this.gl.uniformMatrix4fv(this.uniforms.model, false, transform.worldMatrix)
 
     this.gl.drawElements(this.gl.TRIANGLES, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
+  }
+}
+
+export class ParticlePipeline implements Pipeline {
+  gl: WebGL2RenderingContext
+  program: WebGLProgram
+  attributes: Record<string, number>
+  uniforms: Record<string, WebGLUniformLocation | null>
+  store = useWebGLStore()
+  private meshBuffers = new Map<Mesh, WebGLBuffer>()
+
+  constructor(gl: WebGL2RenderingContext) {
+    this.gl = gl
+    this.program = webgl.createProgram(gl, particleVertexShaderSource, particleFragmentShaderSource)
+    this.attributes = this.createAttributes()
+    this.uniforms = this.createUniforms()
+  }
+
+  private createAttributes() {
+    return {
+      aPosition: this.gl.getAttribLocation(this.program, 'aPosition'),
+      aTexCoords: this.gl.getAttribLocation(this.program, 'aTexCoords'),
+      aInstancePosition: this.gl.getAttribLocation(this.program, 'aInstancePosition'),
+      aInstanceSize: this.gl.getAttribLocation(this.program, 'aInstanceSize'),
+      aInstanceColor: this.gl.getAttribLocation(this.program, 'aInstanceColor')
+    }
+  }
+
+  private createUniforms() {
+    return {
+      view: this.gl.getUniformLocation(this.program, 'view'),
+      projection: this.gl.getUniformLocation(this.program, 'projection')
+    }
+  }
+
+  public createMeshVAO(mesh: Mesh, numberOfComponents: number = 2) {
+    this.gl.useProgram(this.program)
+    const vao = this.gl.createVertexArray()
+    this.gl.bindVertexArray(vao)
+
+    const positionBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer)
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(mesh.positions), this.gl.STATIC_DRAW)
+    this.gl.vertexAttribPointer(this.attributes.aPosition, numberOfComponents, this.gl.FLOAT, false, 0, 0)
+    this.gl.enableVertexAttribArray(this.attributes.aPosition)
+
+    const texBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, texBuffer)
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(mesh.textureCoords), this.gl.STATIC_DRAW)
+    this.gl.vertexAttribPointer(this.attributes.aTexCoords, 2, this.gl.FLOAT, false, 0, 0)
+    this.gl.enableVertexAttribArray(this.attributes.aTexCoords)
+
+    const indicesBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+    this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(mesh.indices), this.gl.STATIC_DRAW)
+
+    const instanceBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, instanceBuffer)
+    // Initial size 1000 * 8 * 4 bytes
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, 1000 * 8 * 4, this.gl.DYNAMIC_DRAW)
+    this.meshBuffers.set(mesh, instanceBuffer)
+
+    const stride = 32
+
+    this.gl.vertexAttribPointer(this.attributes.aInstancePosition, 3, this.gl.FLOAT, false, stride, 0)
+    this.gl.vertexAttribDivisor(this.attributes.aInstancePosition, 1)
+    this.gl.enableVertexAttribArray(this.attributes.aInstancePosition)
+
+    this.gl.vertexAttribPointer(this.attributes.aInstanceSize, 1, this.gl.FLOAT, false, stride, 12)
+    this.gl.vertexAttribDivisor(this.attributes.aInstanceSize, 1)
+    this.gl.enableVertexAttribArray(this.attributes.aInstanceSize)
+
+    this.gl.vertexAttribPointer(this.attributes.aInstanceColor, 4, this.gl.FLOAT, false, stride, 16)
+    this.gl.vertexAttribDivisor(this.attributes.aInstanceColor, 1)
+    this.gl.enableVertexAttribArray(this.attributes.aInstanceColor)
+
+    this.gl.bindVertexArray(null)
+
+    return vao
+  }
+
+  public setGlobalUniforms(): void {
+    this.gl.depthFunc(this.gl.LESS)
+    this.gl.useProgram(this.program)
+    this.gl.uniformMatrix4fv(this.uniforms.view, false, this.store.getViewMatrix())
+    this.gl.uniformMatrix4fv(this.uniforms.projection, false, this.store.getProjectionMatrix())
+  }
+
+  public render(
+    scene: Scene,
+    mesh: Mesh,
+    transform: Transform,
+    material: Material,
+    options: RenderOptions,
+    entity?: Entity
+  ): void {
+    if (!entity) return
+    const particleSystem = entity.getComponent(ParticleSystem)
+    if (!particleSystem) return
+
+    this.gl.useProgram(this.program)
+
+    const buffer = this.meshBuffers.get(mesh)
+    if (!buffer) return
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer)
+
+    const activeCount = particleSystem.activeParticles
+    if (activeCount === 0) return
+
+    const dataView = particleSystem.particleData.subarray(0, activeCount * 8)
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, dataView, this.gl.DYNAMIC_DRAW)
+
+    this.gl.drawElementsInstanced(this.gl.TRIANGLES, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0, activeCount)
   }
 }
 
@@ -608,7 +733,7 @@ export class PostProcessPipeline implements Pipeline {
     }
   }
 
-  public createMeshVAO(mesh: Mesh, numberOfComponents: number = 2) {
+  public createMeshVAO(mesh: Mesh, _numberOfComponents: number = 2) {
     this.gl.useProgram(this.program)
     const vao = this.gl.createVertexArray()
     this.gl.bindVertexArray(vao)

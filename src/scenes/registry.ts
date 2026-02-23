@@ -31,6 +31,11 @@ export const scenes: SceneDefinition[] = [
     name: 'Model Loader',
     id: 'model-loader',
     component: defineAsyncComponent(() => import('./modelLoader/ModelLoaderScene.vue'))
+  },
+  {
+    name: 'Particles',
+    id: 'particles',
+    component: defineAsyncComponent(() => import('./particle/ParticleScene.vue'))
   }
 ]
 

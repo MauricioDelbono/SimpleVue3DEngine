@@ -14,6 +14,7 @@ import {
   QuadPipeline,
   WireframePipeline,
   PostProcessPipeline,
+  ParticlePipeline,
   type RenderOptions
 } from '@/models/pipeline'
 import type { FrameBuffer, Texture } from '@/models/types'
@@ -29,7 +30,8 @@ export const pipelineKeys = {
   quad: 'quad',
   default: 'default',
   wireframe: 'wireframe',
-  postProcess: 'postProcess'
+  postProcess: 'postProcess',
+  particle: 'particle'
 }
 
 export const useWebGLStore = defineStore('webgl', () => {
@@ -132,6 +134,7 @@ export const useWebGLStore = defineStore('webgl', () => {
       pipelines.value[pipelineKeys.default] = new DefaultPipeline(gl.value)
       pipelines.value[pipelineKeys.wireframe] = new WireframePipeline(gl.value)
       pipelines.value[pipelineKeys.postProcess] = new PostProcessPipeline(gl.value)
+      pipelines.value[pipelineKeys.particle] = new ParticlePipeline(gl.value)
       initializeShadowMap()
       initializeMainFrameBuffer()
     }
@@ -316,7 +319,15 @@ export const useWebGLStore = defineStore('webgl', () => {
     pipelines.value.postProcess.setGlobalUniforms(scene)
   }
 
-  function renderMesh(scene: Scene, pipelineKey: string, mesh: Mesh, transform: Transform, material?: Material, options?: RenderOptions) {
+  function renderMesh(
+    scene: Scene,
+    pipelineKey: string,
+    mesh: Mesh,
+    transform: Transform,
+    material?: Material,
+    options?: RenderOptions,
+    entity?: Entity
+  ) {
     // get pipeline
     pipelineKey = pipelineKey ?? scene.defaultPipeline
     const pipeline = pipelines.value[pipelineKey]
@@ -335,7 +346,7 @@ export const useWebGLStore = defineStore('webgl', () => {
 
     // render entity
     gl.value.bindVertexArray(vao)
-    pipeline.render(scene, mesh, transform, material, options)
+    pipeline.render(scene, mesh, transform, material, options, entity)
   }
 
   function getViewDirectionProjectionInverseMatrix() {
