@@ -14,6 +14,9 @@ import {
   QuadPipeline,
   WireframePipeline,
   PostProcessPipeline,
+  GeometryPipeline,
+  SSAOPipeline,
+  SSAOBlurPipeline,
   type RenderOptions
 } from '@/models/pipeline'
 import type { FrameBuffer, Texture } from '@/models/types'
@@ -21,6 +24,7 @@ import type { Mesh } from '@/models/mesh'
 import type { Transform } from '@/models/transform'
 import type { Material } from '@/models/material'
 import { getLightSpaceMatrix, getCascadeSplits, CASCADE_COUNT, SHADOW_MAP_SIZE } from '@/helpers/shadows'
+import { generateSSAOKernel, generateNoiseTexture } from '@/helpers/ssao'
 
 export const pipelineKeys = {
   skybox: 'skybox',
@@ -29,7 +33,10 @@ export const pipelineKeys = {
   quad: 'quad',
   default: 'default',
   wireframe: 'wireframe',
-  postProcess: 'postProcess'
+  postProcess: 'postProcess',
+  geometry: 'geometry',
+  ssao: 'ssao',
+  ssaoBlur: 'ssaoBlur'
 }
 
 export const useWebGLStore = defineStore('webgl', () => {
@@ -73,6 +80,21 @@ export const useWebGLStore = defineStore('webgl', () => {
   let mainColorTexture: Texture = null
   let mainDepthTexture: Texture = null
 
+  // Geometry Buffer
+  let geometryFrameBuffer: FrameBuffer = null
+  let geometryNormalTexture: Texture = null
+  let geometryDepthTexture: Texture = null
+
+  // SSAO
+  let ssaoFrameBuffer: FrameBuffer = null
+  let ssaoColorTexture: Texture = null
+  let ssaoNoiseTexture: Texture = null
+  const ssaoKernel: Ref<Float32Array> = ref(new Float32Array(0))
+
+  // SSAO Blur
+  let ssaoBlurFrameBuffer: FrameBuffer = null
+  let ssaoBlurColorTexture: Texture = null
+
   function reset() {
     if (gl.value && typeof gl.value.clearColor === 'function') {
       clearCanvas()
@@ -100,6 +122,14 @@ export const useWebGLStore = defineStore('webgl', () => {
     mainFrameBuffer = null
     mainColorTexture = null
     mainDepthTexture = null
+    geometryFrameBuffer = null
+    geometryNormalTexture = null
+    geometryDepthTexture = null
+    ssaoFrameBuffer = null
+    ssaoColorTexture = null
+    ssaoNoiseTexture = null
+    ssaoBlurFrameBuffer = null
+    ssaoBlurColorTexture = null
     cascadeSplits.value = []
     lightSpaceMatrices.value = []
   }
@@ -132,8 +162,14 @@ export const useWebGLStore = defineStore('webgl', () => {
       pipelines.value[pipelineKeys.default] = new DefaultPipeline(gl.value)
       pipelines.value[pipelineKeys.wireframe] = new WireframePipeline(gl.value)
       pipelines.value[pipelineKeys.postProcess] = new PostProcessPipeline(gl.value)
+      pipelines.value[pipelineKeys.geometry] = new GeometryPipeline(gl.value)
+      pipelines.value[pipelineKeys.ssao] = new SSAOPipeline(gl.value)
+      pipelines.value[pipelineKeys.ssaoBlur] = new SSAOBlurPipeline(gl.value)
       initializeShadowMap()
       initializeMainFrameBuffer()
+      initializeGeometryBuffer()
+      initializeSSAOBuffer()
+      initializeSSAOBlurBuffer()
     }
 
     return true
@@ -156,7 +192,139 @@ export const useWebGLStore = defineStore('webgl', () => {
     if (result) {
       recalculateViewport()
       resizeMainFrameBuffer()
+      resizeGeometryBuffer()
+      resizeSSAOBuffer()
+      resizeSSAOBlurBuffer()
     }
+  }
+
+  function initializeGeometryBuffer() {
+    const width = canvas.value.width
+    const height = canvas.value.height
+
+    geometryNormalTexture = gl.value.createTexture()
+    gl.value.bindTexture(gl.value.TEXTURE_2D, geometryNormalTexture)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RGB16F, width, height, 0, gl.value.RGB, gl.value.FLOAT, null)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MIN_FILTER, gl.value.NEAREST)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MAG_FILTER, gl.value.NEAREST)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_WRAP_S, gl.value.CLAMP_TO_EDGE)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_WRAP_T, gl.value.CLAMP_TO_EDGE)
+
+    geometryDepthTexture = gl.value.createTexture()
+    gl.value.bindTexture(gl.value.TEXTURE_2D, geometryDepthTexture)
+    gl.value.texImage2D(
+      gl.value.TEXTURE_2D,
+      0,
+      gl.value.DEPTH_COMPONENT24,
+      width,
+      height,
+      0,
+      gl.value.DEPTH_COMPONENT,
+      gl.value.UNSIGNED_INT,
+      null
+    )
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MIN_FILTER, gl.value.NEAREST)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MAG_FILTER, gl.value.NEAREST)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_WRAP_S, gl.value.CLAMP_TO_EDGE)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_WRAP_T, gl.value.CLAMP_TO_EDGE)
+
+    geometryFrameBuffer = gl.value.createFramebuffer()
+    gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, geometryFrameBuffer)
+    gl.value.framebufferTexture2D(gl.value.FRAMEBUFFER, gl.value.COLOR_ATTACHMENT0, gl.value.TEXTURE_2D, geometryNormalTexture, 0)
+    gl.value.framebufferTexture2D(gl.value.FRAMEBUFFER, gl.value.DEPTH_ATTACHMENT, gl.value.TEXTURE_2D, geometryDepthTexture, 0)
+
+    if (gl.value.checkFramebufferStatus(gl.value.FRAMEBUFFER) !== gl.value.FRAMEBUFFER_COMPLETE) {
+      console.error('Error setting up geometry framebuffer')
+    }
+
+    gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, null)
+  }
+
+  function resizeGeometryBuffer() {
+    if (!geometryNormalTexture || !geometryDepthTexture) return
+    const width = canvas.value.width
+    const height = canvas.value.height
+
+    gl.value.bindTexture(gl.value.TEXTURE_2D, geometryNormalTexture)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.RGB16F, width, height, 0, gl.value.RGB, gl.value.FLOAT, null)
+
+    gl.value.bindTexture(gl.value.TEXTURE_2D, geometryDepthTexture)
+    gl.value.texImage2D(
+      gl.value.TEXTURE_2D,
+      0,
+      gl.value.DEPTH_COMPONENT24,
+      width,
+      height,
+      0,
+      gl.value.DEPTH_COMPONENT,
+      gl.value.UNSIGNED_INT,
+      null
+    )
+  }
+
+  function initializeSSAOBuffer() {
+    const width = canvas.value.width
+    const height = canvas.value.height
+
+    // SSAO Color Buffer
+    ssaoColorTexture = gl.value.createTexture()
+    gl.value.bindTexture(gl.value.TEXTURE_2D, ssaoColorTexture)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.R8, width, height, 0, gl.value.RED, gl.value.UNSIGNED_BYTE, null)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MIN_FILTER, gl.value.NEAREST)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MAG_FILTER, gl.value.NEAREST)
+
+    ssaoFrameBuffer = gl.value.createFramebuffer()
+    gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, ssaoFrameBuffer)
+    gl.value.framebufferTexture2D(gl.value.FRAMEBUFFER, gl.value.COLOR_ATTACHMENT0, gl.value.TEXTURE_2D, ssaoColorTexture, 0)
+
+    if (gl.value.checkFramebufferStatus(gl.value.FRAMEBUFFER) !== gl.value.FRAMEBUFFER_COMPLETE) {
+      console.error('Error setting up SSAO framebuffer')
+    }
+
+    // Generate Kernel and Noise
+    ssaoKernel.value = generateSSAOKernel(64)
+    ssaoNoiseTexture = generateNoiseTexture(gl.value)
+
+    gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, null)
+  }
+
+  function resizeSSAOBuffer() {
+    if (!ssaoColorTexture) return
+    const width = canvas.value.width
+    const height = canvas.value.height
+
+    gl.value.bindTexture(gl.value.TEXTURE_2D, ssaoColorTexture)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.R8, width, height, 0, gl.value.RED, gl.value.UNSIGNED_BYTE, null)
+  }
+
+  function initializeSSAOBlurBuffer() {
+    const width = canvas.value.width
+    const height = canvas.value.height
+
+    ssaoBlurColorTexture = gl.value.createTexture()
+    gl.value.bindTexture(gl.value.TEXTURE_2D, ssaoBlurColorTexture)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.R8, width, height, 0, gl.value.RED, gl.value.UNSIGNED_BYTE, null)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MIN_FILTER, gl.value.NEAREST)
+    gl.value.texParameteri(gl.value.TEXTURE_2D, gl.value.TEXTURE_MAG_FILTER, gl.value.NEAREST)
+
+    ssaoBlurFrameBuffer = gl.value.createFramebuffer()
+    gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, ssaoBlurFrameBuffer)
+    gl.value.framebufferTexture2D(gl.value.FRAMEBUFFER, gl.value.COLOR_ATTACHMENT0, gl.value.TEXTURE_2D, ssaoBlurColorTexture, 0)
+
+    if (gl.value.checkFramebufferStatus(gl.value.FRAMEBUFFER) !== gl.value.FRAMEBUFFER_COMPLETE) {
+      console.error('Error setting up SSAO Blur framebuffer')
+    }
+
+    gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, null)
+  }
+
+  function resizeSSAOBlurBuffer() {
+    if (!ssaoBlurColorTexture) return
+    const width = canvas.value.width
+    const height = canvas.value.height
+
+    gl.value.bindTexture(gl.value.TEXTURE_2D, ssaoBlurColorTexture)
+    gl.value.texImage2D(gl.value.TEXTURE_2D, 0, gl.value.R8, width, height, 0, gl.value.RED, gl.value.UNSIGNED_BYTE, null)
   }
 
   function initializeShadowMap() {
@@ -281,6 +449,42 @@ export const useWebGLStore = defineStore('webgl', () => {
     gl.value.clear(gl.value.DEPTH_BUFFER_BIT)
 
     pipelines.value.shadow.setGlobalUniforms(scene)
+  }
+
+  function prepareGeometryPass(scene: Scene) {
+    gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, geometryFrameBuffer)
+    gl.value.viewport(0, 0, canvas.value.width, canvas.value.height)
+    gl.value.clearColor(0.0, 0.0, 0.0, 1.0)
+    gl.value.clear(gl.value.COLOR_BUFFER_BIT | gl.value.DEPTH_BUFFER_BIT)
+
+    const cameraTransform = scene.camera.transform
+    mat4.lookAt(
+      viewMatrix,
+      cameraTransform.position,
+      vec3.add(vec3.create(), cameraTransform.position, cameraTransform.getFrontVector()),
+      cameraTransform.getUpVector()
+    )
+    mat4.multiply(viewProjectionMatrix, projectionMatrix, viewMatrix)
+
+    pipelines.value[pipelineKeys.geometry].setGlobalUniforms(scene)
+  }
+
+  function prepareSSAOPass(scene: Scene) {
+    gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, ssaoFrameBuffer)
+    gl.value.viewport(0, 0, canvas.value.width, canvas.value.height)
+    gl.value.clearColor(0.0, 0.0, 0.0, 1.0)
+    gl.value.clear(gl.value.COLOR_BUFFER_BIT)
+
+    pipelines.value[pipelineKeys.ssao].setGlobalUniforms(scene)
+  }
+
+  function prepareSSAOBlurPass(scene: Scene) {
+    gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, ssaoBlurFrameBuffer)
+    gl.value.viewport(0, 0, canvas.value.width, canvas.value.height)
+    gl.value.clearColor(0.0, 0.0, 0.0, 1.0)
+    gl.value.clear(gl.value.COLOR_BUFFER_BIT)
+
+    pipelines.value[pipelineKeys.ssaoBlur].setGlobalUniforms(scene)
   }
 
   function setRenderColor(scene: Scene) {
@@ -426,6 +630,48 @@ export const useWebGLStore = defineStore('webgl', () => {
     return zFar
   }
 
+  function getGeometryFrameBuffer() {
+    return geometryFrameBuffer
+  }
+
+  function getGeometryNormalTexture() {
+    return geometryNormalTexture
+  }
+
+  function getGeometryDepthTexture() {
+    return geometryDepthTexture
+  }
+
+  function getSSAOFrameBuffer() {
+    return ssaoFrameBuffer
+  }
+
+  function getSSAOColorTexture() {
+    return ssaoColorTexture
+  }
+
+  function getSSAOBlurFrameBuffer() {
+    return ssaoBlurFrameBuffer
+  }
+
+  function getSSAOBlurColorTexture() {
+    return ssaoBlurColorTexture
+  }
+
+  function getSSAONoiseTexture() {
+    return ssaoNoiseTexture
+  }
+
+  function getSSAOKernel() {
+    return ssaoKernel.value
+  }
+
+  function getInverseProjectionMatrix() {
+    const inv = mat4.create()
+    mat4.invert(inv, projectionMatrix)
+    return inv
+  }
+
   return {
     gl,
     canvas,
@@ -457,6 +703,19 @@ export const useWebGLStore = defineStore('webgl', () => {
     getCascadeCount,
     getNearPlane,
     getFarPlane,
+    getGeometryFrameBuffer,
+    getGeometryNormalTexture,
+    getGeometryDepthTexture,
+    getSSAOFrameBuffer,
+    getSSAOColorTexture,
+    getSSAOBlurFrameBuffer,
+    getSSAOBlurColorTexture,
+    getSSAONoiseTexture,
+    getSSAOKernel,
+    getInverseProjectionMatrix,
+    prepareGeometryPass,
+    prepareSSAOPass,
+    prepareSSAOBlurPass,
     reset
   }
 })
