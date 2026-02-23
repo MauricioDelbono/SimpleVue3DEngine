@@ -7,6 +7,7 @@ import { Time } from '@/models/time'
 import { Collider } from '@/physics/collisions/collider'
 import Primitives from '@/helpers/primitives'
 import { Transform } from '@/models/transform'
+import { Frustum } from '@/models/frustum'
 
 interface Render {
   update: (time: Time) => void
@@ -23,6 +24,7 @@ export const useRenderStore = defineStore('render', () => {
   const store = useWebGLStore()
   const postProcessMesh = Primitives.createXYQuad()
   const postProcessTransform = new Transform()
+  const frustum = new Frustum()
 
   function reset() {
     store.reset()
@@ -142,8 +144,17 @@ export const useRenderStore = defineStore('render', () => {
     // 5. Render Scene
     store.setRenderColor(scene.value)
 
+    frustum.setFromProjectionMatrix(store.getViewProjectionMatrix())
+
     scene.value.entities.forEach((entity) => {
       traverseTree(entity, (entity: Entity) => {
+        // Frustum Culling
+        if (entity.mesh && entity.mesh.min[0] !== Infinity) {
+          if (!frustum.intersectsBox(entity.worldMin, entity.worldMax)) {
+            return
+          }
+        }
+
         const pipeline = scene.value.wireframe ? pipelineKeys.wireframe : (entity.pipeline ?? scene.value.defaultPipeline)
         store.renderMesh(scene.value, pipeline, entity.mesh, entity.transform, entity.material)
 
