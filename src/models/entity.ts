@@ -5,9 +5,20 @@ import { Component } from './component'
 import { Material } from './material'
 import { Mesh } from './mesh'
 import { Transform } from './transform'
-import { mat4, type vec3 } from 'gl-matrix'
+import { mat4, vec3 } from 'gl-matrix'
 import type { Time } from './time'
 import { Collider } from '@/physics/collisions/collider'
+
+const TMP_CORNERS = [
+  vec3.create(),
+  vec3.create(),
+  vec3.create(),
+  vec3.create(),
+  vec3.create(),
+  vec3.create(),
+  vec3.create(),
+  vec3.create()
+]
 
 export class Entity {
   public transform: Transform
@@ -19,6 +30,9 @@ export class Entity {
   public material: Material
   public name: string = 'Empty'
   public uuid: string = uuid()
+
+  public worldMin: vec3 = vec3.create()
+  public worldMax: vec3 = vec3.create()
 
   constructor(name: string = 'Empty', mesh: Mesh | null = null, position: vec3 = [0, 0, 0]) {
     this.transform = new Transform()
@@ -83,6 +97,45 @@ export class Entity {
     }
   }
 
+  public updateWorldAABB() {
+    const min = this.mesh.localMin
+    const max = this.mesh.localMax
+    const world = this.transform.worldMatrix
+
+    // Set TMP_CORNERS values from local min/max
+    vec3.set(TMP_CORNERS[0], min[0], min[1], min[2])
+    vec3.set(TMP_CORNERS[1], max[0], min[1], min[2])
+    vec3.set(TMP_CORNERS[2], min[0], max[1], min[2])
+    vec3.set(TMP_CORNERS[3], max[0], max[1], min[2])
+    vec3.set(TMP_CORNERS[4], min[0], min[1], max[2])
+    vec3.set(TMP_CORNERS[5], max[0], min[1], max[2])
+    vec3.set(TMP_CORNERS[6], min[0], max[1], max[2])
+    vec3.set(TMP_CORNERS[7], max[0], max[1], max[2])
+
+    let minX = Infinity,
+      minY = Infinity,
+      minZ = Infinity
+    let maxX = -Infinity,
+      maxY = -Infinity,
+      maxZ = -Infinity
+
+    for (let i = 0; i < 8; i++) {
+      const corner = TMP_CORNERS[i]
+      vec3.transformMat4(corner, corner, world)
+
+      if (corner[0] < minX) minX = corner[0]
+      if (corner[1] < minY) minY = corner[1]
+      if (corner[2] < minZ) minZ = corner[2]
+
+      if (corner[0] > maxX) maxX = corner[0]
+      if (corner[1] > maxY) maxY = corner[1]
+      if (corner[2] > maxZ) maxZ = corner[2]
+    }
+
+    vec3.set(this.worldMin, minX, minY, minZ)
+    vec3.set(this.worldMax, maxX, maxY, maxZ)
+  }
+
   public updateTransformMatrix(matrix?: mat4) {
     this.transform.updateWorldMatrix(matrix)
 
@@ -94,5 +147,7 @@ export class Entity {
     colliders.forEach((collider) => {
       collider.updateTransformMatrix()
     })
+
+    this.updateWorldAABB()
   }
 }

@@ -7,6 +7,8 @@ import { Time } from '@/models/time'
 import { Collider } from '@/physics/collisions/collider'
 import Primitives from '@/helpers/primitives'
 import { Transform } from '@/models/transform'
+import { Frustum } from '@/models/frustum'
+import { vec3 } from 'gl-matrix'
 
 interface Render {
   update: (time: Time) => void
@@ -24,6 +26,12 @@ export const useRenderStore = defineStore('render', () => {
   const postProcessMesh = Primitives.createXYQuad()
   const postProcessTransform = new Transform()
 
+  const frustum = new Frustum()
+  const visibleMap: Map<string, boolean> = new Map()
+  const queryMap: Map<string, WebGLQuery> = new Map()
+  const unitCube = Primitives.createCube()
+  const cubeTransform = new Transform()
+
   function reset() {
     store.reset()
     subscribers.value = []
@@ -31,6 +39,12 @@ export const useRenderStore = defineStore('render', () => {
     stepForward.value = 0
     scene.value = new Scene()
     hasStarted.value = false
+
+    visibleMap.clear()
+    for (const query of queryMap.values()) {
+      store.deleteQuery(query)
+    }
+    queryMap.clear()
   }
 
   function initialize(canvas: HTMLCanvasElement | string = 'canvas') {
@@ -142,19 +156,96 @@ export const useRenderStore = defineStore('render', () => {
     // 5. Render Scene
     store.setRenderColor(scene.value)
 
-    scene.value.entities.forEach((entity) => {
-      traverseTree(entity, (entity: Entity) => {
-        const pipeline = scene.value.wireframe ? pipelineKeys.wireframe : (entity.pipeline ?? scene.value.defaultPipeline)
-        store.renderMesh(scene.value, pipeline, entity.mesh, entity.transform, entity.material)
+    // Update Frustum
+    frustum.setFromProjectionMatrix(store.getViewProjectionMatrix())
 
-        if (scene.value.debugColliders) {
-          const colliders = entity.getComponents(Collider)
-          colliders.forEach((collider) => {
-            store.renderMesh(scene.value, pipelineKeys.wireframe, collider.mesh, collider.transform, undefined, { color: [1, 0, 0] })
-          })
+    // Check Queries
+    for (const [uuid, query] of queryMap) {
+      if (store.isQueryAvailable(query)) {
+        const samples = store.getQueryResult(query)
+        visibleMap.set(uuid, samples > 0)
+      }
+    }
+
+    // Collect Renderable Entities
+    const visibleEntities: Entity[] = []
+    const hiddenEntities: Entity[] = []
+
+    const collect = (entity: Entity) => {
+      // Frustum Culling
+      if (frustum.intersectsAABB(entity.worldMin, entity.worldMax)) {
+        if (visibleMap.get(entity.uuid) !== false) {
+          visibleEntities.push(entity)
+        } else {
+          hiddenEntities.push(entity)
         }
-      })
+      }
+      entity.children.forEach(collect)
+    }
+
+    scene.value.entities.forEach(collect)
+
+    // Sort Visible Entities (Front to Back)
+    const camPos = scene.value.camera.transform.position
+    visibleEntities.sort((a, b) => {
+      const distA = vec3.sqrDist(a.transform.worldPosition, camPos)
+      const distB = vec3.sqrDist(b.transform.worldPosition, camPos)
+      return distA - distB
     })
+
+    // Phase 1: Visible
+    visibleEntities.forEach((entity) => {
+      let query = queryMap.get(entity.uuid)
+      if (!query) {
+        query = store.createQuery()
+        if (query) queryMap.set(entity.uuid, query)
+      }
+
+      if (query) store.gl.beginQuery(store.gl.ANY_SAMPLES_PASSED, query)
+
+      const pipeline = scene.value.wireframe ? pipelineKeys.wireframe : entity.pipeline ?? scene.value.defaultPipeline
+      store.renderMesh(scene.value, pipeline, entity.mesh, entity.transform, entity.material)
+
+      if (scene.value.debugColliders) {
+        const colliders = entity.getComponents(Collider)
+        colliders.forEach((collider) => {
+          store.renderMesh(scene.value, pipelineKeys.wireframe, collider.mesh, collider.transform, undefined, { color: [1, 0, 0] })
+        })
+      }
+
+      if (query) store.gl.endQuery(store.gl.ANY_SAMPLES_PASSED)
+    })
+
+    // Phase 2: Hidden (Occlusion Check)
+    store.gl.colorMask(false, false, false, false)
+    store.gl.depthMask(false)
+
+    hiddenEntities.forEach((entity) => {
+      let query = queryMap.get(entity.uuid)
+      if (!query) {
+        query = store.createQuery()
+        if (query) queryMap.set(entity.uuid, query)
+      }
+
+      if (query) store.gl.beginQuery(store.gl.ANY_SAMPLES_PASSED, query)
+
+      // Render Unit Cube scaled to AABB
+      // Unit cube from Primitives is size 2 centered at origin (min -1, max 1)
+      const size = vec3.sub(vec3.create(), entity.worldMax, entity.worldMin)
+      const center = vec3.lerp(vec3.create(), entity.worldMin, entity.worldMax, 0.5)
+
+      // Scale = size / 2
+      vec3.scale(cubeTransform.scale, size, 0.5)
+      vec3.copy(cubeTransform.position, center)
+      cubeTransform.updateWorldMatrix()
+
+      store.renderMesh(scene.value, pipelineKeys.occlusion, unitCube, cubeTransform)
+
+      if (query) store.gl.endQuery(store.gl.ANY_SAMPLES_PASSED)
+    })
+
+    store.gl.colorMask(true, true, true, true)
+    store.gl.depthMask(true)
 
     // 6. Post Process (if enabled)
     if (dofEnabled) {

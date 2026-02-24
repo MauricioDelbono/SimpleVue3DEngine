@@ -14,6 +14,7 @@ import {
   QuadPipeline,
   WireframePipeline,
   PostProcessPipeline,
+  OcclusionPipeline,
   type RenderOptions
 } from '@/models/pipeline'
 import type { FrameBuffer, Texture } from '@/models/types'
@@ -29,7 +30,8 @@ export const pipelineKeys = {
   quad: 'quad',
   default: 'default',
   wireframe: 'wireframe',
-  postProcess: 'postProcess'
+  postProcess: 'postProcess',
+  occlusion: 'occlusion'
 }
 
 export const useWebGLStore = defineStore('webgl', () => {
@@ -132,6 +134,7 @@ export const useWebGLStore = defineStore('webgl', () => {
       pipelines.value[pipelineKeys.default] = new DefaultPipeline(gl.value)
       pipelines.value[pipelineKeys.wireframe] = new WireframePipeline(gl.value)
       pipelines.value[pipelineKeys.postProcess] = new PostProcessPipeline(gl.value)
+      pipelines.value[pipelineKeys.occlusion] = new OcclusionPipeline(gl.value)
       initializeShadowMap()
       initializeMainFrameBuffer()
     }
@@ -426,6 +429,22 @@ export const useWebGLStore = defineStore('webgl', () => {
     return zFar
   }
 
+  function createQuery() {
+    return gl.value.createQuery()
+  }
+
+  function deleteQuery(query: WebGLQuery) {
+    gl.value.deleteQuery(query)
+  }
+
+  function isQueryAvailable(query: WebGLQuery) {
+    return gl.value.getQueryParameter(query, gl.value.QUERY_RESULT_AVAILABLE)
+  }
+
+  function getQueryResult(query: WebGLQuery) {
+    return gl.value.getQueryParameter(query, gl.value.QUERY_RESULT)
+  }
+
   return {
     gl,
     canvas,
@@ -457,6 +476,10 @@ export const useWebGLStore = defineStore('webgl', () => {
     getCascadeCount,
     getNearPlane,
     getFarPlane,
+    createQuery,
+    deleteQuery,
+    isQueryAvailable,
+    getQueryResult,
     reset
   }
 })
