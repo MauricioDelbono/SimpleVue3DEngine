@@ -5,6 +5,7 @@ import { Scene } from '@/models/scene'
 import { pipelineKeys, useWebGLStore } from './webgl'
 import { Time } from '@/models/time'
 import { Collider } from '@/physics/collisions/collider'
+import { ParticleSystem } from '@/models/particleSystem'
 import Primitives from '@/helpers/primitives'
 import { Transform } from '@/models/transform'
 
@@ -23,6 +24,7 @@ export const useRenderStore = defineStore('render', () => {
   const store = useWebGLStore()
   const postProcessMesh = Primitives.createXYQuad()
   const postProcessTransform = new Transform()
+  const particleMesh = Primitives.createXYQuad()
 
   function reset() {
     store.reset()
@@ -152,6 +154,16 @@ export const useRenderStore = defineStore('render', () => {
           colliders.forEach((collider) => {
             store.renderMesh(scene.value, pipelineKeys.wireframe, collider.mesh, collider.transform, undefined, { color: [1, 0, 0] })
           })
+        }
+      })
+    })
+
+    // Render Particles
+    scene.value.entities.forEach((entity) => {
+      traverseTree(entity, (entity: Entity) => {
+        const particleSystem = entity.getComponent(ParticleSystem)
+        if (particleSystem && particleSystem.isDisplayed) {
+          store.renderParticles(scene.value, particleSystem, particleMesh)
         }
       })
     })

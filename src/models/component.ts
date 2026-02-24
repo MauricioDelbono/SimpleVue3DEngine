@@ -1,4 +1,4 @@
-import { Entity } from './entity'
+import type { Entity } from './entity'
 import type { Time } from './time'
 
 export const EditorPropType = {
@@ -31,7 +31,7 @@ export abstract class Component {
   public editorProps: EditorProp[] = []
 
   constructor() {
-    this.entity = new Entity(undefined, undefined)
+    this.entity = {} as Entity
     this.start()
   }
 

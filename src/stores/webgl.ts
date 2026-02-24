@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { mat4, vec3, vec4 } from 'gl-matrix'
 import { Entity } from '@/models/entity'
 import { Scene } from '@/models/scene'
+import type { ParticleSystem } from '@/models/particleSystem'
 import webgl from '@/helpers/webgl'
 import utils from '@/helpers/utils'
 import {
@@ -14,6 +15,7 @@ import {
   QuadPipeline,
   WireframePipeline,
   PostProcessPipeline,
+  ParticlePipeline,
   type RenderOptions
 } from '@/models/pipeline'
 import type { FrameBuffer, Texture } from '@/models/types'
@@ -29,7 +31,8 @@ export const pipelineKeys = {
   quad: 'quad',
   default: 'default',
   wireframe: 'wireframe',
-  postProcess: 'postProcess'
+  postProcess: 'postProcess',
+  particle: 'particle'
 }
 
 export const useWebGLStore = defineStore('webgl', () => {
@@ -132,6 +135,7 @@ export const useWebGLStore = defineStore('webgl', () => {
       pipelines.value[pipelineKeys.default] = new DefaultPipeline(gl.value)
       pipelines.value[pipelineKeys.wireframe] = new WireframePipeline(gl.value)
       pipelines.value[pipelineKeys.postProcess] = new PostProcessPipeline(gl.value)
+      pipelines.value[pipelineKeys.particle] = new ParticlePipeline(gl.value)
       initializeShadowMap()
       initializeMainFrameBuffer()
     }
@@ -338,6 +342,11 @@ export const useWebGLStore = defineStore('webgl', () => {
     pipeline.render(scene, mesh, transform, material, options)
   }
 
+  function renderParticles(scene: Scene, particleSystem: ParticleSystem, mesh: Mesh) {
+    const pipeline = pipelines.value[pipelineKeys.particle] as ParticlePipeline
+    pipeline.renderParticles(scene, particleSystem, mesh)
+  }
+
   function getViewDirectionProjectionInverseMatrix() {
     mat4.copy(viewDirectionMatrix, viewMatrix)
     viewDirectionMatrix[12] = 0
@@ -437,6 +446,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     prepareShadowCascade,
     setRenderColor,
     renderMesh,
+    renderParticles,
     getCameraMatrix,
     getViewMatrix,
     getProjectionMatrix,
