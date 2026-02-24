@@ -61,6 +61,10 @@ uniform float cascadePlaneDistances[4];
 uniform mat4 lightSpaceMatrices[4];
 uniform mat4 view;
 
+uniform sampler2D ssaoMap;
+uniform bool ssaoEnabled;
+uniform vec2 viewportSize;
+
 // function prototypes
 float ShadowCalculation(vec3 fragPosWorld, vec3 normal, vec3 lightDir);
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
@@ -111,6 +115,13 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
     
     // combine results
     vec3 ambient = light.ambient * (texture(material.diffuse, TexCoords).rgb + material.color);
+
+    // apply SSAO
+    if (ssaoEnabled) {
+        float ao = texture(ssaoMap, gl_FragCoord.xy / viewportSize).r;
+        ambient *= ao;
+    }
+
     vec3 diffuse = light.diffuse * diff * (texture(material.diffuse, TexCoords).rgb + material.color);
     vec3 specular = light.specular * spec * texture(material.specular, TexCoords).rgb;
     
@@ -136,6 +147,13 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     
     // combine results
     vec3 ambient = light.ambient * (texture(material.diffuse, TexCoords).rgb + material.color);
+
+    // apply SSAO
+    if (ssaoEnabled) {
+        float ao = texture(ssaoMap, gl_FragCoord.xy / viewportSize).r;
+        ambient *= ao;
+    }
+
     vec3 diffuse = light.diffuse * diff * (texture(material.diffuse, TexCoords).rgb + material.color);
     vec3 specular = light.specular * spec * texture(material.specular, TexCoords).rgb;
     ambient *= attenuation;
@@ -167,6 +185,13 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     
     // combine results
     vec3 ambient = light.ambient * (texture(material.diffuse, TexCoords).rgb + material.color);
+
+    // apply SSAO
+    if (ssaoEnabled) {
+        float ao = texture(ssaoMap, gl_FragCoord.xy / viewportSize).r;
+        ambient *= ao;
+    }
+
     vec3 diffuse = light.diffuse * diff * (texture(material.diffuse, TexCoords).rgb + material.color);
     vec3 specular = light.specular * spec * texture(material.specular, TexCoords).rgb;
     ambient *= attenuation * intensity;

@@ -40,6 +40,14 @@ export class DepthOfField {
   public bokehRadius: number = 5.0
 }
 
+export class SSAO {
+  public enabled: boolean = false
+  public kernelSize: number = 64
+  public radius: number = 0.5
+  public bias: number = 0.025
+  public power: number = 2.0
+}
+
 export interface IScene {
   fog: Fog
   skybox?: Skybox
@@ -52,6 +60,7 @@ export interface IScene {
   wireframe: boolean
   debugColliders: boolean
   depthOfField: DepthOfField
+  ssao: SSAO
 
   addEntity(entity: Entity): void
   removeEntity(entity: Entity): void
@@ -72,6 +81,7 @@ export class Scene {
   public wireframe: boolean = false
   public debugColliders: boolean = false
   public depthOfField: DepthOfField
+  public ssao: SSAO
 
   public assets = useAssetsStore()
 
@@ -83,6 +93,7 @@ export class Scene {
     this.spotLight = null
     this.directionalLight = null
     this.depthOfField = new DepthOfField()
+    this.ssao = new SSAO()
     this.addCamera(this.camera)
   }
 
