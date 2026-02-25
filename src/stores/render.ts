@@ -108,6 +108,8 @@ export const useRenderStore = defineStore('render', () => {
   function renderScene() {
     const dofEnabled = scene.value.depthOfField.enabled && !scene.value.wireframe
 
+    store.checkOcclusion(scene.value)
+
     // 1. Shadow Pass
     if (!scene.value.wireframe) {
       if (scene.value.directionalLight) {
@@ -144,6 +146,8 @@ export const useRenderStore = defineStore('render', () => {
 
     scene.value.entities.forEach((entity) => {
       traverseTree(entity, (entity: Entity) => {
+        if (!entity.visible) return
+
         const pipeline = scene.value.wireframe ? pipelineKeys.wireframe : (entity.pipeline ?? scene.value.defaultPipeline)
         store.renderMesh(scene.value, pipeline, entity.mesh, entity.transform, entity.material)
 
@@ -155,6 +159,8 @@ export const useRenderStore = defineStore('render', () => {
         }
       })
     })
+
+    store.performOcclusionQueries(scene.value)
 
     // 6. Post Process (if enabled)
     if (dofEnabled) {

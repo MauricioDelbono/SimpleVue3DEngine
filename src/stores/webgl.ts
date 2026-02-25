@@ -14,13 +14,15 @@ import {
   QuadPipeline,
   WireframePipeline,
   PostProcessPipeline,
+  OcclusionPipeline,
   type RenderOptions
 } from '@/models/pipeline'
 import type { FrameBuffer, Texture } from '@/models/types'
 import type { Mesh } from '@/models/mesh'
-import type { Transform } from '@/models/transform'
+import { Transform } from '@/models/transform'
 import type { Material } from '@/models/material'
 import { getLightSpaceMatrix, getCascadeSplits, CASCADE_COUNT, SHADOW_MAP_SIZE } from '@/helpers/shadows'
+import Primitives from '@/helpers/primitives'
 
 export const pipelineKeys = {
   skybox: 'skybox',
@@ -29,13 +31,16 @@ export const pipelineKeys = {
   quad: 'quad',
   default: 'default',
   wireframe: 'wireframe',
-  postProcess: 'postProcess'
+  postProcess: 'postProcess',
+  occlusion: 'occlusion'
 }
 
 export const useWebGLStore = defineStore('webgl', () => {
   const canvas: Ref<HTMLCanvasElement> = ref({} as HTMLCanvasElement)
   const gl: Ref<WebGL2RenderingContext> = ref({} as WebGL2RenderingContext)
   const pipelines: Ref<Record<string, Pipeline>> = ref({})
+  const occlusionQueryMap: Map<Entity, WebGLQuery> = new Map()
+  let unitCube: Mesh | null = null
 
   let lastUsedPipeline: string | null = null
 
@@ -102,6 +107,8 @@ export const useWebGLStore = defineStore('webgl', () => {
     mainDepthTexture = null
     cascadeSplits.value = []
     lightSpaceMatrices.value = []
+    occlusionQueryMap.clear()
+    unitCube = null
   }
 
   function clearCanvas(color: vec4 = [0, 0, 0, 1]) {
@@ -132,6 +139,8 @@ export const useWebGLStore = defineStore('webgl', () => {
       pipelines.value[pipelineKeys.default] = new DefaultPipeline(gl.value)
       pipelines.value[pipelineKeys.wireframe] = new WireframePipeline(gl.value)
       pipelines.value[pipelineKeys.postProcess] = new PostProcessPipeline(gl.value)
+      pipelines.value[pipelineKeys.occlusion] = new OcclusionPipeline(gl.value)
+      unitCube = Primitives.createCube()
       initializeShadowMap()
       initializeMainFrameBuffer()
     }
@@ -426,6 +435,94 @@ export const useWebGLStore = defineStore('webgl', () => {
     return zFar
   }
 
+  function checkOcclusion(scene: Scene) {
+    scene.entities.forEach((entity) => {
+      traverseTree(entity, (child) => {
+        const query = occlusionQueryMap.get(child)
+        if (query) {
+          const available = gl.value.getQueryParameter(query, gl.value.QUERY_RESULT_AVAILABLE)
+          if (available) {
+            const samplesPassed = gl.value.getQueryParameter(query, gl.value.QUERY_RESULT)
+            child.visible = samplesPassed > 0
+          }
+        }
+      })
+    })
+  }
+
+  function performOcclusionQueries(scene: Scene) {
+    if (!unitCube) return
+
+    const pipeline = pipelines.value[pipelineKeys.occlusion]
+    let vao = unitCube.vaoMap[pipelineKeys.occlusion]
+    if (!vao) {
+      vao = pipeline.createMeshVAO(unitCube, 3)
+      unitCube.vaoMap[pipelineKeys.occlusion] = vao
+    }
+
+    pipeline.setGlobalUniforms(scene)
+    if (pipeline instanceof OcclusionPipeline) {
+      pipeline.updateUniforms(viewProjectionMatrix)
+    }
+    gl.value.bindVertexArray(vao)
+
+    const tempTransform = new Transform()
+
+    scene.entities.forEach((entity) => {
+      traverseTree(entity, (child) => {
+        let query = occlusionQueryMap.get(child)
+        if (!query) {
+          query = gl.value.createQuery() as WebGLQuery
+          occlusionQueryMap.set(child, query)
+        }
+
+        // Calculate transform for bounding box
+        // Center = (min + max) / 2
+        // Scale = (max - min) / 2
+        // World = EntityWorld * Translate(Center) * Scale(Scale)
+
+        const center = vec3.create()
+        vec3.add(center, child.mesh.min, child.mesh.max)
+        vec3.scale(center, center, 0.5)
+
+        const scale = vec3.create()
+        vec3.subtract(scale, child.mesh.max, child.mesh.min)
+        vec3.scale(scale, scale, 0.5)
+
+        // If mesh has no volume (e.g. empty), fallback to scale 1 or skip?
+        if (scale[0] === 0 && scale[1] === 0 && scale[2] === 0) {
+           // Skip occlusion query for empty meshes or handle appropriately
+           return
+        }
+
+        // We construct the matrix manually or using Transform helpers
+        // Mat = Translate(center) * Scale(scale)
+        mat4.identity(tempTransform.localMatrix)
+        mat4.translate(tempTransform.localMatrix, tempTransform.localMatrix, center)
+        mat4.scale(tempTransform.localMatrix, tempTransform.localMatrix, scale)
+
+        // World = EntityWorld * Local
+        mat4.multiply(tempTransform.worldMatrix, child.transform.worldMatrix, tempTransform.localMatrix)
+
+        gl.value.beginQuery(gl.value.ANY_SAMPLES_PASSED, query)
+        pipeline.render(scene, unitCube!, tempTransform)
+        gl.value.endQuery(gl.value.ANY_SAMPLES_PASSED)
+      })
+    })
+
+    // Restore state
+    gl.value.colorMask(true, true, true, true)
+    gl.value.depthMask(true)
+    gl.value.depthFunc(gl.value.LESS)
+  }
+
+  function traverseTree(entity: Entity, callback: (entity: Entity) => void) {
+    callback(entity)
+    entity.children.forEach((child) => {
+      traverseTree(child, callback)
+    })
+  }
+
   return {
     gl,
     canvas,
@@ -457,6 +554,8 @@ export const useWebGLStore = defineStore('webgl', () => {
     getCascadeCount,
     getNearPlane,
     getFarPlane,
+    checkOcclusion,
+    performOcclusionQueries,
     reset
   }
 })

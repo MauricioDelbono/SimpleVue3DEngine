@@ -19,6 +19,7 @@ export class Entity {
   public material: Material
   public name: string = 'Empty'
   public uuid: string = uuid()
+  public visible: boolean = true
 
   constructor(name: string = 'Empty', mesh: Mesh | null = null, position: vec3 = [0, 0, 0]) {
     this.transform = new Transform()
