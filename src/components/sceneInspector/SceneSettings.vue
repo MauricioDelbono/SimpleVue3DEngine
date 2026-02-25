@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useRenderStore } from '@/stores/render'
 import { storeToRefs } from 'pinia'
 import VCheckbox from '../shared/VCheckbox/VCheckbox.vue'
+import VInput from '../shared/VInput/VInput.vue'
 
 const store = useRenderStore()
 const { scene } = storeToRefs(store)
@@ -24,6 +25,32 @@ onMounted(() => {})
       <span>Show Colliders:</span>
       <div style="flex: 1"></div>
       <VCheckbox v-model="scene.debugColliders" />
+    </div>
+
+    <h3>Depth of Field</h3>
+
+    <div class="scene-settings-prop">
+      <span>Enabled:</span>
+      <div style="flex: 1"></div>
+      <VCheckbox v-model="scene.depthOfField.enabled" />
+    </div>
+
+    <div v-if="scene.depthOfField.enabled" class="scene-settings-prop">
+      <span>Focus Distance:</span>
+      <div style="flex: 1"></div>
+      <VInput v-model="scene.depthOfField.focusDistance" type="number" />
+    </div>
+
+    <div v-if="scene.depthOfField.enabled" class="scene-settings-prop">
+      <span>Focus Range:</span>
+      <div style="flex: 1"></div>
+      <VInput v-model="scene.depthOfField.focusRange" type="number" />
+    </div>
+
+    <div v-if="scene.depthOfField.enabled" class="scene-settings-prop">
+      <span>Bokeh Radius:</span>
+      <div style="flex: 1"></div>
+      <VInput v-model="scene.depthOfField.bokehRadius" type="number" />
     </div>
   </div>
 </template>
