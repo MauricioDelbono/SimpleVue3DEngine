@@ -81,7 +81,8 @@ export class Rigidbody extends Component {
   }
 
   public get isRotating() {
-    return !this.angularVelocity.every((v) => v === 0)
+    const v = this.angularVelocity
+    return v[0] !== 0 || v[1] !== 0 || v[2] !== 0
   }
 
   public applyForce(force: vec3) {

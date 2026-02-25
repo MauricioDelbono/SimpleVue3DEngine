@@ -10,7 +10,7 @@ export class Face {
 
   constructor(indices: Array<number>, vertices: Array<vec3>, adjacents: Array<number> = [-1, -1, -1]) {
     this.indices = indices // [i1, i2, i3]
-    this.vertices = [vertices[indices[0]], vertices[indices[1]], vertices[indices[2]]]
+    this.vertices = [vertices[indices[0]!]!, vertices[indices[1]!]!, vertices[indices[2]!]!]
     this.adjacents = adjacents // Indices of adjacent faces [opp i1-i2, opp i2-i3, opp i3-i1]
     this.normal = this.computeNormal()
     this.distance = this.computeDistance()
@@ -18,7 +18,7 @@ export class Face {
   }
 
   computeNormal() {
-    const [a, b, c] = this.vertices
+    const [a, b, c] = this.vertices as [vec3, vec3, vec3]
     const ab = vec3.subtract(vec3.create(), b, a)
     const ac = vec3.subtract(vec3.create(), c, a)
     const result = vec3.cross(vec3.create(), ab, ac)
@@ -26,7 +26,7 @@ export class Face {
   }
 
   computeDistance() {
-    return vec3.dot(this.normal, this.vertices[0])
+    return vec3.dot(this.normal, this.vertices[0]!)
   }
 
   isValid() {
@@ -34,12 +34,12 @@ export class Face {
   }
 
   isVisible(point: vec3) {
-    const ap = vec3.subtract(vec3.create(), point, this.vertices[0])
+    const ap = vec3.subtract(vec3.create(), point, this.vertices[0]!)
     return vec3.dot(this.normal, ap) > 0
   }
 
   getCentroid() {
-    const [a, b, c] = this.vertices
+    const [a, b, c] = this.vertices as [vec3, vec3, vec3]
     const result = vec3.create()
     vec3.add(result, a, b)
     vec3.add(result, result, c)

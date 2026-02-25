@@ -261,15 +261,15 @@ export const useWebGLStore = defineStore('webgl', () => {
       }
     }
 
-    const near = cascadeSplits.value[cascadeIndex]
-    const far = cascadeSplits.value[cascadeIndex + 1]
+    const near = cascadeSplits.value[cascadeIndex]!
+    const far = cascadeSplits.value[cascadeIndex + 1]!
 
     const lightDir = scene.directionalLight.transform.getForwardVector()
 
     const lightSpaceMatrix = getLightSpaceMatrix(viewMatrix, fieldOfViewRadians, aspect, near, far, lightDir)
 
-    mat4.copy(lightSpaceMatrices.value[cascadeIndex], lightSpaceMatrix)
-    mat4.copy(lightViewProjectionMatrix, lightSpaceMatrix)
+    mat4.copy(lightSpaceMatrices.value[cascadeIndex]!, lightSpaceMatrix!)
+    mat4.copy(lightViewProjectionMatrix, lightSpaceMatrix!)
 
     gl.value.bindFramebuffer(gl.value.FRAMEBUFFER, depthFrameBuffer)
     gl.value.framebufferTextureLayer(gl.value.FRAMEBUFFER, gl.value.DEPTH_ATTACHMENT, depthTexture, 0, cascadeIndex)
@@ -280,7 +280,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     gl.value.polygonOffset(0.5, 0.5)
     gl.value.clear(gl.value.DEPTH_BUFFER_BIT)
 
-    pipelines.value.shadow.setGlobalUniforms(scene)
+    pipelines.value.shadow!.setGlobalUniforms(scene)
   }
 
   function setRenderColor(scene: Scene) {
@@ -298,7 +298,7 @@ export const useWebGLStore = defineStore('webgl', () => {
 
     if (scene.skybox) {
       lastUsedPipeline = 'skybox'
-      const pipeline = pipelines.value.skybox
+      const pipeline = pipelines.value.skybox!
       let vao = scene.skybox.mesh.vaoMap.skybox
       if (!scene.skybox.mesh.vaoMap.skybox) {
         vao = pipeline.createMeshVAO(scene.skybox.mesh, 3)
@@ -310,16 +310,16 @@ export const useWebGLStore = defineStore('webgl', () => {
       pipeline.render(scene)
     }
 
-    pipelines.value.light.setGlobalUniforms(scene)
-    pipelines.value.wireframe.setGlobalUniforms(scene)
-    pipelines.value.default.setGlobalUniforms(scene)
-    pipelines.value.postProcess.setGlobalUniforms(scene)
+    pipelines.value.light!.setGlobalUniforms(scene)
+    pipelines.value.wireframe!.setGlobalUniforms(scene)
+    pipelines.value.default!.setGlobalUniforms(scene)
+    pipelines.value.postProcess!.setGlobalUniforms(scene)
   }
 
   function renderMesh(scene: Scene, pipelineKey: string, mesh: Mesh, transform: Transform, material?: Material, options?: RenderOptions) {
     // get pipeline
     pipelineKey = pipelineKey ?? scene.defaultPipeline
-    const pipeline = pipelines.value[pipelineKey]
+    const pipeline = pipelines.value[pipelineKey]!
     let vao = mesh.vaoMap[pipelineKey]
 
     // create vao if it doesn't exist
@@ -334,7 +334,7 @@ export const useWebGLStore = defineStore('webgl', () => {
     }
 
     // render entity
-    gl.value.bindVertexArray(vao)
+    gl.value.bindVertexArray(vao ?? null)
     pipeline.render(scene, mesh, transform, material, options)
   }
 
@@ -349,7 +349,12 @@ export const useWebGLStore = defineStore('webgl', () => {
   }
 
   function getModelInverseMatrix(entity: Entity) {
-    mat4.transpose(modelInverseMatrix, mat4.invert(modelInverseMatrix, entity.transform.worldMatrix))
+    const inverted = mat4.invert(modelInverseMatrix, entity.transform.worldMatrix)
+    if (inverted) {
+      mat4.transpose(modelInverseMatrix, inverted)
+    } else {
+      mat4.identity(modelInverseMatrix)
+    }
     return modelInverseMatrix
   }
 

@@ -19,7 +19,7 @@ function gjk(shapeA: Shape, shapeB: Shape) {
   let direction = vec3.create()
   const centerA = shapeA.getCenter()
   const centerB = shapeB.getCenter()
-  vec3.subtract(direction, centerB, centerA)
+  vec3.subtract(direction, centerB!, centerA!)
 
   // Fallback if centers are too close
   if (vec3.length(direction) < 1e-6) {
@@ -205,7 +205,7 @@ function epa(shapeA: Shape, shapeB: Shape, initialSimplex: Array<vec3>) {
     while (toCheck.length > 0) {
       const faceIdx = toCheck.pop() ?? 0
       const face = faces[faceIdx]
-      if (!visibleIndices.has(faceIdx) && face && face.isVisible(p)) {
+      if (face && !visibleIndices.has(faceIdx) && face.isVisible(p)) {
         visibleIndices.add(faceIdx)
         face.adjacents.forEach((adjIdx) => {
           if (adjIdx !== -1 && !visibleIndices.has(adjIdx)) {
@@ -219,10 +219,11 @@ function epa(shapeA: Shape, shapeB: Shape, initialSimplex: Array<vec3>) {
     const edgeMap = new Map()
     for (const idx of visibleIndices) {
       const face = faces[idx]
+      if (!face) continue
       for (let j = 0; j < 3; j++) {
         if (face.adjacents[j] === -1 || !visibleIndices.has(face.adjacents[j])) {
-          const a = face.indices[j]
-          const b = face.indices[(j + 1) % 3]
+          const a = face.indices[j]!
+          const b = face.indices[(j + 1) % 3]!
           const key = a < b ? `${a}-${b}` : `${b}-${a}`
           edgeMap.set(key, [a, b])
         }
@@ -248,10 +249,10 @@ function epa(shapeA: Shape, shapeB: Shape, initialSimplex: Array<vec3>) {
     // Update adjacency for new faces
     for (let i = 0; i < newFaces.length; i++) {
       for (let j = 0; j < faces.length; j++) {
-        const shared = sharedEdge(newFaces[i], faces[j])
+        const shared = sharedEdge(newFaces[i], faces[j]!)
         if (shared) {
           newFaces[i].adjacents[shared.edgeI] = j
-          faces[j].adjacents[shared.edgeJ] = faces.length + i
+          faces[j]!.adjacents[shared.edgeJ] = faces.length + i
         }
       }
       for (let j = i + 1; j < newFaces.length; j++) {
@@ -324,18 +325,18 @@ function computeContactPoints(
   vertices: Array<vec3>
 ) {
   const indices = closestFace.indices
-  const v1 = vertices[indices[0]]
-  const v2 = vertices[indices[1]]
-  const v3 = vertices[indices[2]]
+  const v1 = vertices[indices[0]!]!
+  const v2 = vertices[indices[1]!]!
+  const v3 = vertices[indices[2]!]!
   const totalArea = triangleArea(v1, v2, v3)
   const q = vec3.scale(vec3.create(), closestFace.normal, depth)
   const area1 = triangleArea(q, v2, v3)
   const area2 = triangleArea(q, v3, v1)
   const area3 = triangleArea(q, v1, v2)
   const bary = [area1 / totalArea, area2 / totalArea, area3 / totalArea]
-  const d1 = vertexDirections[indices[0]]
-  const d2 = vertexDirections[indices[1]]
-  const d3 = vertexDirections[indices[2]]
+  const d1 = vertexDirections[indices[0]!]!
+  const d2 = vertexDirections[indices[1]!]!
+  const d3 = vertexDirections[indices[2]!]!
 
   // Get contact points on each shape using their support functions
   const a1 = shapeA.support(d1)
@@ -346,13 +347,13 @@ function computeContactPoints(
   const b3 = shapeB.support(vec3.negate(vec3.create(), d3))
 
   const contactA = vec3.create()
-  vec3.scaleAndAdd(contactA, contactA, a1, bary[0])
-  vec3.scaleAndAdd(contactA, contactA, a2, bary[1])
-  vec3.scaleAndAdd(contactA, contactA, a3, bary[2])
+  vec3.scaleAndAdd(contactA, contactA, a1, bary[0]!)
+  vec3.scaleAndAdd(contactA, contactA, a2, bary[1]!)
+  vec3.scaleAndAdd(contactA, contactA, a3, bary[2]!)
   const contactB = vec3.create()
-  vec3.scaleAndAdd(contactB, contactB, b1, bary[0])
-  vec3.scaleAndAdd(contactB, contactB, b2, bary[1])
-  vec3.scaleAndAdd(contactB, contactB, b3, bary[2])
+  vec3.scaleAndAdd(contactB, contactB, b1, bary[0]!)
+  vec3.scaleAndAdd(contactB, contactB, b2, bary[1]!)
+  vec3.scaleAndAdd(contactB, contactB, b3, bary[2]!)
 
   // Ensure normal points from A to B
   const normal = vec3.copy(vec3.create(), closestFace.normal)

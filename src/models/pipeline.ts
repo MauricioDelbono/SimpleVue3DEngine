@@ -87,8 +87,8 @@ export class SkyboxPipeline implements Pipeline {
       this.gl.depthFunc(this.gl.LEQUAL)
       this.gl.useProgram(this.program)
       this.gl.bindVertexArray(scene.skybox.mesh.vaoMap.skybox)
-      this.gl.uniformMatrix4fv(this.uniforms.uViewDirectionProjectionInverse, false, this.store.getViewDirectionProjectionInverseMatrix())
-      this.gl.uniform1i(this.uniforms.uSkybox, 0)
+      this.gl.uniformMatrix4fv(this.uniforms.uViewDirectionProjectionInverse!, false, this.store.getViewDirectionProjectionInverseMatrix())
+      this.gl.uniform1i(this.uniforms.uSkybox!, 0)
     }
   }
 
@@ -155,14 +155,14 @@ export class LightPipeline implements Pipeline {
   public setGlobalUniforms(): void {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
-    this.gl.uniformMatrix4fv(this.uniforms.view, false, this.store.getViewMatrix())
-    this.gl.uniformMatrix4fv(this.uniforms.projection, false, this.store.getProjectionMatrix())
+    this.gl.uniformMatrix4fv(this.uniforms.view!, false, this.store.getViewMatrix())
+    this.gl.uniformMatrix4fv(this.uniforms.projection!, false, this.store.getProjectionMatrix())
   }
 
   public render(scene: Scene, mesh: Mesh, transform: Transform): void {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
-    this.gl.uniformMatrix4fv(this.uniforms.model, false, transform.worldMatrix)
+    this.gl.uniformMatrix4fv(this.uniforms.model!, false, transform.worldMatrix)
 
     this.gl.drawElements(this.gl.TRIANGLES, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
   }
@@ -223,15 +223,15 @@ export class WireframePipeline implements Pipeline {
   public setGlobalUniforms(): void {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
-    this.gl.uniformMatrix4fv(this.uniforms.view, false, this.store.getViewMatrix())
-    this.gl.uniformMatrix4fv(this.uniforms.projection, false, this.store.getProjectionMatrix())
+    this.gl.uniformMatrix4fv(this.uniforms.view!, false, this.store.getViewMatrix())
+    this.gl.uniformMatrix4fv(this.uniforms.projection!, false, this.store.getProjectionMatrix())
   }
 
   public render(scene: Scene, mesh: Mesh, transform: Transform, material?: Material, options?: RenderOptions): void {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
-    this.gl.uniformMatrix4fv(this.uniforms.model, false, transform.worldMatrix)
-    this.gl.uniform3fv(this.uniforms.color, options?.color ?? [0, 1, 0])
+    this.gl.uniformMatrix4fv(this.uniforms.model!, false, transform.worldMatrix)
+    this.gl.uniform3fv(this.uniforms.color!, options?.color ?? [0, 1, 0])
 
     this.gl.drawElements(this.gl.LINE_LOOP, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
   }
@@ -291,13 +291,13 @@ export class ShadowPipeline implements Pipeline {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
     this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, this.store.getDepthFrameBuffer())
-    this.gl.uniformMatrix4fv(this.uniforms.viewProjection, false, this.store.getLightViewProjectionMatrix())
+    this.gl.uniformMatrix4fv(this.uniforms.viewProjection!, false, this.store.getLightViewProjectionMatrix())
   }
 
   public render(scene: Scene, mesh: Mesh, transform: Transform): void {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
-    this.gl.uniformMatrix4fv(this.uniforms.model, false, transform.worldMatrix)
+    this.gl.uniformMatrix4fv(this.uniforms.model!, false, transform.worldMatrix)
 
     this.gl.drawElements(this.gl.TRIANGLES, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
   }
@@ -363,9 +363,9 @@ export class QuadPipeline implements Pipeline {
   public setGlobalUniforms(): void {
     this.gl.depthFunc(this.gl.ALWAYS)
     this.gl.useProgram(this.program)
-    this.gl.uniform1f(this.uniforms.nearPlane, 0)
-    this.gl.uniform1f(this.uniforms.farPlane, 100)
-    this.gl.uniform1i(this.uniforms.shadowMap, 0)
+    this.gl.uniform1f(this.uniforms.nearPlane!, 0)
+    this.gl.uniform1f(this.uniforms.farPlane!, 100)
+    this.gl.uniform1i(this.uniforms.shadowMap!, 0)
     this.gl.activeTexture(this.gl.TEXTURE0)
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.store.getShadowMap())
   }
@@ -485,15 +485,15 @@ export class DefaultPipeline implements Pipeline {
     this.gl.bindTexture(this.gl.TEXTURE_2D_ARRAY, this.store.getShadowMap())
     this.gl.useProgram(this.program)
 
-    this.gl.uniformMatrix4fv(this.uniforms.view, false, this.store.getViewMatrix())
-    this.gl.uniformMatrix4fv(this.uniforms.projection, false, this.store.getProjectionMatrix())
-    this.gl.uniform3fv(this.uniforms.viewPosition, scene.camera.transform.position)
+    this.gl.uniformMatrix4fv(this.uniforms.view!, false, this.store.getViewMatrix())
+    this.gl.uniformMatrix4fv(this.uniforms.projection!, false, this.store.getProjectionMatrix())
+    this.gl.uniform3fv(this.uniforms.viewPosition!, scene.camera.transform.position)
 
     const splits = this.store.getCascadeSplitsArray()
     const cascadeCount = this.store.getCascadeCount()
     const lightMatrices = this.store.getLightSpaceMatrices()
 
-    this.gl.uniform1i(this.uniforms.cascadeCount, cascadeCount)
+    this.gl.uniform1i(this.uniforms.cascadeCount!, cascadeCount)
 
     if (splits.length > 1) {
       if (!this.cascadeSplitsBuffer || this.cascadeSplitsBuffer.length !== splits.length - 1) {
@@ -502,7 +502,7 @@ export class DefaultPipeline implements Pipeline {
       for (let i = 1; i < splits.length; i++) {
         this.cascadeSplitsBuffer[i - 1] = splits[i]
       }
-      this.gl.uniform1fv(this.uniforms.cascadePlaneDistances, this.cascadeSplitsBuffer)
+      this.gl.uniform1fv(this.uniforms.cascadePlaneDistances!, this.cascadeSplitsBuffer)
     }
 
     if (lightMatrices.length > 0) {
@@ -512,26 +512,26 @@ export class DefaultPipeline implements Pipeline {
       for (let i = 0; i < lightMatrices.length; i++) {
         this.lightSpaceMatricesBuffer.set(lightMatrices[i], i * 16)
       }
-      this.gl.uniformMatrix4fv(this.uniforms.lightSpaceMatrices, false, this.lightSpaceMatricesBuffer)
+      this.gl.uniformMatrix4fv(this.uniforms.lightSpaceMatrices!, false, this.lightSpaceMatricesBuffer)
     }
 
     if (scene.directionalLight) {
-      this.gl.uniform1i(this.uniforms.dirLightEnabled, 1)
-      this.gl.uniform3fv(this.uniforms.dirLightDirection, scene.directionalLight.transform.getForwardVector())
-      this.gl.uniform3fv(this.uniforms.dirLightAmbient, scene.directionalLight.ambient)
-      this.gl.uniform3fv(this.uniforms.dirLightDiffuse, scene.directionalLight.diffuse)
-      this.gl.uniform3fv(this.uniforms.dirLightSpecular, scene.directionalLight.specular)
+      this.gl.uniform1i(this.uniforms.dirLightEnabled!, 1)
+      this.gl.uniform3fv(this.uniforms.dirLightDirection!, scene.directionalLight.transform.getForwardVector())
+      this.gl.uniform3fv(this.uniforms.dirLightAmbient!, scene.directionalLight.ambient)
+      this.gl.uniform3fv(this.uniforms.dirLightDiffuse!, scene.directionalLight.diffuse)
+      this.gl.uniform3fv(this.uniforms.dirLightSpecular!, scene.directionalLight.specular)
     }
 
     if (scene.spotLight) {
-      this.gl.uniform1i(this.uniforms.spotLightEnabled, 1)
-      this.gl.uniform3fv(this.uniforms.spotLightDirection, scene.spotLight.transform.getForwardVector())
-      this.gl.uniform3fv(this.uniforms.spotLightPosition, scene.spotLight.transform.worldPosition)
-      this.gl.uniform3fv(this.uniforms.spotLightAmbient, scene.spotLight.ambient)
-      this.gl.uniform3fv(this.uniforms.spotLightDiffuse, scene.spotLight.diffuse)
-      this.gl.uniform3fv(this.uniforms.spotLightSpecular, scene.spotLight.specular)
-      this.gl.uniform1f(this.uniforms.spotLightCutOff, scene.spotLight.cutOff)
-      this.gl.uniform1f(this.uniforms.spotLightOuterCutOff, scene.spotLight.outerCutOff)
+      this.gl.uniform1i(this.uniforms.spotLightEnabled!, 1)
+      this.gl.uniform3fv(this.uniforms.spotLightDirection!, scene.spotLight.transform.getForwardVector())
+      this.gl.uniform3fv(this.uniforms.spotLightPosition!, scene.spotLight.transform.worldPosition)
+      this.gl.uniform3fv(this.uniforms.spotLightAmbient!, scene.spotLight.ambient)
+      this.gl.uniform3fv(this.uniforms.spotLightDiffuse!, scene.spotLight.diffuse)
+      this.gl.uniform3fv(this.uniforms.spotLightSpecular!, scene.spotLight.specular)
+      this.gl.uniform1f(this.uniforms.spotLightCutOff!, scene.spotLight.cutOff)
+      this.gl.uniform1f(this.uniforms.spotLightOuterCutOff!, scene.spotLight.outerCutOff)
     }
 
     for (let index = 0; index < this.maxPointLights; index++) {
@@ -539,15 +539,15 @@ export class DefaultPipeline implements Pipeline {
       if (scene.pointLights.length <= index) return
       else {
         const light = scene.pointLights[index]
-        this.gl.uniform1i(this.uniforms[`pointLights[${index}]Enabled`], 1)
-        this.gl.uniform3fv(this.uniforms[`pointLights[${index}]Position`], light.transform.worldPosition)
-        this.gl.uniform3fv(this.uniforms[`pointLights[${index}]Ambient`], light.ambient)
-        this.gl.uniform3fv(this.uniforms[`pointLights[${index}]Diffuse`], light.diffuse)
-        this.gl.uniform3fv(this.uniforms[`pointLights[${index}]Specular`], light.specular)
+        this.gl.uniform1i(this.uniforms[`pointLights[${index}]!Enabled`], 1)
+        this.gl.uniform3fv(this.uniforms[`pointLights[${index}]!Position`], light.transform.worldPosition)
+        this.gl.uniform3fv(this.uniforms[`pointLights[${index}]!Ambient`], light.ambient)
+        this.gl.uniform3fv(this.uniforms[`pointLights[${index}]!Diffuse`], light.diffuse)
+        this.gl.uniform3fv(this.uniforms[`pointLights[${index}]!Specular`], light.specular)
       }
     }
 
-    this.gl.uniform1i(this.uniforms.shadowMap, 0)
+    this.gl.uniform1i(this.uniforms.shadowMap!, 0)
     // this.gl.activeTexture(this.gl.TEXTURE0)
     // this.gl.bindTexture(this.gl.TEXTURE_2D, this.store.getShadowMap())
   }
@@ -555,12 +555,12 @@ export class DefaultPipeline implements Pipeline {
   public render(scene: Scene, mesh: Mesh, transform: Transform, material: Material): void {
     this.gl.depthFunc(this.gl.LESS)
     this.gl.useProgram(this.program)
-    this.gl.uniform3fv(this.uniforms.color, material.color)
-    this.gl.uniform1i(this.uniforms.diffuse, 1)
-    this.gl.uniform1i(this.uniforms.specular, 2)
-    this.gl.uniform1i(this.uniforms.emission, 3)
-    this.gl.uniform1f(this.uniforms.shininess, material.shininess)
-    this.gl.uniformMatrix4fv(this.uniforms.model, false, transform.worldMatrix)
+    this.gl.uniform3fv(this.uniforms.color!, material.color)
+    this.gl.uniform1i(this.uniforms.diffuse!, 1)
+    this.gl.uniform1i(this.uniforms.specular!, 2)
+    this.gl.uniform1i(this.uniforms.emission!, 3)
+    this.gl.uniform1f(this.uniforms.shininess!, material.shininess)
+    this.gl.uniformMatrix4fv(this.uniforms.model!, false, transform.worldMatrix)
 
     this.gl.activeTexture(this.gl.TEXTURE1)
     this.gl.bindTexture(this.gl.TEXTURE_2D, material.diffuse)
@@ -640,17 +640,17 @@ export class PostProcessPipeline implements Pipeline {
     this.gl.depthFunc(this.gl.ALWAYS)
     this.gl.useProgram(this.program)
 
-    this.gl.uniform1f(this.uniforms.nearPlane, this.store.getNearPlane())
-    this.gl.uniform1f(this.uniforms.farPlane, this.store.getFarPlane())
-    this.gl.uniform1f(this.uniforms.focusDistance, scene.depthOfField.focusDistance)
-    this.gl.uniform1f(this.uniforms.focusRange, scene.depthOfField.focusRange)
-    this.gl.uniform1f(this.uniforms.bokehRadius, scene.depthOfField.bokehRadius)
+    this.gl.uniform1f(this.uniforms.nearPlane!, this.store.getNearPlane())
+    this.gl.uniform1f(this.uniforms.farPlane!, this.store.getFarPlane())
+    this.gl.uniform1f(this.uniforms.focusDistance!, scene.depthOfField.focusDistance)
+    this.gl.uniform1f(this.uniforms.focusRange!, scene.depthOfField.focusRange)
+    this.gl.uniform1f(this.uniforms.bokehRadius!, scene.depthOfField.bokehRadius)
 
-    this.gl.uniform1i(this.uniforms.colorTexture, 0)
+    this.gl.uniform1i(this.uniforms.colorTexture!, 0)
     this.gl.activeTexture(this.gl.TEXTURE0)
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.store.getMainColorTexture())
 
-    this.gl.uniform1i(this.uniforms.depthTexture, 1)
+    this.gl.uniform1i(this.uniforms.depthTexture!, 1)
     this.gl.activeTexture(this.gl.TEXTURE1)
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.store.getMainDepthTexture())
   }

@@ -11,9 +11,9 @@ import type { Shape } from './shape'
 
 export default class CollisionsHelper {
   static getSphereSphereCollision(sphere1: SphereCollider, sphere2: SphereCollider): CollisionPoints {
-    const distance = vec3.distance(sphere1.worldPosition, sphere2.worldPosition)
+    const distance = vec3.distance(sphere1.worldPosition!, sphere2.worldPosition!)
     const penetration = sphere1.radius + sphere2.radius - distance
-    const normal = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), sphere1.worldPosition, sphere2.worldPosition))
+    const normal = vec3.normalize(vec3.create(), vec3.subtract(vec3.create(), sphere1.worldPosition!, sphere2.worldPosition!))
     const contactPoint1 = vec3.scale(vec3.create(), vec3.negate(normal, normal), sphere1.radius)
     const contactPoint2 = vec3.scale(vec3.create(), normal, sphere2.radius)
     return new CollisionPoints(contactPoint1, contactPoint2, normal, penetration)
@@ -152,15 +152,15 @@ export default class CollisionsHelper {
       ...boxA.axes, // Box A face normals (3)
       ...boxB.axes, // Box B face normals (3)
       // Edge cross products (9)
-      vec3.cross(vec3.create(), boxA.axes[0], boxB.axes[0]),
-      vec3.cross(vec3.create(), boxA.axes[0], boxB.axes[1]),
-      vec3.cross(vec3.create(), boxA.axes[0], boxB.axes[2]),
-      vec3.cross(vec3.create(), boxA.axes[1], boxB.axes[0]),
-      vec3.cross(vec3.create(), boxA.axes[1], boxB.axes[1]),
-      vec3.cross(vec3.create(), boxA.axes[1], boxB.axes[2]),
-      vec3.cross(vec3.create(), boxA.axes[2], boxB.axes[0]),
-      vec3.cross(vec3.create(), boxA.axes[2], boxB.axes[1]),
-      vec3.cross(vec3.create(), boxA.axes[2], boxB.axes[2])
+      vec3.cross(vec3.create(), boxA.axes[0]!, boxB.axes[0]!),
+      vec3.cross(vec3.create(), boxA.axes[0]!, boxB.axes[1]!),
+      vec3.cross(vec3.create(), boxA.axes[0]!, boxB.axes[2]!),
+      vec3.cross(vec3.create(), boxA.axes[1]!, boxB.axes[0]!),
+      vec3.cross(vec3.create(), boxA.axes[1]!, boxB.axes[1]!),
+      vec3.cross(vec3.create(), boxA.axes[1]!, boxB.axes[2]!),
+      vec3.cross(vec3.create(), boxA.axes[2]!, boxB.axes[0]!),
+      vec3.cross(vec3.create(), boxA.axes[2]!, boxB.axes[1]!),
+      vec3.cross(vec3.create(), boxA.axes[2]!, boxB.axes[2]!)
     ]
 
     let minOverlap = Infinity
@@ -168,7 +168,7 @@ export default class CollisionsHelper {
     let axisIndex = -1
 
     for (let i = 0; i < allAxes.length; i++) {
-      const axis = allAxes[i]
+      const axis = allAxes[i]!
 
       // Skip near-zero axes (parallel edges)
       if (vec3.length(axis) < 1e-6) {

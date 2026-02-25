@@ -25,8 +25,10 @@ export class MinHeap {
   bubbleUp(index: number) {
     while (index > 0) {
       const parent = Math.floor((index - 1) / 2)
-      if (this.heap[parent].distance <= this.heap[index].distance) break
-      ;[this.heap[parent], this.heap[index]] = [this.heap[index], this.heap[parent]]
+      if (this.heap[parent]!.distance <= this.heap[index]!.distance) break
+      const temp = this.heap[parent]!
+      this.heap[parent] = this.heap[index]!
+      this.heap[index] = temp
       index = parent
     }
   }
@@ -38,14 +40,16 @@ export class MinHeap {
       const left = 2 * index + 1
       const right = 2 * index + 2
 
-      if (left < length && this.heap[left].distance < this.heap[smallest].distance) {
+      if (left < length && this.heap[left]!.distance < this.heap[smallest]!.distance) {
         smallest = left
       }
-      if (right < length && this.heap[right].distance < this.heap[smallest].distance) {
+      if (right < length && this.heap[right]!.distance < this.heap[smallest]!.distance) {
         smallest = right
       }
       if (smallest === index) break
-      ;[this.heap[index], this.heap[smallest]] = [this.heap[smallest], this.heap[index]]
+      const temp = this.heap[index]!
+      this.heap[index] = this.heap[smallest]!
+      this.heap[smallest] = temp
       index = smallest
     }
   }

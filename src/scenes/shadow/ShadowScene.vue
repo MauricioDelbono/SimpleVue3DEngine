@@ -30,7 +30,7 @@ async function initialize(done: () => {}) {
 
   await loadAssets()
 
-  const dirLight = scene.value.createDirectionalLight([0, 10, 0], meshes.value.cube)
+  const dirLight = scene.value.createDirectionalLight([0, 10, 0], meshes.value.cube!)
   dirLight.transform.scale = vec3.fromValues(0.2, 0.2, 1)
   dirLight.transform.rotation = vec3.fromValues(45, 0, 0)
   // dirLight.ambient = vec3.scale(dirLight.ambient, dirLight.ambient, 0.7)
@@ -40,13 +40,13 @@ async function initialize(done: () => {}) {
   // const lightComponent = new lightMovement()
   // dirLight.addComponent(lightComponent)
 
-  const cube = scene.value.createEntity([-5, 0, 0], meshes.value.cube)
+  const cube = scene.value.createEntity([-5, 0, 0], meshes.value.cube!)
   cube.material.color = [128, 0, 0]
 
-  const sphere = scene.value.createEntity([0, 2, 5], meshes.value.sphere)
+  const sphere = scene.value.createEntity([0, 2, 5], meshes.value.sphere!)
   sphere.material.color = [0, 128, 0]
 
-  const cubeFloor = scene.value.createEntity([0, -2, 0], meshes.value.cube)
+  const cubeFloor = scene.value.createEntity([0, -2, 0], meshes.value.cube!)
   cubeFloor.transform.scale = [15, 0.1, 15]
   cubeFloor.name = 'floor'
 

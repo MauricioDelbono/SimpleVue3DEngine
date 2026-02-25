@@ -83,6 +83,10 @@ export class BoxShape implements Shape {
     // Using mat3 (upper-left 3x3 of the inverse) strips translation,
     // which would otherwise corrupt the direction for objects far from the origin.
     const invTransform = mat4.invert(mat4.create(), this._transformMatrix)
+    if (!invTransform) {
+      // If the matrix is not invertible (e.g. scale is 0), just return zero vector or handle gracefully
+      return vec3.create()
+    }
     const invRotScale = mat3.fromMat4(mat3.create(), invTransform)
     const localDir = vec3.transformMat3(vec3.create(), direction, invRotScale)
     vec3.normalize(localDir, localDir)
@@ -267,7 +271,7 @@ export class ConvexHullShape implements Shape {
   private radius: number
 
   constructor(vertices: vec3[]) {
-    this.vertices = vertices.map((v) => vec3.copy(vec3.create(), v))
+    this.vertices = vertices.map((v) => vec3.copy(vec3.create(), v!))
     this.center = this.computeCenter()
     this.radius = this.computeRadius()
   }
