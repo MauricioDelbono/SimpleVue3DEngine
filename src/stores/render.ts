@@ -107,6 +107,7 @@ export const useRenderStore = defineStore('render', () => {
 
   function renderScene() {
     const dofEnabled = scene.value.depthOfField.enabled && !scene.value.wireframe
+    const ssaoEnabled = scene.value.ssao.enabled && !scene.value.wireframe
 
     // 1. Shadow Pass
     if (!scene.value.wireframe) {
@@ -129,17 +130,44 @@ export const useRenderStore = defineStore('render', () => {
     // 2. Resize
     store.resize()
 
-    // 3. Bind Main Framebuffer or Screen
+    // 3. Geometry Pass
+    if (ssaoEnabled) {
+      store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, store.getGeometryFrameBuffer())
+      store.gl.clearColor(0, 0, 0, 1)
+      store.gl.clear(store.gl.COLOR_BUFFER_BIT | store.gl.DEPTH_BUFFER_BIT)
+
+      scene.value.entities.forEach((entity) => {
+        traverseTree(entity, (entity: Entity) => {
+          if (entity.pipeline !== pipelineKeys.light && entity.pipeline !== pipelineKeys.skybox) {
+            store.renderMesh(scene.value, pipelineKeys.geometry, entity.mesh, entity.transform, entity.material)
+          }
+        })
+      })
+
+      // SSAO Pass
+      store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, store.getSSAOFrameBuffer())
+      store.gl.clearColor(0, 0, 0, 1)
+      store.gl.clear(store.gl.COLOR_BUFFER_BIT)
+      store.renderMesh(scene.value, pipelineKeys.ssao, postProcessMesh, postProcessTransform, undefined)
+
+      // Blur Pass
+      store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, store.getSSAOBlurFrameBuffer())
+      store.gl.clearColor(0, 0, 0, 1)
+      store.gl.clear(store.gl.COLOR_BUFFER_BIT)
+      store.renderMesh(scene.value, pipelineKeys.ssaoBlur, postProcessMesh, postProcessTransform, undefined)
+    }
+
+    // 4. Bind Main Framebuffer or Screen
     if (dofEnabled) {
       store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, store.getMainFrameBuffer())
     } else {
       store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, null)
     }
 
-    // 4. Clear
+    // 5. Clear
     store.clearCanvas(scene.value.fog.color)
 
-    // 5. Render Scene
+    // 6. Render Scene
     store.setRenderColor(scene.value)
 
     scene.value.entities.forEach((entity) => {
@@ -156,7 +184,7 @@ export const useRenderStore = defineStore('render', () => {
       })
     })
 
-    // 6. Post Process (if enabled)
+    // 7. Post Process (if enabled)
     if (dofEnabled) {
       store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, null)
       store.gl.clear(store.gl.COLOR_BUFFER_BIT | store.gl.DEPTH_BUFFER_BIT)

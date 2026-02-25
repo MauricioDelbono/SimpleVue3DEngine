@@ -12,6 +12,10 @@ import wireframeVertexShaderSource from '../shaders/wireframe.vs'
 import wireframeFragmentShaderSource from '../shaders/wireframe.fs'
 import dofVertexShaderSource from '../shaders/dof.vs'
 import dofFragmentShaderSource from '../shaders/dof.fs'
+import geometryVertexShaderSource from '../shaders/geometry.vs'
+import geometryFragmentShaderSource from '../shaders/geometry.fs'
+import ssaoFragmentShaderSource from '../shaders/ssao.fs'
+import ssaoBlurFragmentShaderSource from '../shaders/ssao_blur.fs'
 import webgl from '@/helpers/webgl'
 import type { Scene } from './scene'
 import { useWebGLStore } from '@/stores/webgl'
@@ -164,6 +168,259 @@ export class LightPipeline implements Pipeline {
     this.gl.useProgram(this.program)
     this.gl.uniformMatrix4fv(this.uniforms.model, false, transform.worldMatrix)
 
+    this.gl.drawElements(this.gl.TRIANGLES, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
+  }
+}
+
+export class GeometryPipeline implements Pipeline {
+  gl: WebGL2RenderingContext
+  program: WebGLProgram
+  attributes: Record<string, number>
+  uniforms: Record<string, WebGLUniformLocation | null>
+  store = useWebGLStore()
+
+  constructor(gl: WebGL2RenderingContext) {
+    this.gl = gl
+    this.program = webgl.createProgram(gl, geometryVertexShaderSource, geometryFragmentShaderSource)
+    this.attributes = this.createAttributes()
+    this.uniforms = this.createUniforms()
+  }
+
+  private createAttributes() {
+    return {
+      aPosition: this.gl.getAttribLocation(this.program, 'aPosition'),
+      aNormal: this.gl.getAttribLocation(this.program, 'aNormal')
+    }
+  }
+
+  private createUniforms() {
+    return {
+      model: this.gl.getUniformLocation(this.program, 'model'),
+      view: this.gl.getUniformLocation(this.program, 'view'),
+      projection: this.gl.getUniformLocation(this.program, 'projection')
+    }
+  }
+
+  public createMeshVAO(mesh: Mesh, numberOfComponents: number = 3) {
+    this.gl.useProgram(this.program)
+    const vao = this.gl.createVertexArray()
+    this.gl.bindVertexArray(vao)
+
+    const positionBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer)
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(mesh.positions), this.gl.STATIC_DRAW)
+
+    const normalBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, normalBuffer)
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(mesh.normals), this.gl.STATIC_DRAW)
+
+    const indicesBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+    this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(mesh.indices), this.gl.STATIC_DRAW)
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer)
+    this.gl.vertexAttribPointer(this.attributes.aPosition, numberOfComponents, this.gl.FLOAT, false, 0, 0)
+    this.gl.enableVertexAttribArray(this.attributes.aPosition)
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, normalBuffer)
+    this.gl.vertexAttribPointer(this.attributes.aNormal, 3, this.gl.FLOAT, false, 0, 0)
+    this.gl.enableVertexAttribArray(this.attributes.aNormal)
+
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+
+    this.gl.bindVertexArray(null)
+
+    return vao
+  }
+
+  public setGlobalUniforms(scene: Scene): void {
+    this.gl.depthFunc(this.gl.LESS)
+    this.gl.useProgram(this.program)
+    this.gl.uniformMatrix4fv(this.uniforms.view, false, this.store.getViewMatrix())
+    this.gl.uniformMatrix4fv(this.uniforms.projection, false, this.store.getProjectionMatrix())
+  }
+
+  public render(scene: Scene, mesh: Mesh, transform: Transform): void {
+    this.gl.useProgram(this.program)
+    this.gl.uniformMatrix4fv(this.uniforms.model, false, transform.worldMatrix)
+    this.gl.drawElements(this.gl.TRIANGLES, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
+  }
+}
+
+export class SSAOPipeline implements Pipeline {
+  gl: WebGL2RenderingContext
+  program: WebGLProgram
+  attributes: Record<string, number>
+  uniforms: Record<string, WebGLUniformLocation | null>
+  store = useWebGLStore()
+  private inverseProjection = mat4.create()
+
+  constructor(gl: WebGL2RenderingContext) {
+    this.gl = gl
+    this.program = webgl.createProgram(gl, quadVertexShaderSource, ssaoFragmentShaderSource)
+    this.attributes = this.createAttributes()
+    this.uniforms = this.createUniforms()
+  }
+
+  private createAttributes() {
+    return {
+      aPosition: this.gl.getAttribLocation(this.program, 'aPosition'),
+      aTextureCoords: this.gl.getAttribLocation(this.program, 'aTextureCoords')
+    }
+  }
+
+  private createUniforms() {
+    return {
+      gNormal: this.gl.getUniformLocation(this.program, 'gNormal'),
+      gDepth: this.gl.getUniformLocation(this.program, 'gDepth'),
+      texNoise: this.gl.getUniformLocation(this.program, 'texNoise'),
+      samples: this.gl.getUniformLocation(this.program, 'samples'),
+      projection: this.gl.getUniformLocation(this.program, 'projection'),
+      inverseProjection: this.gl.getUniformLocation(this.program, 'inverseProjection'),
+      noiseScale: this.gl.getUniformLocation(this.program, 'noiseScale'),
+      kernelSize: this.gl.getUniformLocation(this.program, 'kernelSize'),
+      radius: this.gl.getUniformLocation(this.program, 'radius'),
+      bias: this.gl.getUniformLocation(this.program, 'bias'),
+      power: this.gl.getUniformLocation(this.program, 'power')
+    }
+  }
+
+  public createMeshVAO(mesh: Mesh, numberOfComponents: number = 2) {
+    this.gl.useProgram(this.program)
+    const vao = this.gl.createVertexArray()
+    this.gl.bindVertexArray(vao)
+
+    const positionBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer)
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(mesh.positions), this.gl.STATIC_DRAW)
+
+    const textureCoordsBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, textureCoordsBuffer)
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(mesh.textureCoords), this.gl.STATIC_DRAW)
+
+    const indicesBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+    this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(mesh.indices), this.gl.STATIC_DRAW)
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer)
+    this.gl.vertexAttribPointer(this.attributes.aPosition, 2, this.gl.FLOAT, false, 0, 0)
+    this.gl.enableVertexAttribArray(this.attributes.aPosition)
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, textureCoordsBuffer)
+    this.gl.vertexAttribPointer(this.attributes.aTextureCoords, 2, this.gl.FLOAT, false, 0, 0)
+    this.gl.enableVertexAttribArray(this.attributes.aTextureCoords)
+
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+
+    this.gl.bindVertexArray(null)
+
+    return vao
+  }
+
+  public setGlobalUniforms(scene: Scene): void {
+    this.gl.disable(this.gl.DEPTH_TEST)
+    this.gl.useProgram(this.program)
+
+    this.gl.uniform1i(this.uniforms.gNormal, 0)
+    this.gl.activeTexture(this.gl.TEXTURE0)
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.store.getGeometryNormalTexture())
+
+    this.gl.uniform1i(this.uniforms.gDepth, 1)
+    this.gl.activeTexture(this.gl.TEXTURE1)
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.store.getMainDepthTexture())
+
+    this.gl.uniform1i(this.uniforms.texNoise, 2)
+    this.gl.activeTexture(this.gl.TEXTURE2)
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.store.getSSAONoiseTexture())
+
+    this.gl.uniform3fv(this.uniforms.samples, this.store.getSSAOKernel())
+    this.gl.uniformMatrix4fv(this.uniforms.projection, false, this.store.getProjectionMatrix())
+
+    mat4.invert(this.inverseProjection, this.store.getProjectionMatrix())
+    this.gl.uniformMatrix4fv(this.uniforms.inverseProjection, false, this.inverseProjection)
+
+    this.gl.uniform2f(this.uniforms.noiseScale, this.store.canvas.width / 4.0, this.store.canvas.height / 4.0)
+
+    this.gl.uniform1i(this.uniforms.kernelSize, scene.ssao.kernelSize)
+    this.gl.uniform1f(this.uniforms.radius, scene.ssao.radius)
+    this.gl.uniform1f(this.uniforms.bias, scene.ssao.bias)
+    this.gl.uniform1f(this.uniforms.power, scene.ssao.power)
+  }
+
+  public render(scene: Scene, mesh: Mesh): void {
+    this.gl.drawElements(this.gl.TRIANGLES, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
+  }
+}
+
+export class SSAOBlurPipeline implements Pipeline {
+  gl: WebGL2RenderingContext
+  program: WebGLProgram
+  attributes: Record<string, number>
+  uniforms: Record<string, WebGLUniformLocation | null>
+  store = useWebGLStore()
+
+  constructor(gl: WebGL2RenderingContext) {
+    this.gl = gl
+    this.program = webgl.createProgram(gl, quadVertexShaderSource, ssaoBlurFragmentShaderSource)
+    this.attributes = this.createAttributes()
+    this.uniforms = this.createUniforms()
+  }
+
+  private createAttributes() {
+    return {
+      aPosition: this.gl.getAttribLocation(this.program, 'aPosition'),
+      aTextureCoords: this.gl.getAttribLocation(this.program, 'aTextureCoords')
+    }
+  }
+
+  private createUniforms() {
+    return {
+      ssaoInput: this.gl.getUniformLocation(this.program, 'ssaoInput')
+    }
+  }
+
+  public createMeshVAO(mesh: Mesh, numberOfComponents: number = 2) {
+    this.gl.useProgram(this.program)
+    const vao = this.gl.createVertexArray()
+    this.gl.bindVertexArray(vao)
+
+    const positionBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer)
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(mesh.positions), this.gl.STATIC_DRAW)
+
+    const textureCoordsBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, textureCoordsBuffer)
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(mesh.textureCoords), this.gl.STATIC_DRAW)
+
+    const indicesBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+    this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(mesh.indices), this.gl.STATIC_DRAW)
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer)
+    this.gl.vertexAttribPointer(this.attributes.aPosition, 2, this.gl.FLOAT, false, 0, 0)
+    this.gl.enableVertexAttribArray(this.attributes.aPosition)
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, textureCoordsBuffer)
+    this.gl.vertexAttribPointer(this.attributes.aTextureCoords, 2, this.gl.FLOAT, false, 0, 0)
+    this.gl.enableVertexAttribArray(this.attributes.aTextureCoords)
+
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+
+    this.gl.bindVertexArray(null)
+
+    return vao
+  }
+
+  public setGlobalUniforms(): void {
+    this.gl.disable(this.gl.DEPTH_TEST)
+    this.gl.useProgram(this.program)
+
+    this.gl.uniform1i(this.uniforms.ssaoInput, 0)
+    this.gl.activeTexture(this.gl.TEXTURE0)
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.store.getSSAOColorBuffer())
+  }
+
+  public render(scene: Scene, mesh: Mesh): void {
     this.gl.drawElements(this.gl.TRIANGLES, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
   }
 }
@@ -428,6 +685,9 @@ export class DefaultPipeline implements Pipeline {
       view: this.gl.getUniformLocation(this.program, 'view'),
       projection: this.gl.getUniformLocation(this.program, 'projection'),
       shadowMap: this.gl.getUniformLocation(this.program, 'shadowMap'),
+      ssaoMap: this.gl.getUniformLocation(this.program, 'ssaoMap'),
+      ssaoEnabled: this.gl.getUniformLocation(this.program, 'ssaoEnabled'),
+      viewportSize: this.gl.getUniformLocation(this.program, 'viewportSize'),
       cascadeCount: this.gl.getUniformLocation(this.program, 'cascadeCount'),
       cascadePlaneDistances: this.gl.getUniformLocation(this.program, 'cascadePlaneDistances'),
       lightSpaceMatrices: this.gl.getUniformLocation(this.program, 'lightSpaceMatrices')
@@ -548,8 +808,13 @@ export class DefaultPipeline implements Pipeline {
     }
 
     this.gl.uniform1i(this.uniforms.shadowMap, 0)
-    // this.gl.activeTexture(this.gl.TEXTURE0)
-    // this.gl.bindTexture(this.gl.TEXTURE_2D, this.store.getShadowMap())
+
+    this.gl.uniform1i(this.uniforms.ssaoMap, 4) // Slot 4 for SSAO
+    this.gl.activeTexture(this.gl.TEXTURE4)
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.store.getSSAOColorBufferBlur())
+
+    this.gl.uniform1i(this.uniforms.ssaoEnabled, scene.ssao.enabled ? 1 : 0)
+    this.gl.uniform2f(this.uniforms.viewportSize, this.store.canvas.width, this.store.canvas.height)
   }
 
   public render(scene: Scene, mesh: Mesh, transform: Transform, material: Material): void {
