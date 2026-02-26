@@ -313,7 +313,6 @@ export const useWebGLStore = defineStore('webgl', () => {
     pipelines.value.light.setGlobalUniforms(scene)
     pipelines.value.wireframe.setGlobalUniforms(scene)
     pipelines.value.default.setGlobalUniforms(scene)
-    pipelines.value.postProcess.setGlobalUniforms(scene)
   }
 
   function renderMesh(scene: Scene, pipelineKey: string, mesh: Mesh, transform: Transform, material?: Material, options?: RenderOptions) {

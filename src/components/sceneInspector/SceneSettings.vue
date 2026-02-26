@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useRenderStore } from '@/stores/render'
 import { storeToRefs } from 'pinia'
 import VCheckbox from '../shared/VCheckbox/VCheckbox.vue'
+import VInput from '../shared/VInput/VInput.vue'
 
 const store = useRenderStore()
 const { scene } = storeToRefs(store)
@@ -25,6 +26,34 @@ onMounted(() => {})
       <div style="flex: 1"></div>
       <VCheckbox v-model="scene.debugColliders" />
     </div>
+
+    <h3>Depth of Field</h3>
+
+    <div class="scene-settings-prop">
+      <span>Enabled:</span>
+      <div style="flex: 1"></div>
+      <VCheckbox v-model="scene.depthOfField.enabled" />
+    </div>
+
+    <template v-if="scene.depthOfField.enabled">
+      <div class="scene-settings-prop">
+        <span>Focus Distance:</span>
+        <div style="flex: 1"></div>
+        <VInput v-model="scene.depthOfField.focusDistance" type="number" />
+      </div>
+
+      <div class="scene-settings-prop">
+        <span>Focus Range:</span>
+        <div style="flex: 1"></div>
+        <VInput v-model="scene.depthOfField.focusRange" type="number" />
+      </div>
+
+      <div class="scene-settings-prop">
+        <span>Bokeh Radius:</span>
+        <div style="flex: 1"></div>
+        <VInput v-model="scene.depthOfField.bokehRadius" type="number" />
+      </div>
+    </template>
   </div>
 </template>
 
@@ -39,6 +68,10 @@ onMounted(() => {})
     display: flex;
     align-items: center;
     gap: 8px;
+
+    .v-input {
+      width: 64px;
+    }
   }
 }
 </style>

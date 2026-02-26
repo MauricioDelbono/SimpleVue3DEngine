@@ -160,6 +160,7 @@ export const useRenderStore = defineStore('render', () => {
     if (dofEnabled) {
       store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, null)
       store.gl.clear(store.gl.COLOR_BUFFER_BIT | store.gl.DEPTH_BUFFER_BIT)
+      store.pipelines[pipelineKeys.postProcess].setGlobalUniforms(scene.value)
       store.renderMesh(scene.value, pipelineKeys.postProcess, postProcessMesh, postProcessTransform, undefined)
     }
   }
