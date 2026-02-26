@@ -1,5 +1,6 @@
 import { ref, type Ref } from 'vue'
 import { defineStore } from 'pinia'
+import { vec3 } from 'gl-matrix'
 import { Entity } from '@/models/entity'
 import { Scene } from '@/models/scene'
 import { pipelineKeys, useWebGLStore } from './webgl'
@@ -23,6 +24,8 @@ export const useRenderStore = defineStore('render', () => {
   const store = useWebGLStore()
   const postProcessMesh = Primitives.createXYQuad()
   const postProcessTransform = new Transform()
+  const boundingBoxMesh = Primitives.createCube()
+  const boundingBoxTransform = new Transform()
 
   function reset() {
     store.reset()
@@ -142,10 +145,21 @@ export const useRenderStore = defineStore('render', () => {
     // 5. Render Scene
     store.setRenderColor(scene.value)
 
+    // Check Occlusion (Resolve previous frame queries)
+    scene.value.entities.forEach((entity) => {
+      traverseTree(entity, (entity: Entity) => {
+        checkOcclusion(entity)
+      })
+    })
+
+    // Render Visible Entities
     scene.value.entities.forEach((entity) => {
       traverseTree(entity, (entity: Entity) => {
         const pipeline = scene.value.wireframe ? pipelineKeys.wireframe : (entity.pipeline ?? scene.value.defaultPipeline)
-        store.renderMesh(scene.value, pipeline, entity.mesh, entity.transform, entity.material)
+
+        if (entity.isVisible) {
+          store.renderMesh(scene.value, pipeline, entity.mesh, entity.transform, entity.material)
+        }
 
         if (scene.value.debugColliders) {
           const colliders = entity.getComponents(Collider)
@@ -155,6 +169,20 @@ export const useRenderStore = defineStore('render', () => {
         }
       })
     })
+
+    // Run Occlusion Queries (for next frame)
+    if (!scene.value.wireframe) {
+      store.pipelines[pipelineKeys.occlusion].setGlobalUniforms(scene.value)
+      scene.value.entities.forEach((entity) => {
+        traverseTree(entity, (entity: Entity) => {
+          runOcclusionQuery(entity)
+        })
+      })
+
+      // Restore state
+      store.gl.colorMask(true, true, true, true)
+      store.gl.depthMask(true)
+    }
 
     // 6. Post Process (if enabled)
     if (dofEnabled) {
@@ -181,6 +209,34 @@ export const useRenderStore = defineStore('render', () => {
   function stepRender() {
     isRendering.value = true
     stepForward.value = 1
+  }
+
+  function checkOcclusion(entity: Entity) {
+    if (entity.occlusionQuery && entity.queryInProgress) {
+      if (store.isQueryAvailable(entity.occlusionQuery)) {
+        const passed = store.getQueryResult(entity.occlusionQuery)
+        entity.isVisible = passed > 0
+        entity.queryInProgress = false
+      }
+    }
+  }
+
+  function runOcclusionQuery(entity: Entity) {
+    if (!entity.occlusionQuery) {
+      entity.occlusionQuery = store.createQuery()
+    }
+
+    if (!entity.queryInProgress && entity.occlusionQuery) {
+      const aabb = entity.getWorldAABB()
+      vec3.copy(boundingBoxTransform.position, aabb.getCenter())
+      vec3.scale(boundingBoxTransform.scale, aabb.getSize(), 0.5)
+      boundingBoxTransform.updateWorldMatrix()
+
+      store.beginQuery(entity.occlusionQuery)
+      store.renderMesh(scene.value, pipelineKeys.occlusion, boundingBoxMesh, boundingBoxTransform)
+      store.endQuery()
+      entity.queryInProgress = true
+    }
   }
 
   return {

@@ -8,6 +8,7 @@ import { Transform } from './transform'
 import { mat4, type vec3 } from 'gl-matrix'
 import type { Time } from './time'
 import { Collider } from '@/physics/collisions/collider'
+import { AABB } from './aabb'
 
 export class Entity {
   public transform: Transform
@@ -20,12 +21,20 @@ export class Entity {
   public name: string = 'Empty'
   public uuid: string = uuid()
 
+  public occlusionQuery: WebGLQuery | null = null
+  public isVisible: boolean = true
+  public queryInProgress: boolean = false
+
   constructor(name: string = 'Empty', mesh: Mesh | null = null, position: vec3 = [0, 0, 0]) {
     this.transform = new Transform()
     this.transform.position = position
     this.mesh = mesh ?? new Mesh(name)
     this.material = new Material()
     this.name = this.mesh.name
+  }
+
+  public getWorldAABB(): AABB {
+    return AABB.transform(this.mesh.aabb, this.transform.worldMatrix)
   }
 
   public setMaterial(material: Material) {

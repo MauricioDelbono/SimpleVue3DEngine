@@ -12,6 +12,8 @@ import wireframeVertexShaderSource from '../shaders/wireframe.vs'
 import wireframeFragmentShaderSource from '../shaders/wireframe.fs'
 import dofVertexShaderSource from '../shaders/dof.vs'
 import dofFragmentShaderSource from '../shaders/dof.fs'
+import occlusionVertexShaderSource from '../shaders/occlusion.vs'
+import occlusionFragmentShaderSource from '../shaders/occlusion.fs'
 import webgl from '@/helpers/webgl'
 import type { Scene } from './scene'
 import { useWebGLStore } from '@/stores/webgl'
@@ -164,6 +166,71 @@ export class LightPipeline implements Pipeline {
     this.gl.useProgram(this.program)
     this.gl.uniformMatrix4fv(this.uniforms.model, false, transform.worldMatrix)
 
+    this.gl.drawElements(this.gl.TRIANGLES, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
+  }
+}
+
+export class OcclusionPipeline implements Pipeline {
+  gl: WebGL2RenderingContext
+  program: WebGLProgram
+  attributes: Record<string, number>
+  uniforms: Record<string, WebGLUniformLocation | null>
+  store = useWebGLStore()
+
+  constructor(gl: WebGL2RenderingContext) {
+    this.gl = gl
+    this.program = webgl.createProgram(gl, occlusionVertexShaderSource, occlusionFragmentShaderSource)
+    this.attributes = this.createAttributes()
+    this.uniforms = this.createUniforms()
+  }
+
+  private createAttributes() {
+    return {
+      position: this.gl.getAttribLocation(this.program, 'aPosition')
+    }
+  }
+
+  private createUniforms() {
+    return {
+      model: this.gl.getUniformLocation(this.program, 'model'),
+      viewProjection: this.gl.getUniformLocation(this.program, 'viewProjection')
+    }
+  }
+
+  public createMeshVAO(mesh: Mesh, numberOfComponents: number = 3) {
+    this.gl.useProgram(this.program)
+    const vao = this.gl.createVertexArray()
+    this.gl.bindVertexArray(vao)
+
+    const positionBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer)
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(mesh.positions), this.gl.STATIC_DRAW)
+    const indicesBuffer = this.gl.createBuffer()
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+    this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(mesh.indices), this.gl.STATIC_DRAW)
+
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer)
+    this.gl.vertexAttribPointer(this.attributes.position, numberOfComponents, this.gl.FLOAT, false, 0, 0)
+    this.gl.enableVertexAttribArray(this.attributes.position)
+
+    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, indicesBuffer)
+
+    this.gl.bindVertexArray(null)
+
+    return vao
+  }
+
+  public setGlobalUniforms(): void {
+    this.gl.depthFunc(this.gl.LEQUAL)
+    this.gl.colorMask(false, false, false, false)
+    this.gl.depthMask(false)
+    this.gl.useProgram(this.program)
+    this.gl.uniformMatrix4fv(this.uniforms.viewProjection, false, this.store.getViewProjectionMatrix())
+  }
+
+  public render(scene: Scene, mesh: Mesh, transform: Transform): void {
+    this.gl.useProgram(this.program)
+    this.gl.uniformMatrix4fv(this.uniforms.model, false, transform.worldMatrix)
     this.gl.drawElements(this.gl.TRIANGLES, mesh.indices.length, this.gl.UNSIGNED_SHORT, 0)
   }
 }
