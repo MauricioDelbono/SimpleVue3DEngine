@@ -6,6 +6,7 @@ import StopIcon from 'vue-material-design-icons/Stop.vue'
 import StepForwardIcon from 'vue-material-design-icons/StepForward.vue'
 import CheckIcon from 'vue-material-design-icons/Check.vue'
 import DragIcon from 'vue-material-design-icons/Drag.vue'
+import FileImport from 'vue-material-design-icons/FileImport.vue'
 
 import App from './App.vue'
 
@@ -18,5 +19,6 @@ app.component('StopIcon', StopIcon)
 app.component('StepForwardIcon', StepForwardIcon)
 app.component('CheckIcon', CheckIcon)
 app.component('DragIcon', DragIcon)
+app.component('FileImportIcon', FileImport)
 
 app.mount('#app')
