@@ -1,6 +1,6 @@
 import { quat, vec2, vec3, vec4 } from 'gl-matrix'
 
-import type { ShapeInterface } from './shape'
+import type { Shape } from './shape'
 import { PriorityQueue } from './priorityQueue'
 
 const aux = vec3.create()
@@ -334,8 +334,8 @@ export const createTetrahedron = (w0: SupportPoint, w1: SupportPoint, w2: Suppor
 
   const face0: Face = {
     vertices: [w0, w1, w3],
-    siblings: null,
-    adjacent: null,
+    siblings: null as any,
+    adjacent: null as any,
     distance: 0.0,
     closest: vec3.create(),
     closestBary: vec3.create(),
@@ -344,8 +344,8 @@ export const createTetrahedron = (w0: SupportPoint, w1: SupportPoint, w2: Suppor
 
   const face1: Face = {
     vertices: [w1, w2, w3],
-    siblings: null,
-    adjacent: null,
+    siblings: null as any,
+    adjacent: null as any,
     distance: 0.0,
     closest: vec3.create(),
     closestBary: vec3.create(),
@@ -354,8 +354,8 @@ export const createTetrahedron = (w0: SupportPoint, w1: SupportPoint, w2: Suppor
 
   const face2: Face = {
     vertices: [w2, w0, w3],
-    siblings: null,
-    adjacent: null,
+    siblings: null as any,
+    adjacent: null as any,
     distance: 0.0,
     closest: vec3.create(),
     closestBary: vec3.create(),
@@ -364,8 +364,8 @@ export const createTetrahedron = (w0: SupportPoint, w1: SupportPoint, w2: Suppor
 
   const face3: Face = {
     vertices: [w1, w0, w2],
-    siblings: null,
-    adjacent: null,
+    siblings: null as any,
+    adjacent: null as any,
     distance: 0.0,
     closest: vec3.create(),
     closestBary: vec3.create(),
@@ -382,6 +382,7 @@ export const createTetrahedron = (w0: SupportPoint, w1: SupportPoint, w2: Suppor
   face2.adjacent = [1, 2, 1]
   face3.adjacent = [0, 0, 0]
 
+  // @ts-ignore
   const queue = new PriorityQueue<Face>((a: Face, b: Face) => a.distance - b.distance)
 
   for (const face of [face0, face1, face2, face3]) {
@@ -395,7 +396,7 @@ export const createTetrahedron = (w0: SupportPoint, w1: SupportPoint, w2: Suppor
   return queue
 }
 
-export const createHexahedronFromTriangle = (w0: SupportPoint, w1: SupportPoint, w2: SupportPoint, shape: ShapeInterface<SupportPoint>) => {
+export const createHexahedronFromTriangle = (w0: SupportPoint, w1: SupportPoint, w2: SupportPoint, shape: Shape) => {
   const n = vec3.create()
   const vw3 = vec3.create()
   const vw4 = vec3.create()
@@ -426,8 +427,8 @@ export const createHexahedronFromTriangle = (w0: SupportPoint, w1: SupportPoint,
 
   const face0: Face = {
     vertices: [w0, w1, w3],
-    siblings: null,
-    adjacent: null,
+    siblings: null as any,
+    adjacent: null as any,
     distance: 0.0,
     closest: vec3.create(),
     closestBary: vec3.create(),
@@ -436,8 +437,8 @@ export const createHexahedronFromTriangle = (w0: SupportPoint, w1: SupportPoint,
 
   const face1: Face = {
     vertices: [w1, w2, w3],
-    siblings: null,
-    adjacent: null,
+    siblings: null as any,
+    adjacent: null as any,
     distance: 0.0,
     closest: vec3.create(),
     closestBary: vec3.create(),
@@ -446,8 +447,8 @@ export const createHexahedronFromTriangle = (w0: SupportPoint, w1: SupportPoint,
 
   const face2: Face = {
     vertices: [w2, w0, w3],
-    siblings: null,
-    adjacent: null,
+    siblings: null as any,
+    adjacent: null as any,
     distance: 0.0,
     closest: vec3.create(),
     closestBary: vec3.create(),
@@ -456,8 +457,8 @@ export const createHexahedronFromTriangle = (w0: SupportPoint, w1: SupportPoint,
 
   const face3: Face = {
     vertices: [w0, w4, w1],
-    siblings: null,
-    adjacent: null,
+    siblings: null as any,
+    adjacent: null as any,
     distance: 0.0,
     closest: vec3.create(),
     closestBary: vec3.create(),
@@ -466,8 +467,8 @@ export const createHexahedronFromTriangle = (w0: SupportPoint, w1: SupportPoint,
 
   const face4: Face = {
     vertices: [w1, w4, w2],
-    siblings: null,
-    adjacent: null,
+    siblings: null as any,
+    adjacent: null as any,
     distance: 0.0,
     closest: vec3.create(),
     closestBary: vec3.create(),
@@ -477,8 +478,8 @@ export const createHexahedronFromTriangle = (w0: SupportPoint, w1: SupportPoint,
 
   const face5: Face = {
     vertices: [w2, w4, w0],
-    siblings: null,
-    adjacent: null,
+    siblings: null as any,
+    adjacent: null as any,
     distance: 0.0,
     closest: vec3.create(),
     closestBary: vec3.create(),
@@ -499,6 +500,8 @@ export const createHexahedronFromTriangle = (w0: SupportPoint, w1: SupportPoint,
   face4.adjacent = [1, 0, 0]
   face5.adjacent = [1, 0, 0]
 
+  // @ts-ignore
+  // @ts-ignore
   const queue = new PriorityQueue<Face>((a: Face, b: Face) => a.distance - b.distance)
 
   for (const face of [face0, face1, face2, face3, face4, face5]) {
@@ -511,7 +514,7 @@ export const createHexahedronFromTriangle = (w0: SupportPoint, w1: SupportPoint,
   return queue
 }
 
-export const createHexahedronFromLineSegment = (w3: SupportPoint, w4: SupportPoint, shape: ShapeInterface<SupportPoint>) => {
+export const createHexahedronFromLineSegment = (w3: SupportPoint, w4: SupportPoint, shape: Shape) => {
   const w3w4 = vec3.create()
   vec3.subtract(w3w4, w3.diff, w4.diff)
 
@@ -567,8 +570,8 @@ export const createHexahedronFromLineSegment = (w3: SupportPoint, w4: SupportPoi
 
   const face0: Face = {
     vertices: [w0, w1, w3],
-    siblings: null,
-    adjacent: null,
+    siblings: null as any,
+    adjacent: null as any,
     distance: 0.0,
     closest: vec3.create(),
     closestBary: vec3.create(),
@@ -577,8 +580,8 @@ export const createHexahedronFromLineSegment = (w3: SupportPoint, w4: SupportPoi
 
   const face1: Face = {
     vertices: [w1, w2, w3],
-    siblings: null,
-    adjacent: null,
+    siblings: null as any,
+    adjacent: null as any,
     distance: 0.0,
     closest: vec3.create(),
     closestBary: vec3.create(),
@@ -587,8 +590,8 @@ export const createHexahedronFromLineSegment = (w3: SupportPoint, w4: SupportPoi
 
   const face2: Face = {
     vertices: [w2, w0, w3],
-    siblings: null,
-    adjacent: null,
+    siblings: null as any,
+    adjacent: null as any,
     distance: 0.0,
     closest: vec3.create(),
     closestBary: vec3.create(),
@@ -597,8 +600,8 @@ export const createHexahedronFromLineSegment = (w3: SupportPoint, w4: SupportPoi
 
   const face3: Face = {
     vertices: [w0, w4, w1],
-    siblings: null,
-    adjacent: null,
+    siblings: null as any,
+    adjacent: null as any,
     distance: 0.0,
     closest: vec3.create(),
     closestBary: vec3.create(),
@@ -607,8 +610,8 @@ export const createHexahedronFromLineSegment = (w3: SupportPoint, w4: SupportPoi
 
   const face4: Face = {
     vertices: [w1, w4, w2],
-    siblings: null,
-    adjacent: null,
+    siblings: null as any,
+    adjacent: null as any,
     distance: 0.0,
     closest: vec3.create(),
     closestBary: vec3.create(),
@@ -617,8 +620,8 @@ export const createHexahedronFromLineSegment = (w3: SupportPoint, w4: SupportPoi
 
   const face5: Face = {
     vertices: [w2, w4, w0],
-    siblings: null,
-    adjacent: null,
+    siblings: null as any,
+    adjacent: null as any,
     distance: 0.0,
     closest: vec3.create(),
     closestBary: vec3.create(),

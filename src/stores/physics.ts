@@ -9,6 +9,7 @@ import { ImpulseSolver } from '@/physics/dynamics/impulseSolver'
 import { CollisionPair } from '@/physics/collisions/collisionPair'
 import type { Time } from '@/models/time'
 import type { Collider } from '@/physics/collisions/collider'
+import { Manifold } from '@/physics/collisions/manifold'
 
 export const usePhysicsStore = defineStore('physics', () => {
   const store = useRenderStore()

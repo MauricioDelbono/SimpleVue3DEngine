@@ -36,7 +36,7 @@ async function initialize(done: () => {}) {
   await loadAssets()
 
   // Box as floor
-  const entity = scene.value.createEntity([0, -20, 0], meshes.value.boxMesh)
+  const entity = scene.value.createEntity([0, -20, 0], meshes.value.boxMesh!)
   entity.transform.scaleBy(vec3.fromValues(10, 1, 10))
   const rigidbody = new Rigidbody()
   rigidbody.isDynamic = false
@@ -62,7 +62,7 @@ function createSphere() {
 
   const sphere = scene.value.createEntity(
     [Math.random() * 2 - 1, 5, Math.random() * 2 - 1],
-    meshes.value.sphereMesh,
+    meshes.value.sphereMesh!,
     materials.value.chessBoard
   )
   sphere.name = 'Sphere (Instance)'
@@ -81,7 +81,7 @@ function createBox() {
 
   const box = scene.value.createEntity(
     [Math.random() * 2 - 1, 5, Math.random() * 2 - 1], // Changed from -15 to 5 to drop from above
-    meshes.value.boxMesh,
+    meshes.value.boxMesh!,
     materials.value.chessBoard
   )
   box.name = 'Box (Instance)'

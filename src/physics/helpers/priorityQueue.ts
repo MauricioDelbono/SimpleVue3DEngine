@@ -1,7 +1,7 @@
 interface QueueEntry<T> {
   value: T
-  prev: QueueEntry<T>
-  next: QueueEntry<T>
+  prev: QueueEntry<T> | null
+  next: QueueEntry<T> | null
 }
 
 export class PriorityQueue<T extends object> implements Iterable<T> {
@@ -10,8 +10,8 @@ export class PriorityQueue<T extends object> implements Iterable<T> {
   }
 
   private lookup = new WeakMap<T, QueueEntry<T>>()
-  private begin: QueueEntry<T> = null
-  private end: QueueEntry<T> = null
+  private begin: QueueEntry<T> | null = null
+  private end: QueueEntry<T> | null = null
   private _length = 0
 
   constructor(private readonly predicate: (a: T, b: T) => number) {}
@@ -37,17 +37,18 @@ export class PriorityQueue<T extends object> implements Iterable<T> {
       if (!p) {
         // beginning
         entry = { value, prev: null, next: this.begin }
-        this.begin.prev = entry
+        // @ts-ignore
+        this.begin!.prev = entry
         this.begin = entry
       } else if (!p.next) {
         // end
         entry = { value, prev: p, next: null }
-        this.end.next = entry
+        this.end!.next = entry
         this.end = entry
       } else {
         // in between
         entry = { value, prev: p, next: p.next }
-        p.next.prev = entry
+        p.next!.prev = entry
         p.next = entry
       }
     }
@@ -55,16 +56,16 @@ export class PriorityQueue<T extends object> implements Iterable<T> {
     this._length++
   }
 
-  dequeue(): T {
+  dequeue(): T | null {
     if (this._length === 0) {
       return null
     }
 
-    const value = this.begin.value
-    if (this.begin.next) {
-      this.begin.next.prev = null
+    const value = this.begin!.value
+    if (this.begin!.next) {
+      this.begin!.next.prev = null
     }
-    this.begin = this.begin.next
+    this.begin = this.begin!.next
     this._length--
     this.lookup.delete(value)
 
@@ -76,7 +77,7 @@ export class PriorityQueue<T extends object> implements Iterable<T> {
       return
     }
 
-    const entry = this.lookup.get(value)
+    const entry = this.lookup.get(value)!
     if (entry.prev && entry.next) {
       entry.prev.next = entry.next
       entry.next.prev = entry.prev

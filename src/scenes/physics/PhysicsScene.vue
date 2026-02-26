@@ -36,7 +36,7 @@ async function initialize(done: () => {}) {
   await loadAssets()
 
   // Static sphere
-  const entity = scene.value.createEntity([0, -20, 0], meshes.value.bigSphereMesh)
+  const entity = scene.value.createEntity([0, -20, 0], meshes.value.bigSphereMesh!)
   entity.transform.scaleBy(vec3.fromValues(10, 10, 10))
   const rigidbody = new Rigidbody()
   rigidbody.isDynamic = false
@@ -45,7 +45,7 @@ async function initialize(done: () => {}) {
   entity.addComponent(collider)
 
   // Static Plane
-  const plane = scene.value.createEntity([0, -20, 0], meshes.value.planeMesh)
+  const plane = scene.value.createEntity([0, -20, 0], meshes.value.planeMesh!)
   const planeRigidbody = new Rigidbody()
   planeRigidbody.isDynamic = false
   const planeCollider = new PlaneCollider()
@@ -57,8 +57,8 @@ async function initialize(done: () => {}) {
   dirLight.transform.rotation = [45, 0, 0]
 
   // Create 1 sphere every 500ms, delete old ones
-  intervalId = setInterval(() => {
-    const sphere = scene.value.createEntity([Math.random(), 5, Math.random()], meshes.value.sphereMesh, materials.value.chessBoard)
+  intervalId = window.setInterval(() => {
+    const sphere = scene.value.createEntity([Math.random(), 5, Math.random()], meshes.value.sphereMesh!, materials.value.chessBoard)
     sphere.name = 'Sphere (Instance)'
     const sphereRigidbody = new Rigidbody()
     const sphereCollider = new SphereCollider()

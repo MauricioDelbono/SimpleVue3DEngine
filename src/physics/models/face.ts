@@ -2,7 +2,7 @@ import { vec3 } from 'gl-matrix'
 
 export class Face {
   public indices: Array<number>
-  public vertices: Array<vec3>
+  public vertices: [vec3, vec3, vec3]
   public adjacents: Array<number>
   public normal: vec3
   public distance: number
@@ -10,7 +10,10 @@ export class Face {
 
   constructor(indices: Array<number>, vertices: Array<vec3>, adjacents: Array<number> = [-1, -1, -1]) {
     this.indices = indices // [i1, i2, i3]
-    this.vertices = [vertices[indices[0]], vertices[indices[1]], vertices[indices[2]]]
+    const i0 = indices[0]!
+    const i1 = indices[1]!
+    const i2 = indices[2]!
+    this.vertices = [vertices[i0]!, vertices[i1]!, vertices[i2]!]
     this.adjacents = adjacents // Indices of adjacent faces [opp i1-i2, opp i2-i3, opp i3-i1]
     this.normal = this.computeNormal()
     this.distance = this.computeDistance()

@@ -82,7 +82,7 @@ export class BoxShape implements Shape {
     // Transform direction to local space as a DIRECTION (w=0), not a point.
     // Using mat3 (upper-left 3x3 of the inverse) strips translation,
     // which would otherwise corrupt the direction for objects far from the origin.
-    const invTransform = mat4.invert(mat4.create(), this._transformMatrix)
+    const invTransform = mat4.invert(mat4.create(), this._transformMatrix) || mat4.create()
     const invRotScale = mat3.fromMat4(mat3.create(), invTransform)
     const localDir = vec3.transformMat3(vec3.create(), direction, invRotScale)
     vec3.normalize(localDir, localDir)
@@ -274,7 +274,7 @@ export class ConvexHullShape implements Shape {
 
   public support(direction: vec3): vec3 {
     let maxDot = -Infinity
-    let result = this.vertices[0]
+    let result = this.vertices[0] || vec3.create()
 
     for (const vertex of this.vertices) {
       const dot = vec3.dot(vertex, direction)

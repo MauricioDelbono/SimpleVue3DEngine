@@ -248,17 +248,17 @@ function epa(shapeA: Shape, shapeB: Shape, initialSimplex: Array<vec3>) {
     // Update adjacency for new faces
     for (let i = 0; i < newFaces.length; i++) {
       for (let j = 0; j < faces.length; j++) {
-        const shared = sharedEdge(newFaces[i], faces[j])
+        const shared = sharedEdge(newFaces[i]!, faces[j]!)
         if (shared) {
-          newFaces[i].adjacents[shared.edgeI] = j
-          faces[j].adjacents[shared.edgeJ] = faces.length + i
+          newFaces[i]!.adjacents[shared.edgeI] = j
+          faces[j]!.adjacents[shared.edgeJ] = faces.length + i
         }
       }
       for (let j = i + 1; j < newFaces.length; j++) {
-        const shared = sharedEdge(newFaces[i], newFaces[j])
+        const shared = sharedEdge(newFaces[i]!, newFaces[j]!)
         if (shared) {
-          newFaces[i].adjacents[shared.edgeI] = faces.length + j
-          newFaces[j].adjacents[shared.edgeJ] = faces.length + i
+          newFaces[i]!.adjacents[shared.edgeI] = faces.length + j
+          newFaces[j]!.adjacents[shared.edgeJ] = faces.length + i
         }
       }
     }
@@ -324,18 +324,18 @@ function computeContactPoints(
   vertices: Array<vec3>
 ) {
   const indices = closestFace.indices
-  const v1 = vertices[indices[0]]
-  const v2 = vertices[indices[1]]
-  const v3 = vertices[indices[2]]
+  const v1 = vertices[indices[0]]!
+  const v2 = vertices[indices[1]]!
+  const v3 = vertices[indices[2]]!
   const totalArea = triangleArea(v1, v2, v3)
   const q = vec3.scale(vec3.create(), closestFace.normal, depth)
   const area1 = triangleArea(q, v2, v3)
   const area2 = triangleArea(q, v3, v1)
   const area3 = triangleArea(q, v1, v2)
   const bary = [area1 / totalArea, area2 / totalArea, area3 / totalArea]
-  const d1 = vertexDirections[indices[0]]
-  const d2 = vertexDirections[indices[1]]
-  const d3 = vertexDirections[indices[2]]
+  const d1 = vertexDirections[indices[0]]!
+  const d2 = vertexDirections[indices[1]]!
+  const d3 = vertexDirections[indices[2]]!
 
   // Get contact points on each shape using their support functions
   const a1 = shapeA.support(d1)
