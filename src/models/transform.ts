@@ -1,5 +1,8 @@
 import { mat4, quat, vec3 } from 'gl-matrix'
 
+// Module-level temporary quaternion to avoid per-frame allocations
+const TMP_QUAT = quat.create()
+
 export class Transform {
   public position: vec3
   public rotation: vec3
@@ -37,9 +40,11 @@ export class Transform {
   }
 
   public getMatrix(destination: mat4): mat4 {
+    // Optimization: reuse TMP_QUAT instead of allocating new one
+    quat.fromEuler(TMP_QUAT, this.rotation[0], this.rotation[1], this.rotation[2])
     return mat4.fromRotationTranslationScale(
       destination,
-      quat.fromEuler([0, 0, 0, 0], this.rotation[0], this.rotation[1], this.rotation[2]),
+      TMP_QUAT,
       this.position,
       this.scale
     )
@@ -79,48 +84,51 @@ export class Transform {
 
   public getFrontVector(): vec3 {
     const front = vec3.fromValues(0, 0, 1)
-    const quaternion = quat.fromEuler([0, 0, 0, 0], this.rotation[0], this.rotation[1], this.rotation[2])
-    vec3.transformQuat(front, front, quaternion)
+    quat.fromEuler(TMP_QUAT, this.rotation[0], this.rotation[1], this.rotation[2])
+    vec3.transformQuat(front, front, TMP_QUAT)
     return front
   }
 
   public getForwardVector(): vec3 {
-    const rotation = quat.fromEuler([0, 0, 0, 0], this.rotation[0], this.rotation[1], this.rotation[2])
+    quat.fromEuler(TMP_QUAT, this.rotation[0], this.rotation[1], this.rotation[2])
     const forward = vec3.fromValues(0, 0, 1)
-    vec3.transformQuat(forward, forward, rotation)
+    vec3.transformQuat(forward, forward, TMP_QUAT)
     return forward
   }
 
   public getRightVector(): vec3 {
-    const rotation = quat.fromEuler([0, 0, 0, 0], this.rotation[0], this.rotation[1], this.rotation[2])
+    quat.fromEuler(TMP_QUAT, this.rotation[0], this.rotation[1], this.rotation[2])
     const right = vec3.fromValues(1, 0, 0)
-    vec3.transformQuat(right, right, rotation)
+    vec3.transformQuat(right, right, TMP_QUAT)
     return right
   }
 
   public getUpVector(): vec3 {
-    const rotation = quat.fromEuler([0, 0, 0, 0], this.rotation[0], this.rotation[1], this.rotation[2])
+    quat.fromEuler(TMP_QUAT, this.rotation[0], this.rotation[1], this.rotation[2])
     const up = vec3.fromValues(0, 1, 0)
-    vec3.transformQuat(up, up, rotation)
+    vec3.transformQuat(up, up, TMP_QUAT)
     return up
   }
 
   public getForwardVectorWorld(): vec3 {
     const forward = vec3.fromValues(0, 0, 1)
-    vec3.transformQuat(forward, forward, this.worldRotation)
+    mat4.getRotation(TMP_QUAT, this.worldMatrix)
+    vec3.transformQuat(forward, forward, TMP_QUAT)
     vec3.normalize(forward, forward)
     return forward
   }
 
   public getRightVectorWorld(): vec3 {
     const right = vec3.fromValues(1, 0, 0)
-    vec3.transformQuat(right, right, this.worldRotation)
+    mat4.getRotation(TMP_QUAT, this.worldMatrix)
+    vec3.transformQuat(right, right, TMP_QUAT)
     return right
   }
 
   public getUpVectorWorld(): vec3 {
     const up = vec3.fromValues(0, 1, 0)
-    vec3.transformQuat(up, up, this.worldRotation)
+    mat4.getRotation(TMP_QUAT, this.worldMatrix)
+    vec3.transformQuat(up, up, TMP_QUAT)
     return up
   }
 }
