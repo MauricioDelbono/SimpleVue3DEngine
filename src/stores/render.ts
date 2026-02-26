@@ -107,6 +107,7 @@ export const useRenderStore = defineStore('render', () => {
 
   function renderScene() {
     const dofEnabled = scene.value.depthOfField.enabled && !scene.value.wireframe
+    const ssaoEnabled = scene.value.ssao.enabled && !scene.value.wireframe
 
     // 1. Shadow Pass
     if (!scene.value.wireframe) {
@@ -129,17 +130,53 @@ export const useRenderStore = defineStore('render', () => {
     // 2. Resize
     store.resize()
 
-    // 3. Bind Main Framebuffer or Screen
+    // 3. SSAO Pass
+    if (ssaoEnabled) {
+      // Geometry Pass (Z-Prepass + Normal)
+      store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, store.getGBuffer())
+      store.gl.clearColor(0, 0, 0, 1)
+      store.gl.clear(store.gl.COLOR_BUFFER_BIT | store.gl.DEPTH_BUFFER_BIT)
+
+      store.pipelines[pipelineKeys.geometry].setGlobalUniforms(scene.value)
+
+      scene.value.entities.forEach((entity) => {
+        traverseTree(entity, (entity: Entity) => {
+          if (
+            entity.pipeline !== pipelineKeys.light &&
+            entity.pipeline !== pipelineKeys.skybox &&
+            entity.pipeline !== pipelineKeys.wireframe
+          ) {
+            if (entity.mesh) {
+              store.renderMesh(scene.value, pipelineKeys.geometry, entity.mesh, entity.transform, entity.material)
+            }
+          }
+        })
+      })
+
+      // SSAO Calculation Pass
+      store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, store.getSSAOColorBuffer())
+      store.gl.clear(store.gl.COLOR_BUFFER_BIT)
+      store.pipelines[pipelineKeys.ssao].setGlobalUniforms(scene.value)
+      store.renderMesh(scene.value, pipelineKeys.ssao, postProcessMesh, postProcessTransform)
+
+      // SSAO Blur Pass
+      store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, store.getSSAOBlurBuffer())
+      store.gl.clear(store.gl.COLOR_BUFFER_BIT)
+      store.pipelines[pipelineKeys.ssaoBlur].setGlobalUniforms(scene.value)
+      store.renderMesh(scene.value, pipelineKeys.ssaoBlur, postProcessMesh, postProcessTransform)
+    }
+
+    // 4. Bind Main Framebuffer or Screen
     if (dofEnabled) {
       store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, store.getMainFrameBuffer())
     } else {
       store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, null)
     }
 
-    // 4. Clear
+    // 5. Clear
     store.clearCanvas(scene.value.fog.color)
 
-    // 5. Render Scene
+    // 6. Render Scene
     store.setRenderColor(scene.value)
 
     scene.value.entities.forEach((entity) => {
@@ -150,13 +187,20 @@ export const useRenderStore = defineStore('render', () => {
         if (scene.value.debugColliders) {
           const colliders = entity.getComponents(Collider)
           colliders.forEach((collider) => {
-            store.renderMesh(scene.value, pipelineKeys.wireframe, collider.mesh, collider.transform, undefined, { color: [1, 0, 0] })
+            store.renderMesh(
+              scene.value,
+              pipelineKeys.wireframe,
+              collider.mesh,
+              collider.transform,
+              undefined,
+              { color: [1, 0, 0] }
+            )
           })
         }
       })
     })
 
-    // 6. Post Process (if enabled)
+    // 7. Post Process (if enabled)
     if (dofEnabled) {
       store.gl.bindFramebuffer(store.gl.FRAMEBUFFER, null)
       store.gl.clear(store.gl.COLOR_BUFFER_BIT | store.gl.DEPTH_BUFFER_BIT)
