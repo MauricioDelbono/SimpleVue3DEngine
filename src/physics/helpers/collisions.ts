@@ -75,9 +75,19 @@ export default class CollisionsHelper {
 
     const threshold = 0.95 // cos(~18 degrees)
 
-    const allAxes = [...axesA, ...axesB]
-    for (let i = 0; i < allAxes.length; i++) {
-      const axis = allAxes[i]
+    for (let i = 0; i < axesA.length; i++) {
+      const axis = axesA[i]
+      const dotX = Math.abs(vec3.dot(axis, worldX))
+      const dotY = Math.abs(vec3.dot(axis, worldY))
+      const dotZ = Math.abs(vec3.dot(axis, worldZ))
+
+      if (dotX < threshold && dotY < threshold && dotZ < threshold) {
+        return true // Box is rotated, use GJK
+      }
+    }
+
+    for (let i = 0; i < axesB.length; i++) {
+      const axis = axesB[i]
       const dotX = Math.abs(vec3.dot(axis, worldX))
       const dotY = Math.abs(vec3.dot(axis, worldY))
       const dotZ = Math.abs(vec3.dot(axis, worldZ))
