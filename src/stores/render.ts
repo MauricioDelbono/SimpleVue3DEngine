@@ -13,6 +13,8 @@ interface Render {
   lateUpdate: (time: Time) => void
 }
 
+const DEBUG_COLLIDER_MATERIAL = { color: [1, 0, 0] as [number, number, number] }
+
 export const useRenderStore = defineStore('render', () => {
   const subscribers: Ref<Render[]> = ref([])
   const hasStarted = ref(false)
@@ -150,7 +152,7 @@ export const useRenderStore = defineStore('render', () => {
         if (scene.value.debugColliders) {
           const colliders = entity.getComponents(Collider)
           colliders.forEach((collider) => {
-            store.renderMesh(scene.value, pipelineKeys.wireframe, collider.mesh, collider.transform, undefined, { color: [1, 0, 0] })
+            store.renderMesh(scene.value, pipelineKeys.wireframe, collider.mesh, collider.transform, undefined, DEBUG_COLLIDER_MATERIAL)
           })
         }
       })
