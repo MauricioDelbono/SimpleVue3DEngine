@@ -226,20 +226,7 @@ export default class CollisionsHelper {
     }
 
     // Run EPA to get contact information
-    const contactPoints = epa(shapeA, shapeB, gjkResult.simplex)
-
-    // Debug logging
-    console.log(
-      `COLLISION_DETECTED: depth=${contactPoints.depth.toFixed(3)} normal=[${contactPoints.normal[0].toFixed(
-        2
-      )},${contactPoints.normal[1].toFixed(2)},${contactPoints.normal[2].toFixed(2)}] A=[${contactPoints.a[0].toFixed(
-        2
-      )},${contactPoints.a[1].toFixed(2)},${contactPoints.a[2].toFixed(2)}] B=[${contactPoints.b[0].toFixed(
-        2
-      )},${contactPoints.b[1].toFixed(2)},${contactPoints.b[2].toFixed(2)}]`
-    )
-
-    return contactPoints
+    return epa(shapeA, shapeB, gjkResult.simplex)
   }
 
   private static getOverlapOnAxis(boxA: any, boxB: any, axis: vec3): number {
@@ -248,15 +235,7 @@ export default class CollisionsHelper {
     const projB = this.projectBoxOntoAxis(boxB, axis)
 
     // Calculate overlap
-    const overlap = Math.min(projA.max, projB.max) - Math.max(projA.min, projB.min)
-
-    console.log(
-      `OVERLAP: A=[${projA.min.toFixed(2)},${projA.max.toFixed(2)}] B=[${projB.min.toFixed(2)},${projB.max.toFixed(
-        2
-      )}] result=${overlap.toFixed(3)}`
-    )
-
-    return overlap
+    return Math.min(projA.max, projB.max) - Math.max(projA.min, projB.min)
   }
 
   private static projectBoxOntoAxis(box: any, axis: vec3): { min: number; max: number } {

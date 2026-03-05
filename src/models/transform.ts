@@ -42,12 +42,7 @@ export class Transform {
   public getMatrix(destination: mat4): mat4 {
     // Optimization: reuse TMP_QUAT instead of allocating new one
     quat.fromEuler(TMP_QUAT, this.rotation[0], this.rotation[1], this.rotation[2])
-    return mat4.fromRotationTranslationScale(
-      destination,
-      TMP_QUAT,
-      this.position,
-      this.scale
-    )
+    return mat4.fromRotationTranslationScale(destination, TMP_QUAT, this.position, this.scale)
   }
 
   public updateWorldMatrix(matrix?: mat4) {
