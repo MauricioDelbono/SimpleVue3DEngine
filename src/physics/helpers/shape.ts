@@ -414,7 +414,13 @@ export class ShapeFactory {
       const threshold = 0.95 // cos(~18 degrees)
 
       let isAxisAligned = true
-      for (const axis of [...axesA, ...axesB]) {
+
+      // Bolt ⚡ Optimization: Avoid array spreading [...axesA, ...axesB] here
+      // This is a hot loop for collision detection running every frame.
+      // Array spreading allocates intermediate arrays causing unnecessary GC pressure.
+      // We use two sequential loops instead to prevent allocations.
+      for (let i = 0; i < axesA.length; i++) {
+        const axis = axesA[i]
         const dotX = Math.abs(vec3.dot(axis, worldX))
         const dotY = Math.abs(vec3.dot(axis, worldY))
         const dotZ = Math.abs(vec3.dot(axis, worldZ))
@@ -422,6 +428,20 @@ export class ShapeFactory {
         if (dotX < threshold && dotY < threshold && dotZ < threshold) {
           isAxisAligned = false
           break
+        }
+      }
+
+      if (isAxisAligned) {
+        for (let i = 0; i < axesB.length; i++) {
+          const axis = axesB[i]
+          const dotX = Math.abs(vec3.dot(axis, worldX))
+          const dotY = Math.abs(vec3.dot(axis, worldY))
+          const dotZ = Math.abs(vec3.dot(axis, worldZ))
+
+          if (dotX < threshold && dotY < threshold && dotZ < threshold) {
+            isAxisAligned = false
+            break
+          }
         }
       }
 
