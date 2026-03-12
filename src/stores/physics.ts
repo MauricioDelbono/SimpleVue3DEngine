@@ -65,51 +65,55 @@ export const usePhysicsStore = defineStore('physics', () => {
   }
 
   function applyForces() {
-    objects.forEach((object) => {
-      if (object.isStatic) return
+    for (let i = 0; i < objects.length; i++) {
+      const object = objects[i]
+      if (object.isStatic) continue
       object.applyForce(vec3.scale(vec3.create(), gravity, object.mass))
-    })
+    }
   }
 
   function updateObjects(time: Time) {
-    objects.forEach((object) => {
-      if (object.isStatic) return
+    for (let i = 0; i < objects.length; i++) {
+      const object = objects[i]
+      if (object.isStatic) continue
       object.step(time)
-    })
+    }
   }
 
   function broadPhaseCollisions() {
     const colliderPairs: CollisionPair[] = []
     // First iterate over all rigidbodies
-    objects
-      .slice()
-      .reverse()
-      .forEach((object, i) => {
-        if (object.isStatic || object.isSleeping) return // Skip static and sleeping objects
-        const objectColliders = object.colliders
+    // Optimization: Avoid intermediate array allocations (.slice().reverse()) and closure overhead in high-frequency physics paths
+    for (let i = objects.length - 1; i >= 0; i--) {
+      const object = objects[i]
+      if (object.isStatic || object.isSleeping) continue // Skip static and sleeping objects
+      const objectColliders = object.colliders
 
-        objects.forEach((otherObject, j) => {
-          // skip self and already checked pairs
-          if (object === otherObject || j >= objects.length - i) return
-          // Skip if both objects are sleeping (no need to check sleeping vs sleeping)
-          if (object.isSleeping && otherObject.isSleeping) return
+      for (let j = 0; j < objects.length; j++) {
+        const otherObject = objects[j]
+        // skip self and already checked pairs
+        if (object === otherObject || j >= i) continue
+        // Skip if both objects are sleeping (no need to check sleeping vs sleeping)
+        if (object.isSleeping && otherObject.isSleeping) continue
 
-          const otherObjectColliders = otherObject.colliders
-          if (!objectColliders.length || !otherObjectColliders.length) return
+        const otherObjectColliders = otherObject.colliders
+        if (!objectColliders.length || !otherObjectColliders.length) continue
 
-          // Then iterate over all colliders of each of the rigidbodies
-          objectColliders.forEach((collider) => {
-            otherObjectColliders.forEach((otherCollider) => {
-              // Check for potential tunneling with fast-moving objects
-              const isFastMoving = vec3.length(object.velocity) > 10 || vec3.length(otherObject.velocity) > 10
+        // Then iterate over all colliders of each of the rigidbodies
+        for (let c1 = 0; c1 < objectColliders.length; c1++) {
+          const collider = objectColliders[c1]
+          for (let c2 = 0; c2 < otherObjectColliders.length; c2++) {
+            const otherCollider = otherObjectColliders[c2]
+            // Check for potential tunneling with fast-moving objects
+            const isFastMoving = vec3.length(object.velocity) > 10 || vec3.length(otherObject.velocity) > 10
 
-              if (collider.intersects(otherCollider) || (isFastMoving && sweptIntersection(object, otherObject, collider, otherCollider))) {
-                colliderPairs.push(new CollisionPair(object, otherObject, collider, otherCollider))
-              }
-            })
-          })
-        })
-      })
+            if (collider.intersects(otherCollider) || (isFastMoving && sweptIntersection(object, otherObject, collider, otherCollider))) {
+              colliderPairs.push(new CollisionPair(object, otherObject, collider, otherCollider))
+            }
+          }
+        }
+      }
+    }
 
     return colliderPairs
   }
@@ -164,7 +168,8 @@ export const usePhysicsStore = defineStore('physics', () => {
       }
     }
 
-    collisionPairs.forEach((collisionPair: CollisionPair) => {
+    for (let i = 0; i < collisionPairs.length; i++) {
+      const collisionPair = collisionPairs[i]
       // Update collider transforms before collision detection
 
       collisionPair.colliderA.updateTransformMatrix()
@@ -180,16 +185,16 @@ export const usePhysicsStore = defineStore('physics', () => {
       if (manifold.hasCollision) {
         collisions.push(new Collision(collisionPair.bodyA, collisionPair.bodyB, collisionPair.colliderA, collisionPair.colliderB, manifold))
       }
-    })
+    }
 
     return collisions
   }
 
   function resolveCollisions(time: Time, collisions: Collision[]) {
-    solvers.forEach((solver) => {
-      if (collisions.length === 0) return
-      solver.solve(collisions, time)
-    })
+    if (collisions.length === 0) return
+    for (let i = 0; i < solvers.length; i++) {
+      solvers[i].solve(collisions, time)
+    }
   }
 
   return { addObject, removeObject, addSolver, removeSolver, reset, initialize }
